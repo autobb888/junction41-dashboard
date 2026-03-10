@@ -1,0 +1,22 @@
+services:
+  dashboard:
+    build: .
+    container_name: j41-dashboard
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5173:5173"
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"

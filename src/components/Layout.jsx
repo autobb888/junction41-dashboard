@@ -1,0 +1,369 @@
+import { Outlet, Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { LayoutDashboard, Briefcase, Mail, Wrench, Store, Plus, Bell, Menu, X, Settings, BookOpen, UserCircle, ChevronDown, LogOut, AlertTriangle, Code2 } from 'lucide-react';
+import ResolvedId from './ResolvedId';
+import { useState, useEffect, useRef } from 'react';
+
+export default function Layout() {
+  const { user, logout, requireAuth } = useAuth();
+  const location = useLocation();
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+  const avatarMenuRef = useRef(null);
+  const [profileEmpty, setProfileEmpty] = useState(false);
+  const [profileBannerDismissed, setProfileBannerDismissed] = useState(() => sessionStorage.getItem('profileBannerDismissed') === 'true');
+  const [showToast, setShowToast] = useState(false);
+
+  // Close menus on navigation
+  useEffect(() => {
+    setMobileMenuOpen(false);
+    setAvatarMenuOpen(false);
+  }, [location.pathname]);
+
+  // Close avatar menu on outside click
+  useEffect(() => {
+    function handleClick(e) {
+      if (avatarMenuRef.current && !avatarMenuRef.current.contains(e.target)) {
+        setAvatarMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  // Check if profile/contentmultimap is empty
+  useEffect(() => {
+    if (!user) { setProfileEmpty(false); return; }
+    (async () => {
+      try {
+        const res = await fetch('/v1/me/identity', { credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+        const d = data.data?.decoded;
+        const cmmCount = Object.keys(d?.contentmultimap || {}).length;
+        const cmCount = Object.keys(d?.contentmap || {}).length;
+        const empty = cmmCount === 0 && cmCount === 0;
+        setProfileEmpty(empty);
+        if (empty && !sessionStorage.getItem('profileToastShown')) {
+          sessionStorage.setItem('profileToastShown', 'true');
+          setShowToast(true);
+          setTimeout(() => setShowToast(false), 6000);
+        }
+      } catch {}
+    })();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchUnread = async () => {
+      try {
+        const res = await fetch('/v1/me/notifications?limit=1', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          setUnreadCount(data.meta?.unreadCount?.c || 0);
+        }
+      } catch {}
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
+  }, [user]);
+
+  // Main nav — shown in top bar on desktop
+  const mainNav = [
+    { path: '/marketplace', label: 'Marketplace', icon: Store },
+    { path: '/developers', label: 'Developers', icon: Code2 },
+    ...(!user ? [
+      { path: '/guide', label: 'Guide', icon: BookOpen },
+      { path: '/get-id', label: 'Get Free ID', icon: Plus },
+    ] : []),
+    ...(user ? [
+      { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { path: '/jobs', label: 'Jobs', icon: Briefcase },
+    ] : []),
+  ];
+
+  // Avatar dropdown menu items
+  const avatarNav = [
+    { path: '/profile', label: 'Profile', icon: UserCircle },
+    { path: '/services', label: 'Services', icon: Wrench },
+    { path: '/register', label: 'Register Agent', icon: Plus },
+    { path: '/settings', label: 'Settings', icon: Settings },
+    { path: '/guide', label: 'Guide', icon: BookOpen },
+  ];
+
+  // All items for mobile menu
+  const mobileNav = [
+    { path: '/marketplace', label: 'Marketplace', icon: Store },
+    { path: '/developers', label: 'Developers', icon: Code2 },
+    { path: '/guide', label: 'Guide', icon: BookOpen },
+    ...(!user ? [
+      { path: '/get-id', label: 'Get Free ID', icon: Plus },
+    ] : []),
+    ...(user ? [
+      { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { path: '/jobs', label: 'Jobs', icon: Briefcase },
+      { path: '/inbox', label: 'Inbox', icon: Mail },
+      { path: '/services', label: 'Services', icon: Wrench },
+      { path: '/register', label: 'Register', icon: Plus },
+      { path: '/profile', label: 'Profile', icon: UserCircle },
+      { path: '/settings', label: 'Settings', icon: Settings },
+    ] : []),
+  ];
+
+  function NavLink({ to, children, isActive }) {
+    return (
+      <Link
+        to={to}
+        className="px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2"
+        style={{
+          color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+          backgroundColor: isActive ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+        }}
+        onMouseEnter={(e) => {
+          if (!isActive) {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+            e.currentTarget.style.color = 'var(--text-primary)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!isActive) {
+            e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.color = 'var(--text-secondary)';
+          }
+        }}
+      >
+        {children}
+      </Link>
+    );
+  }
+
+  function IconButton({ to, children, badge, ariaLabel }) {
+    const isActive = location.pathname === to;
+    return (
+      <Link
+        to={to}
+        className="relative p-2 rounded-lg transition-colors"
+        aria-label={ariaLabel}
+        style={{ color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)' }}
+        onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-primary)'}
+        onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.color = 'var(--text-secondary)'; }}
+      >
+        {children}
+        {badge > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[10px] font-bold text-white" style={{ backgroundColor: 'var(--accent-blue)' }}>
+            {badge > 99 ? '99+' : badge}
+          </span>
+        )}
+      </Link>
+    );
+  }
+
+  // Generate avatar initials + color from name
+  const displayName = user?.identityName || user?.verusId || '';
+  const shortName = displayName.split('.')[0] || displayName.slice(0, 8);
+  const initials = shortName.slice(0, 2).toUpperCase();
+
+  return (
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-base)' }}>
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:bg-verus-blue focus:text-white focus:rounded-lg focus:text-sm focus:font-medium">Skip to main content</a>
+      {/* Header */}
+      <header className="border-b sticky top-0 z-50 backdrop-blur-xl" style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'rgba(5, 5, 8, 0.85)' }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-4 md:gap-6 min-w-0">
+            {/* Mobile hamburger */}
+            <button
+              className="md:hidden p-1.5 rounded-lg transition-colors"
+              style={{ color: 'var(--text-secondary)' }}
+              onClick={() => setMobileMenuOpen(o => !o)}
+              aria-label="Toggle menu"
+            >
+              {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+
+            <Link to="/" className="flex items-center gap-2 shrink-0">
+              <span className="text-lg font-bold" style={{ fontFamily: "'Lexend', sans-serif", color: '#A78BFA', letterSpacing: '-0.02em' }}>J41</span>
+              <span className="font-medium text-white hidden lg:inline text-sm" style={{ fontFamily: "'Outfit', sans-serif" }}>Junction41</span>
+            </Link>
+            
+            {/* Desktop nav — just core items */}
+            <nav className="hidden md:flex items-center gap-1">
+              {mainNav.map(item => {
+                const Icon = item.icon;
+                const isActive = location.pathname === item.path;
+                return (
+                  <NavLink key={item.path} to={item.path} isActive={isActive}>
+                    <Icon size={16} style={{ opacity: isActive ? 1 : 0.7 }} />
+                    {item.label}
+                  </NavLink>
+                );
+              })}
+            </nav>
+          </div>
+
+          {/* Right side */}
+          <div className="flex items-center gap-1 sm:gap-2">
+            {user ? (
+              <>
+                {/* Inbox icon */}
+                <IconButton to="/inbox" ariaLabel="Inbox">
+                  <Mail size={18} />
+                </IconButton>
+
+                {/* Notifications bell */}
+                <IconButton to="/dashboard" badge={unreadCount} ariaLabel="Notifications">
+                  <Bell size={18} />
+                </IconButton>
+
+                {/* Avatar dropdown */}
+                <div className="relative" ref={avatarMenuRef}>
+                  <button
+                    onClick={() => setAvatarMenuOpen(o => !o)}
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors"
+                    aria-label="Account menu"
+                    style={{ color: 'var(--text-secondary)' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'}
+                    onMouseLeave={(e) => { if (!avatarMenuOpen) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                  >
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0" style={{ background: 'linear-gradient(135deg, #A78BFA, #7C3AED)' }}>
+                      {initials}
+                    </div>
+                    <span className="hidden sm:inline text-sm font-medium max-w-[120px] truncate" style={{ color: 'var(--text-primary)' }}>
+                      {shortName}
+                    </span>
+                    <ChevronDown size={14} className="hidden sm:block" style={{ opacity: 0.5 }} />
+                  </button>
+
+                  {/* Dropdown menu */}
+                  {avatarMenuOpen && (
+                    <div
+                      className="absolute right-0 top-full mt-1 w-56 rounded-lg border shadow-xl overflow-hidden z-50"
+                      style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-subtle)' }}
+                    >
+                      {/* Identity header */}
+                      <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--border-subtle)' }}>
+                        <p className="text-sm font-medium text-white truncate">{displayName}</p>
+                        <p className="text-xs truncate" style={{ color: 'var(--text-tertiary)' }}>{user.verusId}</p>
+                      </div>
+
+                      {/* Menu items */}
+                      <div className="py-1">
+                        {avatarNav.map(item => {
+                          const Icon = item.icon;
+                          const isActive = location.pathname === item.path;
+                          return (
+                            <Link
+                              key={item.path}
+                              to={item.path}
+                              className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors"
+                              style={{
+                                color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                backgroundColor: isActive ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'}
+                              onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                            >
+                              <Icon size={16} />
+                              {item.label}
+                            </Link>
+                          );
+                        })}
+                      </div>
+
+                      {/* Logout */}
+                      <div className="border-t py-1" style={{ borderColor: 'var(--border-subtle)' }}>
+                        <button
+                          onClick={logout}
+                          className="flex items-center gap-3 px-4 py-2.5 text-sm w-full transition-colors"
+                          style={{ color: 'var(--text-secondary)' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'; e.currentTarget.style.color = '#f87171'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                        >
+                          <LogOut size={16} />
+                          Sign Out
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <button
+                onClick={requireAuth}
+                className="px-4 py-2 text-sm font-medium rounded-lg transition-all hover:opacity-90"
+                style={{ backgroundColor: '#A78BFA', color: 'white', fontFamily: "'Outfit', sans-serif" }}
+              >
+                Sign In
+              </button>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* Mobile Navigation Menu */}
+      {mobileMenuOpen && (
+        <div className="md:hidden border-b" style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-subtle)' }}>
+          <nav className="max-w-6xl mx-auto px-4 py-2 flex flex-col gap-1">
+            {mobileNav.map(item => {
+              const Icon = item.icon;
+              const isActive = location.pathname === item.path;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
+                  style={{
+                    color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    backgroundColor: isActive ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                  }}
+                >
+                  <Icon size={18} style={{ opacity: isActive ? 1 : 0.7 }} />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+      )}
+
+      {/* Empty Profile Banner */}
+      {user && profileEmpty && !profileBannerDismissed && (
+        <div className="max-w-6xl mx-auto px-4 pt-4">
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
+            <p className="text-amber-200 text-sm flex-1">
+              Your profile is empty — nobody knows what you're offering! <Link to="/profile" className="text-violet-400 hover:underline font-medium">Set up your profile →</Link>
+            </p>
+            <button onClick={() => { setProfileBannerDismissed(true); sessionStorage.setItem('profileBannerDismissed', 'true'); }}
+              className="text-gray-500 hover:text-gray-300 text-xs">Dismiss</button>
+          </div>
+        </div>
+      )}
+
+      {/* Main Content */}
+      <main id="main-content" className={['/', '/developers'].includes(location.pathname) ? 'page-content' : 'max-w-6xl mx-auto px-4 py-8 page-content'}>
+        <Outlet />
+      </main>
+
+      {/* Toast popup for empty profile */}
+      {showToast && (
+        <div className="fixed bottom-6 right-6 z-50 animate-slide-up">
+          <div className="bg-gray-900 border border-amber-500/40 rounded-xl shadow-2xl p-4 max-w-sm flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-white text-sm font-medium">Your profile is empty!</p>
+              <p className="text-gray-400 text-xs mt-1">Nobody knows what you're offering. Set up your profile so others can find you.</p>
+              <Link to="/profile" onClick={() => setShowToast(false)} className="text-violet-400 hover:text-violet-300 text-xs font-medium mt-2 inline-block">
+                Set up profile →
+              </Link>
+            </div>
+            <button onClick={() => setShowToast(false)} className="text-gray-500 hover:text-gray-300">
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
