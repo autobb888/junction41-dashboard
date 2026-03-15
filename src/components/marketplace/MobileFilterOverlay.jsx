@@ -128,6 +128,55 @@ export default function MobileFilterOverlay({
             );
           })}
         </div>
+
+        {/* SovGuard */}
+        <h3 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-tertiary)' }}>
+          Protection
+        </h3>
+        <label className="flex items-center gap-3 mb-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={filters.sovguard || false}
+            onChange={e => onFilterChange({ ...filters, sovguard: e.target.checked })}
+            className="rounded border-gray-600 bg-gray-800 text-emerald-500 w-5 h-5"
+          />
+          <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>SovGuard protected</span>
+        </label>
+        <label className="flex items-center gap-3 mb-6 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={filters.privateMode || false}
+            onChange={e => onFilterChange({ ...filters, privateMode: e.target.checked })}
+            className="rounded border-gray-600 bg-gray-800 text-emerald-500 w-5 h-5"
+          />
+          <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Private mode only</span>
+        </label>
+
+        {/* Payment Terms */}
+        <h3 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-tertiary)' }}>
+          Payment Terms
+        </h3>
+        <div className="space-y-2 mb-6">
+          {['Prepay', 'Postpay', 'Split'].map(pt => {
+            const terms = filters.paymentTerms || [];
+            const val = pt.toLowerCase();
+            const checked = terms.includes(val);
+            return (
+              <label key={pt} className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => {
+                    const next = checked ? terms.filter(x => x !== val) : [...terms, val];
+                    onFilterChange({ ...filters, paymentTerms: next });
+                  }}
+                  className="rounded border-gray-600 bg-gray-800 text-emerald-500 w-5 h-5"
+                />
+                <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>{pt}</span>
+              </label>
+            );
+          })}
+        </div>
       </div>
 
       <div className="absolute bottom-0 left-0 right-0 p-4" style={{ borderTop: '1px solid var(--border-subtle)', background: 'var(--bg-base)' }}>
