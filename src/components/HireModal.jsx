@@ -35,7 +35,8 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
   const [allowThirdParty, setAllowThirdParty] = useState(false);
   const [requireDeletion, setRequireDeletion] = useState(true);
   const [privateMode, setPrivateMode] = useState(false); // E2E encrypted premium
-  const [sovguardEnabled, setSafechatEnabled] = useState(true);
+  const agentRequiresSovguard = Boolean(service?.sovguard);
+  const [sovguardEnabled, setSovguardEnabled] = useState(true);
   const modalRef = useRef(null);
 
   // Restore draft from sessionStorage on mount (F-7)
@@ -134,16 +135,30 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
     agent?.id;
   const amount = Number(service?.price) || 0;
   const currency = service?.currency || 'VRSCTEST';
-  // Data sharing discounts — sharing data = cheaper job
-  const dataDiscount = (allowTraining ? 0.10 : 0) + (allowThirdParty ? 0.10 : 0) + (!requireDeletion ? 0.05 : 0);
-  const privatePremium = privateMode ? amount * 0.50 : 0;
-  const baseFeeRate = 0.05; // 5% platform fee
-  const discountedFeeRate = Math.max(baseFeeRate * (1 - dataDiscount), 0);
-  const adjustedAmount = amount + privatePremium;
-  const feeAmount = (adjustedAmount * discountedFeeRate).toFixed(4);
-  const totalCost = (adjustedAmount + adjustedAmount * discountedFeeRate).toFixed(4);
-  const savingsPercent = Math.round(dataDiscount * 100);
-  const signMessage = `J41-JOB|To:${sellerVerusId}|Desc:${description}|Amt:${amount} ${currency}|Fee:${feeAmount} ${currency}|SovGuard:${sovguardEnabled ? 'yes' : 'no'}|Deadline:${deadline || 'None'}|Ts:${timestamp}|I request this job and agree to pay upon completion.`;
+  // Data sharing discount — discount off agent price (data has value to the agent, not the platform)
+  const dataDiscountRate = (allowTraining ? 0.10 : 0) + (allowThirdParty ? 0.10 : 0) + (!requireDeletion ? 0.05 : 0);
+  const agentAmount = Math.max(amount * (1 - dataDiscountRate), 0);
+  const platformFeeRate = 0.05; // Platform always takes 5% of agent amount
+  const platformFee = agentAmount * platformFeeRate;
+  const privatePremium = privateMode ? amount * 0.50 : 0; // Private mode premium goes to J41
+  const totalPlatformFee = platformFee + privatePremium; // J41 receives: 5% fee + private premium
+  const feeAmount = totalPlatformFee.toFixed(4);
+  const totalCost = (agentAmount + totalPlatformFee).toFixed(4);
+  const savingsAmount = (amount * dataDiscountRate).toFixed(4);
+  const savingsPercent = Math.round(dataDiscountRate * 100);
+
+  // Clear signature when any signed field changes (stale signature protection)
+  useEffect(() => {
+    setSignature('');
+  }, [description, deadlineDate, deadlineTime, sovguardEnabled, dataRetention, allowTraining, allowThirdParty, requireDeletion, privateMode, timestamp]);
+  const paymentTerms = service?.paymentTerms || service?.payment_terms || 'prepay';
+  const dataTermsStr = `Retain:${dataRetention}|Train:${allowTraining ? 'yes' : 'no'}|3rdParty:${allowThirdParty ? 'yes' : 'no'}|DelAttest:${requireDeletion ? 'yes' : 'no'}`;
+  const paymentCommitment = paymentTerms === 'prepay'
+    ? 'I request this job and agree to pay upfront before work begins.'
+    : paymentTerms === 'postpay'
+      ? 'I request this job and agree to pay upon delivery.'
+      : 'I request this job and agree to split payment (50% upfront, 50% on delivery).';
+  const signMessage = `J41-JOB|To:${sellerVerusId}|Desc:${description}|Amt:${agentAmount.toFixed(4)} ${currency}|Fee:${feeAmount} ${currency}|Pay:${paymentTerms}|SovGuard:${sovguardEnabled ? 'yes' : 'no'}|${dataTermsStr}|Deadline:${deadline || 'None'}|Ts:${timestamp}|${paymentCommitment}`;
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -176,10 +191,10 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
           serviceId: service?.id,
           description: description.trim(),
           message: message.trim() || undefined,
-          amount: service?.price || 0,
+          amount: agentAmount,
           currency: service?.currency || 'VRSCTEST',
           deadline: deadline || undefined,
-          paymentTerms: 'prepay',
+          paymentTerms,
           sovguardEnabled,
           dataTerms: {
             retention: dataRetention,
@@ -246,6 +261,15 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
                 <p className="text-xl font-bold text-verus-blue">
                   {service?.price} {service?.currency}
                 </p>
+                <span className={`inline-block mt-1 text-xs font-medium px-2 py-0.5 rounded-full ${
+                  paymentTerms === 'prepay' ? 'bg-amber-900/50 text-amber-300' :
+                  paymentTerms === 'postpay' ? 'bg-green-900/50 text-green-300' :
+                  'bg-blue-900/50 text-blue-300'
+                }`}>
+                  {paymentTerms === 'prepay' ? 'Pay upfront' :
+                   paymentTerms === 'postpay' ? 'Pay on delivery' :
+                   'Split payment'}
+                </span>
               </div>
             </div>
           </div>
@@ -377,42 +401,65 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
           {/* SovGuard Protection */}
           <div className="rounded-xl border p-4 space-y-3" style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--bg-raised)' }}>
             <h4 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>🛡️ SovGuard Protection</h4>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={sovguardEnabled} onChange={e => setSafechatEnabled(e.target.checked)}
-                className="rounded border-gray-600 bg-gray-800 text-verus-blue focus:ring-verus-blue" />
+            <label className={`flex items-center gap-2 ${agentRequiresSovguard ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'}`}>
+              <input type="checkbox" checked={sovguardEnabled}
+                disabled={agentRequiresSovguard}
+                onChange={e => setSovguardEnabled(e.target.checked)}
+                className="rounded border-gray-600 bg-gray-800 text-verus-blue focus:ring-verus-blue disabled:opacity-50" />
               <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Enable SovGuard — 6-layer prompt injection protection for both parties</span>
             </label>
-            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>SovGuard scans all messages for manipulation, protecting you and the agent.</p>
+            {agentRequiresSovguard ? (
+              <p className="text-xs text-amber-400">This agent requires SovGuard — it cannot be disabled.</p>
+            ) : (
+              <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>SovGuard scans all messages for manipulation, protecting you and the agent.</p>
+            )}
           </div>
 
           {/* Payment Breakdown */}
           <div className="rounded-xl border p-4" style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--bg-raised)' }}>
             <h4 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>💰 Payment Breakdown</h4>
             <div className="space-y-2 text-sm">
+              <p className="text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>To Agent</p>
               <div className="flex justify-between">
-                <span style={{ color: 'var(--text-secondary)' }}>Agent Payment</span>
+                <span style={{ color: 'var(--text-secondary)' }}>Service Price</span>
                 <span style={{ color: 'var(--text-primary)' }}>{amount} {currency}</span>
+              </div>
+              {savingsPercent > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-green-400">Data sharing discount (-{savingsPercent}%)</span>
+                  <span className="text-green-400">-{savingsAmount} {currency}</span>
+                </div>
+              )}
+              {savingsPercent > 0 && (
+                <div className="flex justify-between font-medium">
+                  <span style={{ color: 'var(--text-secondary)' }}>Agent receives</span>
+                  <span style={{ color: 'var(--text-primary)' }}>{agentAmount.toFixed(4)} {currency}</span>
+                </div>
+              )}
+
+              <p className="text-xs font-medium mt-3 mb-1" style={{ color: 'var(--text-muted)' }}>To Junction41</p>
+              <div className="flex justify-between">
+                <span style={{ color: 'var(--text-secondary)' }}>Platform Fee (5%)</span>
+                <span style={{ color: 'var(--text-primary)' }}>{platformFee.toFixed(4)} {currency}</span>
               </div>
               {privateMode && (
                 <div className="flex justify-between">
-                  <span style={{ color: 'var(--text-secondary)' }}>🔐 Private Mode Premium (+50%)</span>
+                  <span style={{ color: 'var(--text-secondary)' }}>🔐 Private Mode E2E Encryption</span>
                   <span className="text-amber-400">{privatePremium.toFixed(4)} {currency}</span>
                 </div>
               )}
-              <div className="flex justify-between">
-                <span style={{ color: 'var(--text-secondary)' }}>
-                  Platform Fee ({(discountedFeeRate * 100).toFixed(1)}%)
-                  {savingsPercent > 0 && <span className="text-green-400 ml-1">(-{savingsPercent}% data sharing discount)</span>}
-                </span>
-                <span style={{ color: 'var(--text-primary)' }}>{feeAmount} {currency}</span>
-              </div>
+
               <div className="border-t pt-2 mt-2 flex justify-between font-semibold" style={{ borderColor: 'var(--border-subtle)' }}>
                 <span style={{ color: 'var(--text-primary)' }}>Total</span>
                 <span className="text-verus-blue">{totalCost} {currency}</span>
               </div>
             </div>
             <p className="text-xs mt-3" style={{ color: 'var(--text-tertiary)' }}>
-              You'll send two transactions after the agent accepts: one to the agent ({privateMode ? adjustedAmount.toFixed(4) : amount} {currency}) and one platform fee ({feeAmount} {currency}).
+              {paymentTerms === 'prepay'
+                ? `You'll send two transactions after the agent accepts (before work begins): one to the agent (${agentAmount.toFixed(4)} ${currency}) and one to Junction41 (${feeAmount} ${currency}).`
+                : paymentTerms === 'postpay'
+                  ? `You'll send two transactions after the agent delivers: one to the agent (${agentAmount.toFixed(4)} ${currency}) and one to Junction41 (${feeAmount} ${currency}).`
+                  : `You'll send 50% upfront after acceptance (${(agentAmount / 2).toFixed(4)} ${currency} + ${(totalPlatformFee / 2).toFixed(4)} ${currency} to J41), and 50% on delivery.`}
             </p>
           </div>
 

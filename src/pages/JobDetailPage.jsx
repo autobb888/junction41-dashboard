@@ -23,6 +23,7 @@ export default function JobDetailPage() {
   const [existingReview, setExistingReview] = useState(null);
   const [autoOpenPayment, setAutoOpenPayment] = useState(false);
   const chatRef = useRef(null);
+  const prevStatusRef = useRef(null);
 
   useEffect(() => {
     fetchJob();
@@ -36,6 +37,16 @@ export default function JobDetailPage() {
     const interval = setInterval(fetchJob, 5000);
     return () => clearInterval(interval);
   }, [job?.status, job?.id, loading]);
+
+  // Detect requested → accepted transition and auto-open payment (works via poll or WS)
+  useEffect(() => {
+    if (!job || loading) return;
+    const isBuyerNow = job.buyerVerusId === user?.verusId;
+    if (prevStatusRef.current === 'requested' && job.status === 'accepted' && isBuyerNow) {
+      setAutoOpenPayment(true);
+    }
+    prevStatusRef.current = job.status;
+  }, [job?.status, loading]);
 
   // Handle ?action=pay URL param
   useEffect(() => {
@@ -117,6 +128,58 @@ export default function JobDetailPage() {
       <div className="card" style={{ padding: '16px 24px' }}>
         <JobStepper status={job.status} hasPayment={!!job.payment?.txid} />
       </div>
+
+      {/* Waiting for agent — shown when buyer is waiting for acceptance */}
+      {isBuyer && job.status === 'requested' && (() => {
+        const lastSeen = job.seller?.lastSeenAt;
+        const seenAgo = lastSeen ? Math.floor((Date.now() - new Date(lastSeen + (lastSeen.endsWith('Z') ? '' : 'Z')).getTime()) / 1000) : null;
+        const isOnline = seenAgo !== null && seenAgo < 60;
+        const isRecent = seenAgo !== null && seenAgo < 300;
+        return (
+          <div className="card" style={{ padding: '20px 24px', borderColor: isOnline ? 'rgba(74,222,128,0.2)' : 'var(--border-subtle)' }}>
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <div className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center">
+                  <svg className="animate-spin h-5 w-5 text-verus-blue" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                  </svg>
+                </div>
+                {isOnline && (
+                  <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-gray-900"></span>
+                )}
+              </div>
+              <div className="flex-1">
+                <p className="text-white font-medium text-sm">
+                  {isOnline
+                    ? 'Waiting for SovAgent to accept...'
+                    : isRecent
+                      ? 'Waiting for SovAgent to come back online...'
+                      : 'Request sent — waiting for SovAgent response'}
+                </p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
+                  {isOnline
+                    ? 'Agent is online — should respond shortly'
+                    : isRecent
+                      ? `Last seen ${Math.floor(seenAgo / 60)} min ago — may respond soon`
+                      : lastSeen
+                        ? `Last seen ${seenAgo > 86400 ? Math.floor(seenAgo / 86400) + 'd' : seenAgo > 3600 ? Math.floor(seenAgo / 3600) + 'h' : Math.floor(seenAgo / 60) + 'm'} ago`
+                        : 'Agent has not been seen yet'}
+                </p>
+              </div>
+              {isOnline && (
+                <div className="flex items-center gap-1.5">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-400"></span>
+                  </span>
+                  <span className="text-green-400 text-xs font-medium">Online</span>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Job Info */}
       <div className="card space-y-4">

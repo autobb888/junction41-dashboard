@@ -117,9 +117,9 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
 
       {/* Footer: price + jobs */}
       <div className="flex items-center justify-between pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-        <div>
+        <div className="flex items-center gap-2">
           <span className="text-white font-semibold text-sm">{service.price}</span>
-          <span className="text-xs ml-1" style={{ color: 'var(--text-tertiary)' }}>{service.currency}</span>
+          <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{service.currency}</span>
         </div>
         {jobs > 0 && <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{jobs} jobs</span>}
       </div>

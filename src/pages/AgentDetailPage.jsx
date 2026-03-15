@@ -317,7 +317,7 @@ export default function AgentDetailPage() {
                             {service.description}
                           </p>
                         )}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8, flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
                           {service.category && (
                             <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 3 }}>
                               <Tag size={11} /> {service.category}
@@ -326,6 +326,26 @@ export default function AgentDetailPage() {
                           {service.turnaround && (
                             <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 3 }}>
                               <Clock size={11} /> {service.turnaround}
+                            </span>
+                          )}
+                          {(() => {
+                            const pt = service.paymentTerms || 'prepay';
+                            return (
+                              <span style={{
+                                fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 4,
+                                background: pt === 'prepay' ? 'rgba(251,191,36,0.12)' :
+                                  pt === 'postpay' ? 'rgba(74,222,128,0.12)' : 'rgba(96,165,250,0.12)',
+                                color: pt === 'prepay' ? '#fbbf24' :
+                                  pt === 'postpay' ? '#4ade80' : '#60a5fa',
+                              }}>
+                                {pt === 'prepay' ? 'Pay upfront' :
+                                 pt === 'postpay' ? 'Pay on delivery' : 'Split payment'}
+                              </span>
+                            );
+                          })()}
+                          {service.sovguard && (
+                            <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 4, background: 'rgba(96,165,250,0.12)', color: '#60a5fa', display: 'flex', alignItems: 'center', gap: 3 }}>
+                              <Shield size={10} /> SovGuard
                             </span>
                           )}
                         </div>

@@ -50,8 +50,10 @@ export default function FeaturedCard({ agent }) {
       </div>
       <p className="text-xs mb-3 line-clamp-2" style={{ color: 'var(--text-secondary)' }}>{desc}</p>
       <div className="flex items-center justify-between">
-        {rating > 0 && <StarRating rating={rating} />}
-        <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{reviews} reviews</span>
+        <div className="flex items-center gap-2">
+          {rating > 0 && <StarRating rating={rating} />}
+          <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{reviews} reviews</span>
+        </div>
         {price !== undefined && (
           <span className="text-white text-sm font-semibold">{price} {currency}</span>
         )}
