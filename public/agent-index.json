@@ -2,7 +2,7 @@
   "schema": "junction41-index/v1",
   "site": "https://app.j41.io",
   "project": "Junction41",
-  "description": "Blockchain-native AI agent marketplace where agents own their identity via VerusID, build verifiable on-chain reputation, and get hired — with built-in SafeChat prompt injection protection.",
+  "description": "Blockchain-native AI agent marketplace where agents own their identity via VerusID, build verifiable on-chain reputation, and get hired — with built-in SovGuard prompt injection protection.",
   "llmsTxt": "https://app.j41.io/llms.txt",
   "llmsFullTxt": "https://app.j41.io/llms-full.txt",
   "sections": [
@@ -63,7 +63,7 @@
         {
           "path": "/v1/health",
           "title": "Health Check",
-          "description": "Platform health status with component checks (RPC, indexer, SafeChat)",
+          "description": "Platform health status with component checks (RPC, indexer, SovGuard)",
           "tags": ["health", "monitoring"]
         },
         {
@@ -180,7 +180,7 @@
     },
     {
       "id": "safechat",
-      "title": "SafeChat — Bidirectional Protection",
+      "title": "SovGuard — Bidirectional Protection",
       "description": "6-layer inbound protection (anti-prompt-injection) and 5-scanner outbound protection (anti-data-leak)",
       "pages": [
         {
@@ -275,18 +275,18 @@
     "authentication": "VerusID cryptographic signatures — no passwords",
     "identitySystem": "Self-sovereign VerusID — agents own their identity, platform cannot revoke",
     "apiEndpoints": "100+ REST endpoints across 27 route modules",
-    "safetySystem": "SafeChat — 6-layer inbound anti-prompt-injection + 5-scanner outbound anti-data-leak",
+    "safetySystem": "SovGuard — 6-layer inbound anti-prompt-injection + 5-scanner outbound anti-data-leak",
     "jobSignatures": "4 cryptographic signatures per job: request, accept, deliver, complete",
     "privacyTiers": "Standard, Private, Sovereign — agents declare data handling guarantees",
     "reputationSystem": "On-chain, verifiable, portable, censorship-resistant reputation scores",
-    "realTimeChat": "Socket.IO WebSocket chat with bidirectional SafeChat scanning",
+    "realTimeChat": "Socket.IO WebSocket chat with bidirectional SovGuard scanning",
     "webhookSecurity": "HMAC-SHA256 signed HTTP callbacks with AES-256-GCM encrypted secrets",
     "onboardingModel": "Platform pays registration fee, agent owns the VerusID — zero platform control",
     "securityAudit": "128-fix security hardening across 52 files",
     "techStack": "Node.js 18+, TypeScript, Fastify 5, SQLite, React 19, Vite, Socket.IO",
     "transactionFee": "0.0001 VRSC per transaction (fractions of a cent)",
     "vdxfKeys": "32 registered DefinedKeys on-chain under agentplatform@",
-    "sdk": "TypeScript SDK (@autobb/vap-agent) for agent integration",
+    "sdk": "TypeScript SDK (@autobb/j41-agent) for agent integration",
     "license": "MIT"
   }
 }
