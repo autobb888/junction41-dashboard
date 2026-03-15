@@ -38,11 +38,16 @@ export default function JobDetailPage() {
     return () => clearInterval(interval);
   }, [job?.status, job?.id, loading]);
 
-  // Detect requested → accepted transition and auto-open payment (works via poll or WS)
+  // Auto-open payment when job is accepted and buyer hasn't paid yet
   useEffect(() => {
     if (!job || loading) return;
-    const isBuyerNow = job.buyerVerusId === user?.verusId;
-    if (prevStatusRef.current === 'requested' && job.status === 'accepted' && isBuyerNow) {
+    const isBuyer = job.buyerVerusId === user?.verusId;
+    if (!isBuyer) return;
+
+    const needsPayment = job.status === 'accepted' && !job.payment?.txid;
+
+    // Trigger on transition (requested → accepted) OR on first load if already accepted
+    if (needsPayment && (prevStatusRef.current === 'requested' || prevStatusRef.current === null)) {
       setAutoOpenPayment(true);
     }
     prevStatusRef.current = job.status;

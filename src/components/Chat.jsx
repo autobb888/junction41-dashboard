@@ -26,6 +26,44 @@ function buildSignCmd(idName, message) {
 
 const STAR_LABELS = ['Terrible', 'Poor', 'Okay', 'Good', 'Excellent'];
 
+function FileMessage({ content, jobId, messageId }) {
+  const [fileInfo, setFileInfo] = useState(null);
+  useEffect(() => {
+    async function loadFile() {
+      try {
+        const res = await fetch(`${API_BASE}/v1/jobs/${jobId}/files`, { credentials: 'include' });
+        const data = await res.json();
+        if (res.ok && data.data) {
+          const file = data.data.find(f => f.messageId === messageId);
+          if (file) setFileInfo(file);
+        }
+      } catch { /* ignore */ }
+    }
+    loadFile();
+  }, [jobId, messageId]);
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <span>{content}</span>
+      {fileInfo && (
+        <a
+          href={`${API_BASE}/v1/jobs/${jobId}/files/${fileInfo.id}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            color: 'var(--accent)', fontSize: 12, textDecoration: 'none',
+            padding: '2px 8px', borderRadius: 4,
+            border: '1px solid rgba(52, 211, 153, 0.3)',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          Download
+        </a>
+      )}
+    </div>
+  );
+}
+
 export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) {
   const { user } = useAuth();
   const [messages, setMessages] = useState([]);
@@ -71,6 +109,10 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
   // Extension panel state
   const [extAmount, setExtAmount] = useState('');
   const [extReason, setExtReason] = useState('');
+
+  // File upload state
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
 
   const isBuyer = job?.buyerVerusId === user?.verusId;
   const isSeller = job?.sellerVerusId === user?.verusId;
@@ -200,6 +242,12 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
       setSessionEndingInfo({ requestedBy: data.requestedBy, reason: data.reason });
     });
 
+    socket.on('file_uploaded', (data) => {
+      // File upload creates a chat message server-side — it'll arrive via 'message' event.
+      // But if the uploader is us, we already showed it optimistically, so just ensure
+      // the files list is fresh if we ever add one.
+    });
+
     socket.on('job_status_changed', (data) => {
       setJobStatus(data.status);
       onJobStatusChanged?.();
@@ -263,6 +311,34 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
     if (socketRef.current && connected && now - lastTypingSentRef.current > 2000) {
       socketRef.current.emit('typing', { jobId });
       lastTypingSentRef.current = now;
+    }
+  }
+
+  // File upload
+  async function handleFileUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Reset input so same file can be re-selected
+    e.target.value = '';
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(`${API_BASE}/v1/jobs/${jobId}/files`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error?.message || 'Upload failed');
+      }
+      // Server auto-creates a chat message + emits WS event, so the message list will update
+    } catch (err) {
+      alert('Upload failed: ' + err.message);
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -1030,7 +1106,28 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
                   )}
                 </div>
                 <div style={{ margin: 0, color: 'var(--text-primary)', fontSize: 14, wordBreak: 'break-word' }} className="chat-markdown">
-                  <Markdown rehypePlugins={[rehypeSanitize]}>{msg.content}</Markdown>
+                  {msg.content?.startsWith('\uD83D\uDCCE Uploaded file:') && msg.fileId ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span>{msg.content}</span>
+                      <a
+                        href={`${API_BASE}/v1/jobs/${jobId}/files/${msg.fileId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          color: 'var(--accent)', fontSize: 12, textDecoration: 'none',
+                          padding: '2px 8px', borderRadius: 4,
+                          border: '1px solid rgba(52, 211, 153, 0.3)',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        Download
+                      </a>
+                    </div>
+                  ) : msg.content?.startsWith('\uD83D\uDCCE Uploaded file:') ? (
+                    <FileMessage content={msg.content} jobId={jobId} messageId={msg.id} />
+                  ) : (
+                    <Markdown rehypePlugins={[rehypeSanitize]}>{msg.content}</Markdown>
+                  )}
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
                   <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
@@ -1107,8 +1204,32 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
         style={{
           display: 'flex', gap: 8, padding: '12px 16px',
           borderTop: '1px solid var(--border-primary)',
+          alignItems: 'center',
         }}
       >
+        <input
+          ref={fileInputRef}
+          type="file"
+          onChange={handleFileUpload}
+          style={{ display: 'none' }}
+          accept="image/*,.pdf,.txt,.md,.csv,.json,.xml,.zip,.tar,.gz,.7z,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+        />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={inputDisabled || uploading}
+          title="Attach file"
+          style={{
+            background: 'none', border: 'none', cursor: inputDisabled ? 'default' : 'pointer',
+            padding: '6px 8px', borderRadius: 6, color: 'var(--text-secondary)',
+            opacity: inputDisabled || uploading ? 0.4 : 0.7,
+            fontSize: 18, lineHeight: 1, flexShrink: 0,
+          }}
+          onMouseEnter={e => { if (!inputDisabled) e.target.style.opacity = 1; e.target.style.color = 'var(--accent)'; }}
+          onMouseLeave={e => { e.target.style.opacity = inputDisabled ? 0.4 : 0.7; e.target.style.color = 'var(--text-secondary)'; }}
+        >
+          {uploading ? '\u23F3' : '\uD83D\uDCCE'}
+        </button>
         <input
           type="text"
           value={input}
