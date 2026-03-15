@@ -11,7 +11,7 @@ function CopyButton({ text }) {
   return (
     <button
       onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-      className="inline-flex items-center gap-1 text-gray-500 hover:text-violet-400 transition-colors"
+      className="inline-flex items-center gap-1 text-gray-500 hover:text-teal-400 transition-colors"
       title="Copy"
     >
       {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
@@ -28,9 +28,9 @@ function CollapsibleSection({ title, icon: Icon, children, defaultOpen = false, 
         className="w-full flex items-center gap-3 px-5 py-4 bg-white/[0.02] hover:bg-white/[0.04] transition-colors text-left"
       >
         {open ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
-        {Icon && <Icon className="w-4 h-4 text-violet-400" />}
+        {Icon && <Icon className="w-4 h-4 text-teal-400" />}
         <span className="text-white font-medium">{title}</span>
-        {badge && <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300">{badge}</span>}
+        {badge && <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300">{badge}</span>}
       </button>
       {open && <div className="px-5 pb-5 pt-2">{children}</div>}
     </div>
@@ -59,15 +59,15 @@ function DecodedDataView({ decoded }) {
   return (
     <div className="space-y-3">
       {Object.entries(decoded).map(([key, value]) => {
-        // Parse the key label: "agentplatform::agent.v1.name (agent.name)" → highlight the DefinedKey
-        const match = key.match(/^(agentplatform::\S+)\s*\((\S+)\)$/);
+        // Parse the key label: "agentplatform::agent.name (agent.name)" → highlight the DefinedKey
+        const match = key.match(/^(\S+::\S+)\s*\((\S+)\)$/);
         const definedKey = match ? match[1] : null;
         const shortLabel = match ? match[2] : key;
 
         return (
           <div key={key} className="bg-white/[0.03] rounded-lg p-3 border border-white/5">
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-violet-400 text-xs font-mono">{definedKey || key}</span>
+              <span className="text-teal-400 text-xs font-mono">{definedKey || key}</span>
               {definedKey && <span className="text-gray-600 text-xs">→ {shortLabel}</span>}
               <CopyButton text={definedKey || key} />
             </div>
@@ -91,15 +91,16 @@ function SchemaReference({ schema }) {
   if (!schema) return null;
 
   const sections = [
-    { key: 'agent', label: 'Agent Keys', prefix: 'agent.v1' },
-    { key: 'service', label: 'Service Keys', prefix: 'svc.v1' },
-    { key: 'review', label: 'Review Keys', prefix: 'review.v1' },
-    { key: 'platform', label: 'Platform Keys', prefix: 'platform.v1' },
+    { key: 'agent', label: 'Agent Keys' },
+    { key: 'service', label: 'Service Keys' },
+    { key: 'session', label: 'Session Keys' },
+    { key: 'review', label: 'Review Keys' },
+    { key: 'platform', label: 'Platform Keys' },
   ];
 
   return (
     <div className="space-y-4">
-      {sections.map(({ key, label, prefix }) => (
+      {sections.map(({ key, label }) => (
         <div key={key}>
           <h4 className="text-sm font-medium text-gray-400 mb-2">{label}</h4>
           <div className="overflow-x-auto">
@@ -115,7 +116,7 @@ function SchemaReference({ schema }) {
                 {(schema[key] || []).map(({ field, definedKey, iAddress }) => (
                   <tr key={field} className="border-t border-white/5">
                     <td className="py-1.5 pr-4 text-gray-300">{field}</td>
-                    <td className="py-1.5 pr-4 font-mono text-xs text-violet-400">{definedKey}</td>
+                    <td className="py-1.5 pr-4 font-mono text-xs text-teal-400">{definedKey}</td>
                     <td className="py-1.5 font-mono text-xs text-gray-500 flex items-center gap-1">
                       <span className="truncate max-w-[200px]">{iAddress}</span>
                       <CopyButton text={iAddress} />
@@ -134,6 +135,7 @@ function SchemaReference({ schema }) {
 export default function ProfilePage() {
   const { user } = useAuth();
   const [identity, setIdentity] = useState(null);
+  const [isAgent, setIsAgent] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -143,10 +145,15 @@ export default function ProfilePage() {
 
   async function fetchIdentity() {
     try {
-      const res = await fetch(`${API_BASE}/v1/me/identity`, { credentials: 'include' });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error.message);
-      setIdentity(data.data);
+      const [identityRes, agentRes] = await Promise.all([
+        fetch(`${API_BASE}/v1/me/identity`, { credentials: 'include' }),
+        fetch(`${API_BASE}/v1/agents/${encodeURIComponent(user.verusId)}`, { credentials: 'include' }),
+      ]);
+      const identityData = await identityRes.json();
+      if (identityData.error) throw new Error(identityData.error.message);
+      setIdentity(identityData.data);
+
+      setIsAgent(agentRes.ok && (await agentRes.json()).data != null);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -192,7 +199,7 @@ export default function ProfilePage() {
           href={`https://explorer.verustest.net/address/${identity.iAddress}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-1.5 text-sm text-violet-400 hover:text-violet-300 transition-colors"
+          className="flex items-center gap-1.5 text-sm text-teal-400 hover:text-teal-300 transition-colors"
         >
           View on Explorer <ExternalLink className="w-3.5 h-3.5" />
         </a>
@@ -201,7 +208,7 @@ export default function ProfilePage() {
       {/* Identity Card */}
       <div className="card">
         <div className="flex items-center gap-3 mb-5">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500 to-teal-700 flex items-center justify-center">
             <User className="w-6 h-6 text-white" />
           </div>
           <div>
@@ -246,13 +253,13 @@ export default function ProfilePage() {
                     Your {identity.revocationauthority === identity.iAddress && identity.recoveryauthority === identity.iAddress ? 'revocation and recovery authorities are both' : identity.revocationauthority === identity.iAddress ? 'revocation authority is' : 'recovery authority is'} set to your own identity. 
                     If your keys are compromised, you won't be able to revoke or recover your ID. Set these to a separate VerusID you control.
                   </p>
-                  <a href="https://wiki.j41.io/docs/concepts/verusid/" target="_blank" rel="noopener noreferrer"
-                    className="text-violet-400 hover:text-violet-300 text-xs font-medium mt-2 inline-block">
+                  <a href="https://docs.j41.io/concepts/verusid/" target="_blank" rel="noopener noreferrer"
+                    className="text-teal-400 hover:text-teal-300 text-xs font-medium mt-2 inline-block">
                     Learn more about VerusID security →
                   </a>
                   <div className="mt-3 relative">
-                    <pre className="bg-gray-900 rounded p-2 text-xs text-green-400 overflow-x-auto whitespace-pre-wrap">{`updateidentity '{"name":"${identity.fullyqualifiedname?.split('.')[0] || 'yourname'}","parent":"${identity.parent}","revocationauthority":"YOUR_PERSONAL_ID@","recoveryauthority":"YOUR_PERSONAL_ID@"}'`}</pre>
-                    <CopyButton text={`updateidentity '{"name":"${identity.fullyqualifiedname?.split('.')[0] || 'yourname'}","parent":"${identity.parent}","revocationauthority":"YOUR_PERSONAL_ID@","recoveryauthority":"YOUR_PERSONAL_ID@"}'`} />
+                    <pre className="bg-gray-900 rounded p-2 text-xs text-green-400 overflow-x-auto whitespace-pre-wrap">{`updateidentity '{"name":"${identity.fullyqualifiedname || 'yourname@'}","parent":"${identity.parent}","revocationauthority":"YOUR_PERSONAL_ID@","recoveryauthority":"YOUR_PERSONAL_ID@"}'`}</pre>
+                    <CopyButton text={`updateidentity '{"name":"${identity.fullyqualifiedname || 'yourname@'}","parent":"${identity.parent}","revocationauthority":"YOUR_PERSONAL_ID@","recoveryauthority":"YOUR_PERSONAL_ID@"}'`} />
                   </div>
                 </div>
               </div>
@@ -261,92 +268,115 @@ export default function ProfilePage() {
         </div>
       </CollapsibleSection>
 
-      {/* Empty Profile Warning + Setup Form */}
-      {decodedCmmCount === 0 && decodedCmCount === 0 && (
-        <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-5">
+      {/* Agent: empty profile warning + setup form */}
+      {isAgent && decodedCmmCount === 0 && decodedCmCount === 0 && (
+        <>
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-5">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-400 mt-0.5 shrink-0" />
+              <div>
+                <h3 className="text-amber-300 font-medium">Your agent profile is empty</h3>
+                <p className="text-gray-400 text-sm mt-1">
+                  You're registered as an agent but haven't published any on-chain data yet. Fill out the form below so buyers can find you.
+                </p>
+              </div>
+            </div>
+          </div>
+          <ProfileSetupForm identityName={identity.fullyqualifiedname} parentIAddress={identity.parent} />
+        </>
+      )}
+
+      {/* Buyer: not registered as agent */}
+      {!isAgent && (
+        <div className="bg-white/[0.03] border border-white/10 rounded-lg p-5">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-400 mt-0.5 shrink-0" />
+            <User className="w-5 h-5 text-teal-400 mt-0.5 shrink-0" />
             <div>
-              <h3 className="text-amber-300 font-medium">Your profile is empty!</h3>
+              <h3 className="text-white font-medium">You're browsing as a buyer</h3>
               <p className="text-gray-400 text-sm mt-1">
-                Nobody knows what you're offering or looking for! Fill out the form below to publish your agent profile on-chain.
+                Your VerusID is all you need to hire agents and manage jobs. Want to offer services?
               </p>
+              <a href="/register" className="inline-block mt-3 text-sm text-teal-400 hover:text-teal-300 font-medium transition-colors">
+                Register as an agent →
+              </a>
             </div>
           </div>
         </div>
       )}
 
-      {decodedCmmCount === 0 && decodedCmCount === 0 && (
-        <ProfileSetupForm identityName={identity.fullyqualifiedname} />
-      )}
-
-      {/* Decoded Content (agentplatform DefinedKeys) */}
-      <CollapsibleSection
-        title="On-Chain Data (agentplatform DefinedKeys)"
-        icon={Database}
-        defaultOpen
-        badge={`${decodedCmmCount + decodedCmCount} fields`}
-      >
-        {decodedCmmCount > 0 && (
-          <div className="mb-4">
-            <h4 className="text-sm font-medium text-gray-400 mb-3">contentmultimap</h4>
-            <DecodedDataView decoded={identity.decoded.contentmultimap} />
-          </div>
-        )}
-        {decodedCmCount > 0 && (
-          <div>
-            <h4 className="text-sm font-medium text-gray-400 mb-3">contentmap</h4>
-            <DecodedDataView decoded={identity.decoded.contentmap} />
-          </div>
-        )}
-        {decodedCmmCount === 0 && decodedCmCount === 0 && (
-          <p className="text-gray-500 text-sm italic">
-            No agentplatform data found on this identity. Use <code className="text-violet-400">updateidentity</code> to publish agent/service data.
-          </p>
-        )}
-      </CollapsibleSection>
-
-      {/* Raw JSON */}
-      <CollapsibleSection title="Raw contentmultimap" icon={FileCode} badge={`${cmmCount} keys`}>
-        <pre className="font-mono text-xs text-gray-400 bg-black/30 rounded-lg p-4 overflow-x-auto max-h-96 whitespace-pre-wrap">
-          {JSON.stringify(identity.contentmultimap, null, 2)}
-        </pre>
-      </CollapsibleSection>
-
-      {cmmCount > 0 && (
-        <CollapsibleSection title="Raw contentmap" icon={FileCode} badge={`${cmCount} keys`}>
-          <pre className="font-mono text-xs text-gray-400 bg-black/30 rounded-lg p-4 overflow-x-auto max-h-96 whitespace-pre-wrap">
-            {JSON.stringify(identity.contentmap, null, 2)}
-          </pre>
+      {/* On-chain data — show for agents or anyone with existing data */}
+      {(isAgent || decodedCmmCount > 0 || decodedCmCount > 0) && (
+        <CollapsibleSection
+          title="On-Chain Data (DefinedKeys)"
+          icon={Database}
+          defaultOpen
+          badge={`${decodedCmmCount + decodedCmCount} fields`}
+        >
+          {decodedCmmCount > 0 && (
+            <div className="mb-4">
+              <h4 className="text-sm font-medium text-gray-400 mb-3">contentmultimap</h4>
+              <DecodedDataView decoded={identity.decoded.contentmultimap} />
+            </div>
+          )}
+          {decodedCmCount > 0 && (
+            <div>
+              <h4 className="text-sm font-medium text-gray-400 mb-3">contentmap</h4>
+              <DecodedDataView decoded={identity.decoded.contentmap} />
+            </div>
+          )}
+          {decodedCmmCount === 0 && decodedCmCount === 0 && (
+            <p className="text-gray-500 text-sm italic">
+              No data published yet. Use the setup form above or <code className="text-teal-400">updateidentity</code> to publish your agent profile.
+            </p>
+          )}
         </CollapsibleSection>
       )}
 
-      {/* updateidentity Helper */}
-      <CollapsibleSection title="updateidentity Command" icon={Shield}>
-        <p className="text-gray-400 text-sm mb-3">
-          Use this CLI command to update your identity's on-chain data:
-        </p>
-        <div className="relative">
-          <pre className="font-mono text-xs text-green-400 bg-black/30 rounded-lg p-4 overflow-x-auto whitespace-pre-wrap">
-            {identity.updateHint}
-          </pre>
-          <div className="absolute top-2 right-2">
-            <CopyButton text={identity.updateHint} />
-          </div>
-        </div>
-        <p className="text-gray-600 text-xs mt-2">
-          Replace the contentmultimap values with hex-encoded JSON. Use the DefinedKey i-addresses from the schema reference below.
-        </p>
-      </CollapsibleSection>
+      {/* Raw JSON — agent only */}
+      {isAgent && (
+        <>
+          <CollapsibleSection title="Raw contentmultimap" icon={FileCode} badge={`${cmmCount} keys`}>
+            <pre className="font-mono text-xs text-gray-400 bg-black/30 rounded-lg p-4 overflow-x-auto max-h-96 whitespace-pre-wrap">
+              {JSON.stringify(identity.contentmultimap, null, 2)}
+            </pre>
+          </CollapsibleSection>
 
-      {/* Schema Reference */}
-      <CollapsibleSection title="agentplatform DefinedKey Schema Reference" icon={Key}>
-        <p className="text-gray-400 text-sm mb-4">
-          These DefinedKeys are registered under <code className="text-violet-400">agentplatform@</code> on VRSCTEST. 
-          Use the i-addresses as contentmultimap keys.
-        </p>
-        <SchemaReference schema={identity.schema} />
-      </CollapsibleSection>
+          {cmCount > 0 && (
+            <CollapsibleSection title="Raw contentmap" icon={FileCode} badge={`${cmCount} keys`}>
+              <pre className="font-mono text-xs text-gray-400 bg-black/30 rounded-lg p-4 overflow-x-auto max-h-96 whitespace-pre-wrap">
+                {JSON.stringify(identity.contentmap, null, 2)}
+              </pre>
+            </CollapsibleSection>
+          )}
+
+          {/* updateidentity Helper */}
+          <CollapsibleSection title="updateidentity Command" icon={Shield}>
+            <p className="text-gray-400 text-sm mb-3">
+              Use this CLI command to update your identity's on-chain data:
+            </p>
+            <div className="relative">
+              <pre className="font-mono text-xs text-green-400 bg-black/30 rounded-lg p-4 overflow-x-auto whitespace-pre-wrap">
+                {identity.updateHint}
+              </pre>
+              <div className="absolute top-2 right-2">
+                <CopyButton text={identity.updateHint} />
+              </div>
+            </div>
+            <p className="text-gray-600 text-xs mt-2">
+              Replace the contentmultimap values with hex-encoded JSON. Use the DefinedKey i-addresses from the schema reference below.
+            </p>
+          </CollapsibleSection>
+
+          {/* Schema Reference */}
+          <CollapsibleSection title="DefinedKey Schema Reference (33 keys)" icon={Key}>
+            <p className="text-gray-400 text-sm mb-4">
+              These DefinedKeys are registered under <code className="text-teal-400">agentplatform@</code> on VRSCTEST.
+              Use the i-addresses as contentmultimap keys.
+            </p>
+            <SchemaReference schema={identity.schema} />
+          </CollapsibleSection>
+        </>
+      )}
     </div>
   );
 }

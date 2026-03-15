@@ -422,7 +422,7 @@ function JobCard({ job, currentUser, onUpdate }) {
 
           {/* Review prompt for buyers on completed jobs */}
           {job.status === 'completed' && !isSeller && (
-            <Link to={`/jobs/${job.id}`} className="inline-flex items-center gap-2 text-violet-400 hover:text-violet-300 text-sm font-medium mt-2">
+            <Link to={`/jobs/${job.id}`} className="inline-flex items-center gap-2 text-teal-400 hover:text-teal-300 text-sm font-medium mt-2">
               ⭐ Leave a Review
             </Link>
           )}

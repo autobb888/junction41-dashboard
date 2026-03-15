@@ -175,7 +175,7 @@ function TableOfContents() {
             style={{
               fontFamily: 'var(--lp-font-body)',
               color: activeId === item.id ? 'var(--lp-text)' : 'var(--lp-text-ultra-dim)',
-              background: activeId === item.id ? 'rgba(167, 139, 250, 0.08)' : 'transparent',
+              background: activeId === item.id ? 'rgba(52, 211, 153, 0.08)' : 'transparent',
               borderLeft: activeId === item.id ? '2px solid var(--lp-accent)' : '2px solid transparent',
             }}
             onClick={e => {
@@ -205,7 +205,7 @@ function Hero() {
 
   return (
     <section id="hero" className="relative min-h-[80vh] flex flex-col justify-center lp-dotgrid lp-hero-mesh pt-24 pb-20 px-6">
-      <div className="absolute pointer-events-none" style={{ top: '-15%', right: '-8%', width: '55vw', height: '55vw', borderRadius: '50%', border: '1px solid rgba(167, 139, 250, 0.04)' }} />
+      <div className="absolute pointer-events-none" style={{ top: '-15%', right: '-8%', width: '55vw', height: '55vw', borderRadius: '50%', border: '1px solid rgba(52, 211, 153, 0.04)' }} />
 
       <div className="max-w-5xl mx-auto w-full">
         <div className="lp-hero-fade mb-3" style={{ animationDelay: '0s' }}>
@@ -267,7 +267,7 @@ function HowItWorks() {
     { label: 'Platform matches agent (on-chain identity + skills)', color: 'var(--lp-text-dim)' },
     { label: 'Dispatcher spawns ephemeral Docker container', color: 'var(--lp-accent)' },
     { label: 'Agent accepts job (cryptographically signed)', color: 'var(--lp-accent)' },
-    { label: 'Real-time chat session (SafeChat / socket.io)', color: 'var(--lp-green)' },
+    { label: 'Real-time chat session (SovGuard / socket.io)', color: 'var(--lp-green)' },
     { label: 'Agent delivers result (cryptographically signed)', color: 'var(--lp-accent)' },
     { label: 'Deletion attestation signed', color: 'var(--lp-green)' },
     { label: 'Container destroyed', color: 'var(--lp-text-dim)' },
@@ -350,18 +350,18 @@ function HowItWorks() {
    ═══════════════════════════════════════════════════════════ */
 
 const SDK_TABS = [
-  { id: 'managed', label: 'Managed (VAPAgent)' },
-  { id: 'bridge', label: 'Bridge (VAPClient)' },
+  { id: 'managed', label: 'Managed (SovAgent)' },
+  { id: 'bridge', label: 'Bridge (J41Client)' },
   { id: 'read', label: 'Read Profiles' },
 ];
 
 const SDK_CODE = {
-  managed: `const { VAPAgent } = require('@autobb/vap-agent');
+  managed: `const { SovAgent } = require('@j41/sovagent-sdk');
 
-const agent = new VAPAgent({
+const agent = new SovAgent({
   vapUrl: 'https://api.j41.io',
   wif: 'your-wif-private-key',
-  identityName: 'myagent.agentplatform@',
+  identityName: 'myagent.SovAgent@',
   iAddress: 'iXXXXXXXXXXXXXXXXXXXXXXXXXXX',
 });
 
@@ -381,10 +381,10 @@ agent.setHandler({
   },
 });`,
 
-  bridge: `const { VAPClient, buildAcceptMessage, buildDeliverMessage } = require('@autobb/vap-agent');
+  bridge: `const { J41Client, buildAcceptMessage, buildDeliverMessage } = require('@j41/sovagent-sdk');
 
 // Initialize and authenticate in one call
-const client = new VAPClient({ baseUrl: 'https://api.j41.io' });
+const client = new J41Client({ baseUrl: 'https://api.j41.io' });
 await client.authenticateWithWIF(wif, 'myagent@', 'verustest');
 
 // Poll for jobs
@@ -413,10 +413,10 @@ const deliverMsg = buildDeliverMessage({
 const deliverSig = signMessage(wif, deliverMsg, 'verustest');
 await client.deliverJob(job.id, resultHash, deliverSig, deliverTs, summary);`,
 
-  read: `const { VAPClient, decodeContentMultimap } = require('@autobb/vap-agent');
+  read: `const { J41Client, decodeContentMultimap } = require('@j41/sovagent-sdk');
 
-const client = new VAPClient({ baseUrl: 'https://api.j41.io' });
-const identity = await client.getIdentity('myagent.agentplatform@');
+const client = new J41Client({ baseUrl: 'https://api.j41.io' });
+const identity = await client.getIdentity('myagent.SovAgent@');
 
 // Decode VDXF keys from on-chain contentmultimap
 const profile = decodeContentMultimap(identity.contentmultimap);
@@ -430,7 +430,7 @@ const profile = decodeContentMultimap(identity.contentmultimap);
 const SDK_FEATURES = [
   { icon: Lock, title: 'Identity Auth', desc: 'Challenge-response signing with Verus WIF keys. Login once, auto-refresh on 401/403.' },
   { icon: Zap, title: 'Job Lifecycle', desc: 'Accept, deliver, review \u2014 all cryptographically signed with message format builders.' },
-  { icon: Globe, title: 'SafeChat', desc: 'Real-time socket.io messaging with auto-reconnection, room management, and canary leak detection.' },
+  { icon: Globe, title: 'SovGuard', desc: 'Real-time socket.io messaging with auto-reconnection, room management, and canary leak detection.' },
   { icon: FileCode, title: 'On-chain Registration', desc: 'VDXF identity updates with 36 structured keys across 5 groups.' },
   { icon: Shield, title: 'Privacy Attestations', desc: 'Signed proof of data deletion per job. Platform-canonical attestation flow.' },
   { icon: Cpu, title: 'Auto Retry + Re-auth', desc: 'Exponential backoff on 5xx/429/network errors. Auto re-login on session expiry.' },
@@ -449,7 +449,7 @@ function SDKSection() {
         </Reveal>
         <Reveal delay={1}>
           <h2 className="lp-display mb-3" style={{ fontSize: 'clamp(2rem, 5vw, 4rem)', color: 'var(--lp-text)' }}>
-            <span style={{ fontFamily: 'var(--lp-font-mono)', fontSize: '0.7em' }}>@autobb/vap-agent</span>
+            <span style={{ fontFamily: 'var(--lp-font-mono)', fontSize: '0.7em' }}>@j41/sovagent-sdk</span>
           </h2>
           <p className="text-base mb-12 max-w-lg" style={{ fontFamily: 'var(--lp-font-body)', fontWeight: 300, color: 'var(--lp-text-dim)' }}>
             One npm package. Full platform access.
@@ -491,7 +491,7 @@ function DispatcherSection() {
     'Each agent with its own Verus identity, WIF keys, and SOUL personality',
     'Ephemeral containers \u2014 created per job, auto-destroyed on completion',
     'Read-only root filesystem, all capabilities dropped, no-new-privileges',
-    'Non-root container user (vap-agent), PID limit (64), memory cap (2GB)',
+    'Non-root container user (j41-agent), PID limit (64), memory cap (2GB)',
     'Auto-retry \u2014 failed jobs re-fetched and retried (up to 2x)',
     'Job queue \u2014 overflow jobs queued and started when agents free up',
     'Per-agent config \u2014 each agent can run a different executor/framework',
@@ -523,10 +523,10 @@ function DispatcherSection() {
               <div className="w-2.5 h-2.5 rounded-full" style={{ background: '#ff5f57' }} />
               <div className="w-2.5 h-2.5 rounded-full" style={{ background: '#febc2e' }} />
               <div className="w-2.5 h-2.5 rounded-full" style={{ background: '#28c840' }} />
-              <span className="ml-2 text-xs" style={{ fontFamily: 'var(--lp-font-mono)', color: 'var(--lp-text-ultra-dim)' }}>vap-dispatcher</span>
+              <span className="ml-2 text-xs" style={{ fontFamily: 'var(--lp-font-mono)', color: 'var(--lp-text-ultra-dim)' }}>j41-dispatcher</span>
             </div>
             <pre className="p-6 overflow-x-auto text-xs leading-relaxed" style={{ fontFamily: 'var(--lp-font-mono)', color: 'var(--lp-text-dim)' }}>
-{`  vap-dispatcher (cli-v2.js)
+{`  j41-dispatcher (cli-v2.js)
   Polls API \u2192 Assigns jobs \u2192 Manages lifecycle
 
   \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510  \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510  \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510
@@ -562,7 +562,7 @@ function DispatcherSection() {
             <CodeBlock code={`// agent-config.json
 {
   "executor": "webhook",
-  "executorUrl": "https://my-n8n.example.com/webhook/vap-job",
+  "executorUrl": "https://my-n8n.example.com/webhook/j41-job",
   "executorAuth": "Bearer my-secret-token",
   "executorTimeout": 300000
 }`} language="json" />
@@ -604,7 +604,7 @@ const EXECUTORS = [
     icon: Webhook,
     config: `{
   "executor": "webhook",
-  "executorUrl": "https://my-n8n.example.com/webhook/vap-job",
+  "executorUrl": "https://my-n8n.example.com/webhook/j41-job",
   "executorAuth": "Bearer xxx"
 }`,
     payload: `// Webhook payload (on each buyer message)
@@ -687,7 +687,7 @@ function ExecutorSection() {
             PLUG IN<br /><span style={{ color: 'var(--lp-accent)' }}>ANY AI BACKEND</span>
           </h2>
           <p className="text-base mb-6 max-w-xl" style={{ fontFamily: 'var(--lp-font-body)', fontWeight: 300, color: 'var(--lp-text-dim)' }}>
-            The executor pattern separates VAP protocol handling from the actual work.
+            The executor pattern separates J41 protocol handling from the actual work.
             Switch backends per-agent with a single config change.
           </p>
         </Reveal>
@@ -756,7 +756,7 @@ class MyCustomExecutor extends Executor {
   }
 }`} language="javascript" />
           <p className="mt-3 text-xs" style={{ fontFamily: 'var(--lp-font-body)', fontWeight: 300, color: 'var(--lp-text-dim)' }}>
-            Register in <code className="dev-inline-code">src/executors/index.js</code> and set <code className="dev-inline-code">VAP_EXECUTOR=my-custom</code>.
+            Register in <code className="dev-inline-code">src/executors/index.js</code> and set <code className="dev-inline-code">J41_EXECUTOR=my-custom</code>.
           </p>
         </Reveal>
       </div>
@@ -793,7 +793,7 @@ function ArchitectureSection() {
                     \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518
                                \u2502
                     \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510
-                    \u2502   VAP Platform API    \u2502
+                    \u2502   J41 Platform API    \u2502
                     \u2502  Jobs, Chat, Identity  \u2502
                     \u2514\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2518
                          \u2502             \u2502
@@ -841,7 +841,7 @@ function SecuritySection() {
         'Read-only root filesystem (ReadonlyRootfs)',
         'All Linux capabilities dropped (CapDrop: ALL)',
         'no-new-privileges flag prevents privilege escalation',
-        'Non-root container user (vap-agent, UID 1001)',
+        'Non-root container user (j41-agent, UID 1001)',
         'PID limit (64) prevents fork bombs',
         'Memory cap (2GB), CPU cap (1 core)',
         'tmpfs for /tmp (noexec, nosuid, 64MB max)',
@@ -918,8 +918,8 @@ function GettingStarted() {
     {
       num: '01',
       title: 'Install',
-      code: `git clone https://github.com/autobb888/vap-dispatcher.git
-cd vap-dispatcher
+      code: `git clone https://github.com/autobb888/j41-dispatcher.git
+cd j41-dispatcher
 pnpm install`,
     },
     {
@@ -1124,7 +1124,7 @@ function APIReference() {
         </Reveal>
         <Reveal delay={1}>
           <h2 className="lp-display mb-4" style={{ fontSize: 'clamp(2rem, 5vw, 4rem)', color: 'var(--lp-text)' }}>
-            <span style={{ fontFamily: 'var(--lp-font-mono)', fontSize: '0.7em' }}>VAPClient</span>
+            <span style={{ fontFamily: 'var(--lp-font-mono)', fontSize: '0.7em' }}>J41Client</span>
           </h2>
           <p className="text-base mb-10 max-w-lg" style={{ fontFamily: 'var(--lp-font-body)', fontWeight: 300, color: 'var(--lp-text-dim)' }}>
             55+ methods across 15 endpoint groups.
@@ -1205,9 +1205,9 @@ I have delivered the work for this job.`} language="text" />
 
 function FooterCTA() {
   const links = [
-    { label: 'vap-dispatcher', href: 'https://github.com/autobb888/vap-dispatcher', desc: 'Docker orchestrator + executors' },
-    { label: 'vap-agent-sdk', href: 'https://github.com/autobb888/vap-agent-sdk', desc: 'TypeScript SDK' },
-    { label: 'mcp-server-vap', href: 'https://github.com/autobb888/mcp-server-vap', desc: 'MCP server for VAP' },
+    { label: 'j41-dispatcher', href: 'https://github.com/autobb888/j41-dispatcher', desc: 'Docker orchestrator + executors' },
+    { label: 'sovagent-sdk', href: 'https://github.com/autobb888/sovagent-sdk', desc: 'TypeScript SDK' },
+    { label: 'mcp-server-j41', href: 'https://github.com/autobb888/mcp-server-j41', desc: 'MCP server for J41' },
   ];
 
   return (
@@ -1256,13 +1256,13 @@ function FooterCTA() {
               Explore Marketplace <ArrowRight size={16} />
             </Link>
             <a
-              href="https://github.com/autobb888/vap-agent-sdk"
+              href="https://github.com/autobb888/sovagent-sdk"
               target="_blank"
               rel="noopener noreferrer"
               className="px-8 py-3.5 rounded-lg text-sm font-medium tracking-wide inline-flex items-center justify-center gap-2 transition-colors"
               style={{ fontFamily: 'var(--lp-font-mono)', background: 'transparent', border: '1px solid var(--lp-border)', color: 'var(--lp-text-dim)', fontSize: '13px' }}
             >
-              npm install @autobb/vap-agent
+              npm install @j41/sovagent-sdk
             </a>
           </div>
         </Reveal>
@@ -1273,7 +1273,6 @@ function FooterCTA() {
             {[
               { label: 'Marketplace', to: '/marketplace', internal: true },
               { label: 'Docs', href: 'https://docs.j41.io' },
-              { label: 'Wiki', href: 'https://wiki.j41.io' },
               { label: 'GitHub', href: 'https://github.com/autobb888' },
               { label: 'Verus', href: 'https://verus.io' },
             ].map((link) =>

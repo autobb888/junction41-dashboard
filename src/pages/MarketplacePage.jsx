@@ -1,30 +1,18 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Search, Clock, ChevronRight } from 'lucide-react';
-import HireModal from '../components/HireModal';
-import ResolvedId from '../components/ResolvedId';
-import TrustBadge from '../components/TrustBadge';
-import AgentAvatar from '../components/AgentAvatar';
+import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
+import { CATEGORIES, getCategoryById } from '../components/marketplace/categories';
+import CategorySidebar from '../components/marketplace/CategorySidebar';
+import MobileFilterOverlay from '../components/marketplace/MobileFilterOverlay';
+import MarketplaceSearchBar from '../components/marketplace/MarketplaceSearchBar';
+import MarketplaceCard from '../components/marketplace/MarketplaceCard';
+import FeaturedCard from '../components/marketplace/FeaturedCard';
+import HorizontalScroll from '../components/marketplace/HorizontalScroll';
 import { SkeletonList } from '../components/Skeleton';
 import usePageTitle from '../hooks/usePageTitle';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
+const PAGE_SIZE = 24;
 
-// ─── Category Colors ───────────────────────────────────────────────
-const CATEGORY_COLORS = {
-  support:     { bg: 'bg-blue-500/10',    text: 'text-blue-400' },
-  education:   { bg: 'bg-green-500/10',   text: 'text-green-400' },
-  development: { bg: 'bg-purple-500/10',  text: 'text-purple-400' },
-  defi:        { bg: 'bg-amber-500/10',   text: 'text-amber-400' },
-  identity:    { bg: 'bg-violet-500/10',  text: 'text-violet-400' },
-  security:    { bg: 'bg-red-500/10',     text: 'text-red-400' },
-  data:        { bg: 'bg-cyan-500/10',    text: 'text-cyan-400' },
-  finance:     { bg: 'bg-emerald-500/10', text: 'text-emerald-400' },
-  legal:       { bg: 'bg-orange-500/10',  text: 'text-orange-400' },
-};
-const DEFAULT_CAT_COLOR = { bg: 'bg-slate-500/10', text: 'text-gray-400' };
-
-// ─── Helpers ────────────────────────────────────────────────────────
 function useDebounce(value, delay) {
   const [debounced, setDebounced] = useState(value);
   useEffect(() => {
@@ -34,492 +22,405 @@ function useDebounce(value, delay) {
   return debounced;
 }
 
-function getCtaText(service) {
-  if (service.price === 0 || service.price === '0') return 'Use Free';
-  if (service.protocols?.includes('mcp')) return 'Connect';
-  if (service.turnaround && service.turnaround.includes('5 min')) return 'Use Now';
-  return 'Hire';
-}
-
-function CategoryTag({ category }) {
-  if (!category) return null;
-  const colors = CATEGORY_COLORS[category.toLowerCase()] || DEFAULT_CAT_COLOR;
-  return (
-    <span className={`text-xs px-2 py-0.5 rounded-md font-medium ${colors.bg} ${colors.text}`}>
-      {category}
-    </span>
-  );
-}
-
-// ─── Featured Agents ────────────────────────────────────────────────
-function FeaturedAgents({ services }) {
-  // Aggregate by agent, pick those with reputation
-  const agentMap = {};
-  services.forEach(s => {
-    const key = s.verusId;
-    if (!agentMap[key]) {
-      agentMap[key] = {
-        verusId: s.verusId,
-        name: s.agent_name || s.agentName || s.verusId,
-        rating: s.reputation?.score || 0,
-        reviews: s.reputation?.totalReviews || 0,
-        jobs: s.reputation?.completedJobs || 0,
-        verified: s.verification?.endpoints?.some(e => e.status === 'verified') || false,
-        transparency: s.transparency,
-        online: s.agentOnline || false,
-        serviceCount: 0,
-      };
-    }
-    agentMap[key].serviceCount++;
-    // Take best rating
-    const rep = s.reputation;
-    if (rep?.score && rep.score > agentMap[key].rating) {
-      agentMap[key].rating = rep.score;
-      agentMap[key].reviews = rep.totalReviews || 0;
-      agentMap[key].jobs = rep.completedJobs || 0;
-    }
-  });
-
-  const featured = Object.values(agentMap)
-    .filter(a => a.rating > 0 || a.jobs > 0 || a.verified)
-    .sort((a, b) => b.jobs - a.jobs || b.rating - a.rating)
-    .slice(0, 6);
-
-  if (featured.length === 0) return null;
-
-  return (
-    <div className="mb-8">
-      <div className="flex items-center gap-2 mb-4">
-        <span className="text-lg">⭐</span>
-        <h2 className="text-lg font-semibold text-white">Featured Agents</h2>
-        <span className="text-sm text-gray-400">Top rated</span>
-      </div>
-      <div className="flex gap-4 overflow-x-auto pb-2" style={{ scrollbarWidth: 'thin' }}>
-        {featured.map(agent => (
-          <Link
-            key={agent.verusId}
-            to={`/agents/${encodeURIComponent(agent.verusId)}`}
-            className="flex-shrink-0 w-56 p-4 bg-white/[0.03]
-                       border border-white/[0.06] rounded-xl hover:border-violet-500/30
-                       transition-all duration-200 group no-underline"
-          >
-            <div className="flex items-center gap-3 mb-3">
-              <AgentAvatar name={agent.name} verusId={agent.verusId} size="md" online={agent.online} />
-              <div className="min-w-0">
-                <div className="font-medium text-white text-sm group-hover:text-violet-400 transition-colors truncate">
-                  {agent.name}{agent.name && !agent.name.includes('.') && !agent.name.startsWith('i') ? '.agentplatform@' : ''}
-                </div>
-                <div className="text-xs text-gray-500 truncate">{agent.serviceCount} service{agent.serviceCount !== 1 ? 's' : ''}</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 text-xs text-gray-400">
-              {agent.rating > 0 && (
-                <span className="flex items-center gap-1">
-                  <span className="text-yellow-400">★</span> {agent.rating.toFixed(1)}
-                </span>
-              )}
-              {agent.jobs > 0 && <span>{agent.jobs} jobs</span>}
-              {agent.verified && <span className="text-green-400">✓ Verified</span>}
-            </div>
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ─── Stats Bar ──────────────────────────────────────────────────────
-function StatsBar({ services }) {
-  const agentSet = new Map();
-  services.forEach(s => {
-    if (!agentSet.has(s.verusId)) agentSet.set(s.verusId, s.agentOnline);
-  });
-  const agents = agentSet.size;
-  const onlineAgents = [...agentSet.values()].filter(Boolean).length;
-  const totalJobs = services.reduce((sum, s) => sum + (s.reputation?.completedJobs || 0), 0);
-
-  return (
-    <div className="flex items-center justify-center gap-6 mb-8 py-3
-                    border-y border-white/[0.06] text-sm text-gray-400">
-      <div className="flex items-center gap-1.5">
-        <span className="text-white font-semibold">{agents}</span> agents
-      </div>
-      {onlineAgents > 0 && (
-        <>
-          <span className="text-gray-700">·</span>
-          <div className="flex items-center gap-1.5">
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
-            <span className="text-green-400 font-semibold">{onlineAgents}</span> online
-          </div>
-        </>
-      )}
-      <span className="text-gray-700">·</span>
-      <div className="flex items-center gap-1.5">
-        <span className="text-white font-semibold">{services.length}</span> services
-      </div>
-      {totalJobs > 0 && (
-        <>
-          <span className="text-gray-700">·</span>
-          <div className="flex items-center gap-1.5">
-            <span className="text-white font-semibold">{totalJobs}</span> jobs completed
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-// ─── Empty State ────────────────────────────────────────────────────
-function MarketplaceEmpty({ searchQuery, category }) {
-  return (
-    <div className="col-span-full flex flex-col items-center justify-center py-16 text-center">
-      <div className="text-4xl mb-3">🔍</div>
-      <h3 className="text-lg font-medium text-white mb-2">
-        {searchQuery
-          ? `No results for "${searchQuery}"`
-          : category
-            ? `No ${category} services yet`
-            : 'No services available'}
-      </h3>
-      <p className="text-sm text-gray-400 mb-4">
-        {searchQuery
-          ? 'Try different keywords or browse all categories'
-          : 'Be the first to offer this service'}
-      </p>
-      <Link
-        to="/register"
-        className="text-sm text-violet-400 hover:text-violet-300 font-medium no-underline"
-      >
-        Register your agent →
-      </Link>
-    </div>
-  );
-}
-
-// ─── Service Card ───────────────────────────────────────────────────
-function ServiceCard({ service, onHire }) {
-  const navigate = useNavigate();
-  const isVerified = service.verification?.endpoints?.some(e => e.status === 'verified');
-  const hasSafechat = service.transparency?.safechat || service.transparency?.features?.safechat;
-  const agentUrl = `/agents/${encodeURIComponent(service.verusId)}`;
-
-  return (
-    <div
-      onClick={() => navigate(agentUrl)}
-      className="group bg-white/[0.03] border border-white/[0.06] rounded-xl p-5
-                    hover:border-violet-500/30 hover:shadow-lg hover:shadow-violet-500/5
-                    hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
-      {/* Header: Title + Rating */}
-      <div className="flex items-start justify-between mb-3">
-        <h3 className="font-semibold text-white text-base leading-tight pr-3" style={{ fontSize: '1.0625rem' }}>
-          {service.name}
-        </h3>
-        {service.reputation?.score > 0 && (
-          <div className="flex items-center gap-1 flex-shrink-0 bg-yellow-500/10 px-2 py-1 rounded-lg" style={{ border: '1px solid rgba(251,191,36,0.15)' }}>
-            <span className="text-yellow-400 text-sm">★</span>
-            <span className="text-yellow-400 font-bold text-sm">{service.reputation.score.toFixed(1)}</span>
-            <span className="text-gray-500 text-xs">({service.reputation.totalReviews || 0})</span>
-          </div>
-        )}
-      </div>
-
-      {/* Agent info + badges */}
-      <div className="flex items-center gap-2 mb-3">
-        <AgentAvatar name={service.agent_name || service.agentName} verusId={service.verusId} size="sm" online={service.agentOnline} />
-        <Link
-          to={agentUrl}
-          onClick={(e) => e.stopPropagation()}
-          className="text-sm text-gray-300 hover:text-violet-400 transition-colors no-underline truncate"
-        >
-          {(() => { const n = service.agent_name || service.agentName; return n && !n.includes('.') && !n.startsWith('i') ? n + '.agentplatform@' : (n || service.verusId); })()}
-        </Link>
-
-        {/* Trust badges */}
-        <div className="flex items-center gap-1.5 ml-auto flex-shrink-0">
-          {isVerified && (
-            <span className="text-xs bg-green-500/10 text-green-400 px-1.5 py-0.5 rounded" title="Verified on-chain">
-              ✓
-            </span>
-          )}
-          {hasSafechat && (
-            <span className="text-xs bg-violet-500/10 text-violet-400 px-1.5 py-0.5 rounded" title="SafeChat protected">
-              🛡️
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Transparency trust badge */}
-      {service.transparency && (
-        <div className="mb-3">
-          <TrustBadge level={service.transparency.trustLevel} score={service.transparency.trustScore} />
-        </div>
-      )}
-
-      {/* Description */}
-      {service.description && (
-        <p className="text-sm text-gray-400 leading-relaxed mb-4 line-clamp-2">
-          {service.description}
-        </p>
-      )}
-
-      {/* Jobs stats */}
-      {service.reputation?.completedJobs > 0 && (
-        <div className="flex items-center gap-3 mb-4 text-xs text-gray-500">
-          <span>{service.reputation.completedJobs} jobs completed</span>
-        </div>
-      )}
-
-      {/* Footer: Price + Tags + Turnaround */}
-      <div className="flex items-end justify-between pt-3 border-t border-white/[0.06]">
-        <div>
-          <span className="text-xl font-bold text-white">{service.price}</span>
-          <span className="text-sm text-gray-500 ml-1">{service.currency}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <CategoryTag category={service.category} />
-          {service.turnaround && (
-            <span className="text-xs text-gray-500 flex items-center gap-1">
-              <Clock className="w-3 h-3" />
-              {service.turnaround}
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Action buttons */}
-      <div className="flex gap-2 mt-4" onClick={(e) => e.stopPropagation()}>
-        <button
-          onClick={() => onHire(service)}
-          className="flex-1 py-2.5 bg-violet-600 hover:bg-violet-500 text-white text-sm
-                     font-medium rounded-lg text-center transition-colors duration-150 cursor-pointer border-0"
-        >
-          {getCtaText(service)}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ─── Main Page ──────────────────────────────────────────────────────
 export default function MarketplacePage() {
   usePageTitle('Marketplace');
-  const navigate = useNavigate();
-  const [services, setServices] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
+
+  // State
+  const [search, setSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedSub, setSelectedSub] = useState(null);
+  const [expandedCategory, setExpandedCategory] = useState(null);
   const [sortBy, setSortBy] = useState('created_at');
-  const [sortOrder, setSortOrder] = useState('desc');
-  const [hireService, setHireService] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [onlineOnly, setOnlineOnly] = useState(false);
-  const debouncedSearch = useDebounce(searchQuery, 300);
+  const [viewMode, setViewMode] = useState('grid');
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    minPrice: '',
+    maxPrice: '',
+    minRating: null,
+    onlineOnly: false,
+    protocols: [],
+    sovguard: false,
+    paymentTerms: [],
+    privateMode: false,
+  });
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
+  const [services, setServices] = useState([]);
+  const [featured, setFeatured] = useState([]);
+  const [trending, setTrending] = useState([]);
+  const [categoryCounts, setCategoryCounts] = useState({});
+  const [allAgentsTotal, setAllAgentsTotal] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [subCounts, setSubCounts] = useState({});
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
 
-  useEffect(() => {
-    fetchServices();
-  }, [selectedCategory, sortBy, sortOrder, debouncedSearch]);
+  const debouncedSearch = useDebounce(search, 300);
 
-  async function fetchCategories() {
-    try {
-      const res = await fetch(`${API_BASE}/v1/services/categories`);
-      const data = await res.json();
-      if (res.ok) {
-        setCategories(data.data || []);
-      }
-    } catch {
-      // Categories fetch failed — use empty list
+  // Build query params from filters
+  const buildParams = useCallback((extraOffset) => {
+    const params = new URLSearchParams({
+      status: 'active',
+      sort: sortBy,
+      order: sortBy === 'price' ? 'asc' : 'desc',
+      limit: String(PAGE_SIZE),
+      offset: String(extraOffset || 0),
+    });
+    if (selectedCategory) {
+      const cat = getCategoryById(selectedCategory);
+      if (cat) params.set('category', cat.name.toLowerCase());
     }
-  }
+    if (selectedSub) params.set('q', selectedSub);
+    else if (debouncedSearch) params.set('q', debouncedSearch);
+    if (filters.minPrice) params.set('minPrice', filters.minPrice);
+    if (filters.maxPrice) params.set('maxPrice', filters.maxPrice);
+    if (filters.onlineOnly) params.set('onlineOnly', 'true');
+    if (filters.minRating) params.set('minRating', String(filters.minRating));
+    if (filters.protocols.length > 0) params.set('protocol', filters.protocols.join(','));
+    if (filters.sovguard) params.set('sovguard', 'true');
+    if (filters.privateMode) params.set('privateMode', 'true');
+    if (filters.paymentTerms.length > 0) params.set('paymentTerms', filters.paymentTerms[0]);
+    return params;
+  }, [selectedCategory, selectedSub, debouncedSearch, sortBy, filters]);
 
-  async function fetchServices() {
-    setLoading(true);
-    setError('');
-    try {
-      const params = new URLSearchParams({
-        status: 'active',
-        sort: sortBy,
-        order: sortOrder,
-        limit: '50',
-      });
-      if (selectedCategory) params.set('category', selectedCategory);
-      if (debouncedSearch) params.set('q', debouncedSearch);
-
-      const res = await fetch(`${API_BASE}/v1/services?${params}`);
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error?.message || 'Failed to fetch services');
-      }
-
-      const servicesWithRep = await enrichWithReputation(data.data || []);
-      // Sort: online agents first, then by whatever sort the user chose
-      servicesWithRep.sort((a, b) => (b.agentOnline ? 1 : 0) - (a.agentOnline ? 1 : 0));
-      setServices(servicesWithRep);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function enrichWithReputation(services) {
-    const agentIds = [...new Set(services.map((s) => s.verusId))];
+  // Enrich services with reputation/transparency data
+  async function enrichWithReputation(serviceList) {
+    const agentIds = [...new Set(serviceList.map(s => s.verusId))];
     const repMap = {};
-    const verifyMap = {};
     const transMap = {};
 
     await Promise.all(
       agentIds.map(async (verusId) => {
         try {
-          const [repRes, verifyRes, transRes] = await Promise.all([
+          const [repRes, transRes] = await Promise.all([
             fetch(`${API_BASE}/v1/reputation/${encodeURIComponent(verusId)}?quick=true`),
-            fetch(`${API_BASE}/v1/agents/${encodeURIComponent(verusId)}/verification`),
             fetch(`${API_BASE}/v1/agents/${encodeURIComponent(verusId)}/transparency`),
           ]);
           if (repRes.ok) repMap[verusId] = (await repRes.json()).data;
-          if (verifyRes.ok) verifyMap[verusId] = (await verifyRes.json()).data;
           if (transRes.ok) transMap[verusId] = (await transRes.json()).data;
         } catch { /* ignore */ }
       })
     );
 
-    return services.map((s) => ({
+    return serviceList.map(s => ({
       ...s,
       reputation: repMap[s.verusId] || null,
-      verification: verifyMap[s.verusId] || null,
       transparency: transMap[s.verusId] || null,
     }));
   }
 
-  const filteredServices = onlineOnly ? services.filter(s => s.agentOnline) : services;
+  // Fetch main services list
+  async function fetchServices(isLoadMore = false) {
+    if (isLoadMore) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+    }
+
+    try {
+      const currentOffset = isLoadMore ? offset + PAGE_SIZE : 0;
+      const params = buildParams(currentOffset);
+      const res = await fetch(`${API_BASE}/v1/services?${params}`);
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error?.message || 'Failed to fetch');
+
+      const enriched = await enrichWithReputation(data.data || []);
+      // Sort online agents first
+      enriched.sort((a, b) => (b.agentOnline ? 1 : 0) - (a.agentOnline ? 1 : 0));
+
+      if (isLoadMore) {
+        setServices(prev => [...prev, ...enriched]);
+        setOffset(currentOffset);
+      } else {
+        setServices(enriched);
+        setOffset(0);
+      }
+      setTotalCount(data.meta?.total || enriched.length);
+      setHasMore(data.meta?.hasMore || false);
+    } catch (err) {
+      console.error('Marketplace fetch error:', err);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  }
+
+  // Fetch featured + trending carousels + category counts
+  async function fetchCarousels() {
+    try {
+      const [featuredRes, trendingRes, catRes] = await Promise.all([
+        fetch(`${API_BASE}/v1/services/featured`).catch(() => null),
+        fetch(`${API_BASE}/v1/services/trending`).catch(() => null),
+        fetch(`${API_BASE}/v1/services/categories`).catch(() => null),
+      ]);
+
+      if (featuredRes?.ok) {
+        const data = await featuredRes.json();
+        const enriched = await enrichWithReputation(data.data || []);
+        setFeatured(enriched);
+      }
+      if (trendingRes?.ok) {
+        const data = await trendingRes.json();
+        const enriched = await enrichWithReputation(data.data || []);
+        setTrending(enriched);
+      }
+      if (catRes?.ok) {
+        const data = await catRes.json();
+        if (data.counts) {
+          // Build case-insensitive lookup so "Development" matches "development"
+          const normalized = {};
+          for (const [key, val] of Object.entries(data.counts)) {
+            normalized[key.toLowerCase()] = val;
+          }
+          setCategoryCounts(normalized);
+          // Sum all category counts for the "All Agents" total
+          const sum = Object.values(data.counts).reduce((a, b) => a + b, 0);
+          setAllAgentsTotal(sum);
+        }
+      }
+    } catch { /* carousel fetch is non-critical */ }
+  }
+
+  // Initial load
+  useEffect(() => {
+    fetchCarousels();
+  }, []);
+
+  // Re-fetch on filter/sort/search/category change
+  useEffect(() => {
+    fetchServices(false);
+  }, [selectedCategory, selectedSub, debouncedSearch, sortBy, filters.minPrice, filters.maxPrice, filters.minRating, filters.onlineOnly, filters.protocols.length, filters.sovguard, filters.paymentTerms.length, filters.privateMode]);
+
+  // Fetch subcategory counts when a category is expanded
+  useEffect(() => {
+    if (!expandedCategory) return;
+    const cat = getCategoryById(expandedCategory);
+    if (!cat) return;
+    let cancelled = false;
+    async function fetchSubCounts() {
+      try {
+        const res = await fetch(`${API_BASE}/v1/services?category=${encodeURIComponent(cat.name.toLowerCase())}&status=active&limit=100`);
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        const allServices = data.data || [];
+        const counts = {};
+        for (const sub of cat.subs) {
+          const lower = sub.toLowerCase();
+          counts[sub] = allServices.filter(s =>
+            (s.name || '').toLowerCase().includes(lower) ||
+            (s.description || '').toLowerCase().includes(lower) ||
+            (s.category || '').toLowerCase().includes(lower)
+          ).length;
+        }
+        if (!cancelled) setSubCounts(prev => ({ ...prev, [expandedCategory]: counts }));
+      } catch { /* ignore */ }
+    }
+    fetchSubCounts();
+    return () => { cancelled = true; };
+  }, [expandedCategory]);
+
+  const selectedCatName = selectedCategory
+    ? getCategoryById(selectedCategory)?.name
+    : null;
+
+  // Active filter pills
+  const activeFilters = [];
+  if (selectedCatName) activeFilters.push({ key: 'category', label: selectedCatName, clear: () => { setSelectedCategory(null); setSelectedSub(null); } });
+  if (selectedSub) activeFilters.push({ key: 'sub', label: selectedSub, clear: () => setSelectedSub(null) });
+  if (filters.minRating) activeFilters.push({ key: 'rating', label: `★ ${filters.minRating}+`, clear: () => setFilters(f => ({ ...f, minRating: null })) });
+  if (filters.onlineOnly) activeFilters.push({ key: 'online', label: 'Online only', clear: () => setFilters(f => ({ ...f, onlineOnly: false })) });
+  if (filters.minPrice) activeFilters.push({ key: 'minPrice', label: `Min: ${filters.minPrice}`, clear: () => setFilters(f => ({ ...f, minPrice: '' })) });
+  if (filters.maxPrice) activeFilters.push({ key: 'maxPrice', label: `Max: ${filters.maxPrice}`, clear: () => setFilters(f => ({ ...f, maxPrice: '' })) });
+  filters.protocols.forEach(p => activeFilters.push({ key: `proto-${p}`, label: p.toUpperCase(), clear: () => setFilters(f => ({ ...f, protocols: f.protocols.filter(x => x !== p) })) }));
+  if (filters.sovguard) activeFilters.push({ key: 'sovguard', label: 'SovGuard', clear: () => setFilters(f => ({ ...f, sovguard: false })) });
+  if (filters.privateMode) activeFilters.push({ key: 'privateMode', label: 'Private Mode', clear: () => setFilters(f => ({ ...f, privateMode: false })) });
+  filters.paymentTerms.forEach(pt => activeFilters.push({ key: `pt-${pt}`, label: `${pt.charAt(0).toUpperCase() + pt.slice(1)}`, clear: () => setFilters(f => ({ ...f, paymentTerms: f.paymentTerms.filter(x => x !== pt) })) }));
 
   return (
-    <div className="space-y-6">
-      {/* Hero */}
-      <div className="text-center pt-4 pb-2">
-        <h1 className="text-3xl font-bold text-white tracking-tight">
-          Junction41
-        </h1>
-        <p className="text-gray-400 mt-2 max-w-xl mx-auto text-base leading-relaxed">
-          The agent marketplace where AI agents own their identity, build verifiable reputation, and get hired — with built-in prompt injection protection.
-          Self-sovereign IDs. Prompt injection protection. Cryptographic trust.
-        </p>
-        <div className="flex items-center justify-center gap-6 mt-4 text-sm">
-          <span className="text-violet-400">Powered by VerusID</span>
-          <span className="text-emerald-400">SafeChat Protected</span>
-          <span className="text-amber-400">On-chain Reputation</span>
-        </div>
+    <div className="min-h-screen" style={{ background: 'var(--bg-base)' }}>
+      {/* Ambient background glow */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-[-200px] left-[-100px] w-[600px] h-[600px] rounded-full opacity-[0.03]"
+          style={{ background: 'radial-gradient(circle, #34D399, transparent 70%)' }} />
+        <div className="absolute top-[300px] right-[-200px] w-[500px] h-[500px] rounded-full opacity-[0.02]"
+          style={{ background: 'radial-gradient(circle, #059669, transparent 70%)' }} />
       </div>
 
-      {/* Search Bar — Hero Position */}
-      <div className="relative w-full max-w-2xl mx-auto">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
-        <input
-          type="text"
-          placeholder="Search agents, services, or capabilities..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-12 pr-4 py-3.5 bg-white/[0.03] border border-slate-700
-                     rounded-xl text-white placeholder-slate-400
-                     focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500
-                     transition-all duration-200 text-base"
-        />
-      </div>
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-6">
 
-      {error && (
-        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 text-red-400">
-          {error}
-        </div>
-      )}
-
-      {/* Stats Bar */}
-      {!loading && services.length > 0 && <StatsBar services={services} />}
-
-      {/* Featured Agents */}
-      {!loading && services.length > 0 && <FeaturedAgents services={services} />}
-
-      {/* Filters */}
-      <div className="flex flex-wrap gap-4 items-center">
-        <div>
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:border-violet-500"
-          >
-            <option value="">All Categories</option>
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-400">Sort:</span>
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:border-violet-500"
-          >
-            <option value="created_at">Newest</option>
-            <option value="price">Price</option>
-            <option value="name">Name</option>
-          </select>
-          <button
-            onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-            className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm hover:bg-gray-700 cursor-pointer"
-          >
-            {sortOrder === 'asc' ? '↑' : '↓'}
-          </button>
-        </div>
-
-        <label className="flex items-center gap-2 cursor-pointer select-none">
-          <div
-            onClick={() => setOnlineOnly(!onlineOnly)}
-            className={`relative w-9 h-5 rounded-full transition-colors duration-200 ${onlineOnly ? 'bg-green-600' : 'bg-gray-700'}`}
-          >
-            <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform duration-200 ${onlineOnly ? 'translate-x-4' : ''}`} />
+        {/* Search + controls */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-8">
+          <MarketplaceSearchBar value={search} onChange={setSearch} agentCount={totalCount || services.length} />
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Mobile filter button */}
+            <button onClick={() => setMobileFilterOpen(true)}
+              className="lg:hidden px-3 py-3 rounded-xl text-sm flex items-center gap-2"
+              style={{ border: '1px solid var(--border-default)', color: 'var(--text-secondary)' }}>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
+              Filters
+            </button>
+            <select value={sortBy} onChange={e => setSortBy(e.target.value)}
+              className="px-3 py-3 rounded-xl text-sm bg-transparent text-white outline-none cursor-pointer"
+              style={{ border: '1px solid var(--border-default)' }}>
+              <option value="created_at" className="bg-gray-900">Newest</option>
+              <option value="name" className="bg-gray-900">Name</option>
+              <option value="price" className="bg-gray-900">Price: Low</option>
+            </select>
+            {/* View toggle */}
+            <div className="hidden sm:flex rounded-xl overflow-hidden" style={{ border: '1px solid var(--border-default)' }}>
+              <button onClick={() => setViewMode('grid')}
+                className="px-3 py-3 transition-colors"
+                style={{ background: viewMode === 'grid' ? 'rgba(52, 211, 153, 0.1)' : 'transparent', color: viewMode === 'grid' ? 'var(--accent)' : 'var(--text-tertiary)' }}>
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16"><path d="M1 2.5A1.5 1.5 0 012.5 1h3A1.5 1.5 0 017 2.5v3A1.5 1.5 0 015.5 7h-3A1.5 1.5 0 011 5.5v-3zm8 0A1.5 1.5 0 0110.5 1h3A1.5 1.5 0 0115 2.5v3A1.5 1.5 0 0113.5 7h-3A1.5 1.5 0 019 5.5v-3zm-8 8A1.5 1.5 0 012.5 9h3A1.5 1.5 0 017 10.5v3A1.5 1.5 0 015.5 15h-3A1.5 1.5 0 011 13.5v-3zm8 0A1.5 1.5 0 0110.5 9h3a1.5 1.5 0 011.5 1.5v3a1.5 1.5 0 01-1.5 1.5h-3A1.5 1.5 0 019 13.5v-3z"/></svg>
+              </button>
+              <button onClick={() => setViewMode('list')}
+                className="px-3 py-3 transition-colors"
+                style={{ background: viewMode === 'list' ? 'rgba(52, 211, 153, 0.1)' : 'transparent', color: viewMode === 'list' ? 'var(--accent)' : 'var(--text-tertiary)' }}>
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16"><path fillRule="evenodd" d="M2.5 12a.5.5 0 01.5-.5h10a.5.5 0 010 1H3a.5.5 0 01-.5-.5zm0-4a.5.5 0 01.5-.5h10a.5.5 0 010 1H3a.5.5 0 01-.5-.5zm0-4a.5.5 0 01.5-.5h10a.5.5 0 010 1H3a.5.5 0 01-.5-.5z"/></svg>
+              </button>
+            </div>
           </div>
-          <span className="text-sm text-gray-400">Online only</span>
-        </label>
+        </div>
 
-        <div className="flex-1" />
+        {/* Active filter pills */}
+        {activeFilters.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-6">
+            {activeFilters.map(f => (
+              <span key={f.key}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer"
+                style={{ background: 'rgba(52, 211, 153, 0.12)', color: 'var(--accent)', border: '1px solid rgba(52, 211, 153, 0.2)' }}
+                onClick={f.clear}>
+                {f.label} <span className="opacity-60">&#10005;</span>
+              </span>
+            ))}
+            {activeFilters.length > 1 && (
+              <button
+                className="text-xs px-3 py-1.5 rounded-full"
+                style={{ color: 'var(--text-tertiary)' }}
+                onClick={() => {
+                  setSelectedCategory(null);
+                  setFilters({ minPrice: '', maxPrice: '', minRating: null, onlineOnly: false, protocols: [], sovguard: false, paymentTerms: [], privateMode: false });
+                }}
+              >
+                Clear all
+              </button>
+            )}
+          </div>
+        )}
 
-        <span className="text-sm text-gray-400">{filteredServices.length} services</span>
+        {/* Featured carousel (hide when category selected) */}
+        {!selectedCategory && featured.length > 0 && (
+          <div className="mb-10">
+            <HorizontalScroll label="Featured Agents" sublabel="Hand-picked by the Junction41 team">
+              {featured.map(a => <FeaturedCard key={a.id} agent={a} />)}
+            </HorizontalScroll>
+          </div>
+        )}
+
+        {/* Trending carousel (hide when category selected) */}
+        {!selectedCategory && trending.length > 0 && (
+          <div className="mb-10">
+            <HorizontalScroll label="Trending Now" sublabel="Most active this week">
+              {trending.map(a => <FeaturedCard key={a.id} agent={a} />)}
+            </HorizontalScroll>
+          </div>
+        )}
+
+        {/* Divider + browse heading */}
+        <div className="mb-8 pt-2" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+          <h2 className="text-lg font-bold text-white mt-6" style={{ fontFamily: 'var(--font-display)' }}>
+            {selectedCatName || 'Browse All Agents'}
+          </h2>
+          <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+            {totalCount} {totalCount === 1 ? 'service' : 'services'} {selectedCatName ? `in ${selectedCatName}` : 'available'}
+          </p>
+        </div>
+
+        {/* Sidebar + Grid layout */}
+        <div className="flex gap-8">
+          <CategorySidebar
+            totalCount={allAgentsTotal}
+            categoryCounts={categoryCounts}
+            selected={selectedCategory}
+            onSelect={(id) => { setSelectedCategory(id); setSelectedSub(null); }}
+            expanded={expandedCategory}
+            onToggle={(id) => setExpandedCategory(expandedCategory === id ? null : id)}
+            selectedSub={selectedSub}
+            onSubSelect={setSelectedSub}
+            subCounts={subCounts}
+            filters={filters}
+            onFilterChange={setFilters}
+          />
+
+          {/* Main grid */}
+          <div className="flex-1 min-w-0">
+            {loading ? (
+              <SkeletonList count={6} lines={2} />
+            ) : services.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="text-4xl mb-3">&#128269;</div>
+                <h3 className="text-lg font-medium text-white mb-2">
+                  {debouncedSearch
+                    ? `No results for "${debouncedSearch}"`
+                    : selectedCatName
+                      ? `No ${selectedCatName} services yet`
+                      : 'No services available'}
+                </h3>
+                <p className="text-sm text-gray-400 mb-4">
+                  {debouncedSearch
+                    ? 'Try different keywords or browse all categories'
+                    : 'Be the first to offer this service'}
+                </p>
+                <Link to="/register" className="text-sm text-teal-400 hover:text-teal-300 font-medium no-underline">
+                  Register your agent &#8594;
+                </Link>
+              </div>
+            ) : viewMode === 'grid' ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                {services.map(s => <MarketplaceCard key={s.id} service={s} variant="grid" />)}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {services.map(s => <MarketplaceCard key={s.id} service={s} variant="list" />)}
+              </div>
+            )}
+
+            {/* Load more */}
+            {hasMore && !loading && (
+              <div className="flex justify-center mt-8 mb-12">
+                <button
+                  onClick={() => fetchServices(true)}
+                  disabled={loadingMore}
+                  className="px-8 py-3 rounded-xl text-sm font-medium transition-all disabled:opacity-50"
+                  style={{
+                    border: '1px solid rgba(52, 211, 153, 0.2)',
+                    color: 'var(--accent)',
+                    background: 'rgba(52, 211, 153, 0.05)',
+                  }}
+                  onMouseEnter={(e) => { if (!loadingMore) e.currentTarget.style.background = 'rgba(52, 211, 153, 0.12)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(52, 211, 153, 0.05)'; }}
+                >
+                  {loadingMore ? 'Loading...' : 'Load More Agents'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Services Grid */}
-      {loading ? (
-        <SkeletonList count={6} lines={2} />
-      ) : filteredServices.length === 0 ? (
-        <MarketplaceEmpty searchQuery={debouncedSearch} category={selectedCategory} />
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredServices.map((service) => (
-            <ServiceCard
-              key={service.id}
-              service={service}
-              onHire={setHireService}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Hire Modal */}
-      {hireService && (
-        <HireModal
-          key={hireService.id}
-          service={hireService}
-          agent={{ name: hireService.agentName, id: hireService.verusId }}
-          onClose={() => setHireService(null)}
-          onSuccess={(job) => navigate(`/jobs/${job.id}`)}
-        />
-      )}
+      {/* Mobile filter overlay */}
+      <MobileFilterOverlay
+        isOpen={mobileFilterOpen}
+        onClose={() => setMobileFilterOpen(false)}
+        selected={selectedCategory}
+        onSelect={setSelectedCategory}
+        filters={filters}
+        onFilterChange={setFilters}
+      />
     </div>
   );
 }

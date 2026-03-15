@@ -6,21 +6,46 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 
 const STAR_LABELS = ['Terrible', 'Poor', 'Okay', 'Good', 'Excellent'];
 
+/**
+ * Build the review sign message client-side (matches server's generateReviewMessage exactly)
+ */
+function buildReviewMessage(agentVerusId, jobHash, message, rating, timestamp) {
+  return [
+    'Junction41 Review',
+    '===========================',
+    `Agent: ${agentVerusId}`,
+    `Job: ${jobHash}`,
+    `Rating: ${rating || 'N/A'}`,
+    `Message: ${message || 'No message'}`,
+    `Timestamp: ${timestamp}`,
+    '',
+    'I confirm this review is genuine.',
+  ].join('\n');
+}
+
 export default function ReviewModal({ job, onClose, onSubmitted }) {
   const { user } = useAuth();
   const addToast = useToast();
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [message, setMessage] = useState('');
-  const [step, setStep] = useState('compose'); // compose | sign | submitting | done | error
-  const [signData, setSignData] = useState(null);
+  const [step, setStep] = useState('compose'); // compose | submitting | done
   const [signature, setSignature] = useState('');
   const [error, setError] = useState(null);
+  const [timestamp] = useState(() => Math.floor(Date.now() / 1000));
 
   const modalRef = useRef(null);
 
   const agentVerusId = job.seller?.verusId || job.sellerVerusId;
   const idName = user?.identityName ? `${user.identityName}@` : (user?.verusId || 'yourID@');
+
+  // Build sign message live as user types
+  const signMessage = rating >= 1
+    ? buildReviewMessage(agentVerusId, job.jobHash, message, rating, timestamp)
+    : null;
+  const signCommand = signMessage
+    ? `verus -testnet signmessage "${idName}" "${signMessage}"`
+    : null;
 
   // Focus trap (F-22)
   const handleKeyDown = useCallback((e) => {
@@ -44,39 +69,6 @@ export default function ReviewModal({ job, onClose, onSubmitted }) {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
-  async function handleGetSignMessage() {
-    if (rating < 1 || rating > 5) {
-      setError('Please select a rating');
-      return;
-    }
-
-    try {
-      const timestamp = Math.floor(Date.now() / 1000);
-      const params = new URLSearchParams({
-        agentVerusId,
-        jobHash: job.jobHash,
-        message: message || '',
-        rating: String(rating),
-        timestamp: String(timestamp),
-      });
-
-      const res = await fetch(`${API_BASE}/v1/reviews/message?${params}`, {
-        credentials: 'include',
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error?.message || 'Failed to get sign message');
-
-      setSignData({
-        message: data.data.message,
-        timestamp: data.data.timestamp,
-      });
-      setStep('sign');
-      setError(null);
-    } catch (err) {
-      setError(err.message);
-    }
-  }
-
   async function handleSubmit() {
     if (!signature.trim()) {
       setError('Please paste your signature');
@@ -97,7 +89,7 @@ export default function ReviewModal({ job, onClose, onSubmitted }) {
           jobHash: job.jobHash,
           message: message || '',
           rating,
-          timestamp: signData.timestamp,
+          timestamp,
           signature: signature.trim(),
         }),
       });
@@ -112,7 +104,7 @@ export default function ReviewModal({ job, onClose, onSubmitted }) {
       }, 2000);
     } catch (err) {
       setError(err.message);
-      setStep('sign');
+      setStep('compose');
     }
   }
 
@@ -137,7 +129,7 @@ export default function ReviewModal({ job, onClose, onSubmitted }) {
                       key={star}
                       onMouseEnter={() => setHoverRating(star)}
                       onMouseLeave={() => setHoverRating(0)}
-                      onClick={() => setRating(star)}
+                      onClick={() => { setRating(star); setSignature(''); }}
                       className="text-3xl transition-transform hover:scale-110"
                     >
                       {star <= (hoverRating || rating) ? '★' : '☆'}
@@ -156,78 +148,62 @@ export default function ReviewModal({ job, onClose, onSubmitted }) {
                 <label className="block text-sm text-gray-400 mb-2">Review (optional)</label>
                 <textarea
                   value={message}
-                  onChange={e => setMessage(e.target.value)}
+                  onChange={e => { setMessage(e.target.value); setSignature(''); }}
                   placeholder="How was your experience?"
                   rows={3}
                   maxLength={500}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-violet-500 resize-none"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-teal-500 resize-none"
                 />
                 <div className="text-xs text-gray-400 text-right mt-1">{message.length}/500</div>
               </div>
 
-              <button
-                onClick={handleGetSignMessage}
-                disabled={rating < 1}
-                className="w-full bg-violet-600 hover:bg-violet-500 disabled:bg-gray-700 disabled:text-gray-500 text-white font-medium py-3 rounded-lg transition-colors"
-              >
-                Continue to Sign
-              </button>
-            </>
-          )}
+              {/* Sign Command — appears as soon as rating is selected */}
+              {signCommand && (
+                <>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">
+                      Sign this message with your VerusID
+                    </label>
+                    <div className="bg-black/40 border border-white/10 rounded-lg p-3">
+                      <code className="text-xs text-green-400 break-all select-all">
+                        {signCommand}
+                      </code>
+                    </div>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(signCommand)}
+                      className="text-xs text-teal-400 hover:text-teal-300 mt-2"
+                    >
+                      Copy command
+                    </button>
+                  </div>
 
-          {step === 'sign' && signData && (
-            <>
-              {/* Sign Command */}
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">
-                  Sign this message with your VerusID
-                </label>
-                <div className="bg-black/40 border border-white/10 rounded-lg p-3">
-                  <code className="text-xs text-green-400 break-all select-all">
-                    verus -testnet signmessage "{idName}" "{signData.message}"
-                  </code>
-                </div>
-                <button
-                  onClick={() => navigator.clipboard.writeText(`verus -testnet signmessage "${idName}" "${signData.message}"`)}
-                  className="text-xs text-violet-400 hover:text-violet-300 mt-2"
-                >
-                  📋 Copy command
-                </button>
-              </div>
+                  {/* Signature Input */}
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Paste signature</label>
+                    <input
+                      type="text"
+                      value={signature}
+                      onChange={e => {
+                        let val = e.target.value;
+                        if (val.trim().startsWith('{')) {
+                          try { const p = JSON.parse(val.trim()); if (p.signature) val = p.signature; } catch { /* not JSON */ }
+                        }
+                        setSignature(val);
+                      }}
+                      placeholder="Paste the signature output here..."
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-teal-500 font-mono text-sm"
+                    />
+                  </div>
 
-              {/* Signature Input */}
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Paste signature</label>
-                <input
-                  type="text"
-                  value={signature}
-                  onChange={e => {
-                    let val = e.target.value;
-                    if (val.trim().startsWith('{')) {
-                      try { const p = JSON.parse(val.trim()); if (p.signature) val = p.signature; } catch { /* not JSON */ }
-                    }
-                    setSignature(val);
-                  }}
-                  placeholder="Paste the signature output here..."
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-violet-500 font-mono text-sm"
-                />
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => { setStep('compose'); setSignData(null); setSignature(''); }}
-                  className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 font-medium py-3 rounded-lg transition-colors"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  disabled={!signature.trim()}
-                  className="flex-1 bg-violet-600 hover:bg-violet-500 disabled:bg-gray-700 disabled:text-gray-500 text-white font-medium py-3 rounded-lg transition-colors"
-                >
-                  Submit Review
-                </button>
-              </div>
+                  <button
+                    onClick={handleSubmit}
+                    disabled={!signature.trim()}
+                    className="w-full bg-teal-600 hover:bg-teal-500 disabled:bg-gray-700 disabled:text-gray-500 text-white font-medium py-3 rounded-lg transition-colors"
+                  >
+                    Submit Review
+                  </button>
+                </>
+              )}
             </>
           )}
 

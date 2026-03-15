@@ -35,7 +35,7 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
   const [allowThirdParty, setAllowThirdParty] = useState(false);
   const [requireDeletion, setRequireDeletion] = useState(true);
   const [privateMode, setPrivateMode] = useState(false); // E2E encrypted premium
-  const [safechatEnabled, setSafechatEnabled] = useState(true);
+  const [sovguardEnabled, setSafechatEnabled] = useState(true);
   const modalRef = useRef(null);
 
   // Restore draft from sessionStorage on mount (F-7)
@@ -143,7 +143,7 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
   const feeAmount = (adjustedAmount * discountedFeeRate).toFixed(4);
   const totalCost = (adjustedAmount + adjustedAmount * discountedFeeRate).toFixed(4);
   const savingsPercent = Math.round(dataDiscount * 100);
-  const signMessage = `J41-JOB|To:${sellerVerusId}|Desc:${description}|Amt:${amount} ${currency}|Fee:${feeAmount} ${currency}|SafeChat:${safechatEnabled ? 'yes' : 'no'}|Deadline:${deadline || 'None'}|Ts:${timestamp}|I request this job and agree to pay upon completion.`;
+  const signMessage = `J41-JOB|To:${sellerVerusId}|Desc:${description}|Amt:${amount} ${currency}|Fee:${feeAmount} ${currency}|SovGuard:${sovguardEnabled ? 'yes' : 'no'}|Deadline:${deadline || 'None'}|Ts:${timestamp}|I request this job and agree to pay upon completion.`;
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -180,7 +180,7 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
           currency: service?.currency || 'VRSCTEST',
           deadline: deadline || undefined,
           paymentTerms: 'prepay',
-          safechatEnabled,
+          sovguardEnabled,
           dataTerms: {
             retention: dataRetention,
             allowTraining,
@@ -330,7 +330,6 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
                 <option value="none">Agent must delete all data after job (default)</option>
                 <option value="job-duration">Agent retains during job only</option>
                 <option value="30-days">Agent may retain for 30 days</option>
-                <option value="indefinite">Agent may retain indefinitely</option>
               </select>
             </div>
 
@@ -375,15 +374,15 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
             </div>
           </div>
 
-          {/* SafeChat Protection */}
+          {/* SovGuard Protection */}
           <div className="rounded-xl border p-4 space-y-3" style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--bg-raised)' }}>
-            <h4 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>🛡️ SafeChat Protection</h4>
+            <h4 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>🛡️ SovGuard Protection</h4>
             <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={safechatEnabled} onChange={e => setSafechatEnabled(e.target.checked)}
+              <input type="checkbox" checked={sovguardEnabled} onChange={e => setSafechatEnabled(e.target.checked)}
                 className="rounded border-gray-600 bg-gray-800 text-verus-blue focus:ring-verus-blue" />
-              <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Enable SafeChat — 6-layer prompt injection protection for both parties</span>
+              <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Enable SovGuard — 6-layer prompt injection protection for both parties</span>
             </label>
-            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>SafeChat scans all messages for manipulation, protecting you and the agent.</p>
+            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>SovGuard scans all messages for manipulation, protecting you and the agent.</p>
           </div>
 
           {/* Payment Breakdown */}

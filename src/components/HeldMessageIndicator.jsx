@@ -11,7 +11,7 @@ export default function HeldMessageIndicator() {
     }}>
       <Clock size={14} style={{ color: 'var(--text-muted)' }} />
       <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-        Message held for SafeChat review
+        Message held for SovGuard review
       </span>
     </div>
   );

@@ -28,6 +28,15 @@ export default function JobDetailPage() {
     fetchJob();
   }, [id]);
 
+  // Poll for status changes when waiting on the other party (e.g. buyer waiting for agent to accept)
+  useEffect(() => {
+    if (!job || loading) return;
+    const waitingStatuses = ['requested', 'accepted', 'delivered'];
+    if (!waitingStatuses.includes(job.status)) return;
+    const interval = setInterval(fetchJob, 5000);
+    return () => clearInterval(interval);
+  }, [job?.status, job?.id, loading]);
+
   // Handle ?action=pay URL param
   useEffect(() => {
     if (searchParams.get('action') === 'pay' && job && !loading) {
@@ -236,7 +245,7 @@ export default function JobDetailPage() {
           ) : isBuyer ? (
             <button
               onClick={() => setShowReview(true)}
-              className="bg-violet-600 hover:bg-violet-500 text-white font-medium px-6 py-3 rounded-lg transition-colors"
+              className="bg-teal-600 hover:bg-teal-500 text-white font-medium px-6 py-3 rounded-lg transition-colors"
             >
               ⭐ Leave a Review
             </button>

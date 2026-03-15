@@ -1,8 +1,11 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, Briefcase, Mail, Wrench, Store, Plus, Bell, Menu, X, Settings, BookOpen, UserCircle, ChevronDown, LogOut, AlertTriangle, Code2 } from 'lucide-react';
+import { LayoutDashboard, Briefcase, Mail, Wrench, Store, Plus, Bell, Menu, X, Settings, UserCircle, ChevronDown, LogOut, AlertTriangle, Code2 } from 'lucide-react';
 import ResolvedId from './ResolvedId';
+import StreetSignLogo from './StreetSignLogo';
 import { useState, useEffect, useRef } from 'react';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 export default function Layout() {
   const { user, logout, requireAuth } = useAuth();
@@ -32,14 +35,19 @@ export default function Layout() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  // Check if profile/contentmultimap is empty
+  // Check if profile/contentmultimap is empty — only warn registered agents, not buyers
   useEffect(() => {
     if (!user) { setProfileEmpty(false); return; }
     (async () => {
       try {
-        const res = await fetch('/v1/me/identity', { credentials: 'include' });
-        if (!res.ok) return;
-        const data = await res.json();
+        const [identityRes, agentRes] = await Promise.all([
+          fetch(`${API_BASE}/v1/me/identity`, { credentials: 'include' }),
+          fetch(`${API_BASE}/v1/agents/${encodeURIComponent(user.verusId)}`, { credentials: 'include' }),
+        ]);
+        if (!identityRes.ok) return;
+        const isAgent = agentRes.ok && (await agentRes.json()).data != null;
+        if (!isAgent) return; // Buyers don't need this warning
+        const data = await identityRes.json();
         const d = data.data?.decoded;
         const cmmCount = Object.keys(d?.contentmultimap || {}).length;
         const cmCount = Object.keys(d?.contentmap || {}).length;
@@ -58,7 +66,7 @@ export default function Layout() {
     if (!user) return;
     const fetchUnread = async () => {
       try {
-        const res = await fetch('/v1/me/notifications?limit=1', { credentials: 'include' });
+        const res = await fetch(`${API_BASE}/v1/me/notifications?limit=1`, { credentials: 'include' });
         if (res.ok) {
           const data = await res.json();
           setUnreadCount(data.meta?.unreadCount?.c || 0);
@@ -72,10 +80,9 @@ export default function Layout() {
 
   // Main nav — shown in top bar on desktop
   const mainNav = [
-    { path: '/marketplace', label: 'Marketplace', icon: Store },
+    { path: '/marketplace', label: 'Agents', icon: Store },
     { path: '/developers', label: 'Developers', icon: Code2 },
     ...(!user ? [
-      { path: '/guide', label: 'Guide', icon: BookOpen },
       { path: '/get-id', label: 'Get Free ID', icon: Plus },
     ] : []),
     ...(user ? [
@@ -90,14 +97,12 @@ export default function Layout() {
     { path: '/services', label: 'Services', icon: Wrench },
     { path: '/register', label: 'Register Agent', icon: Plus },
     { path: '/settings', label: 'Settings', icon: Settings },
-    { path: '/guide', label: 'Guide', icon: BookOpen },
   ];
 
   // All items for mobile menu
   const mobileNav = [
-    { path: '/marketplace', label: 'Marketplace', icon: Store },
+    { path: '/marketplace', label: 'Agents', icon: Store },
     { path: '/developers', label: 'Developers', icon: Code2 },
-    { path: '/guide', label: 'Guide', icon: BookOpen },
     ...(!user ? [
       { path: '/get-id', label: 'Get Free ID', icon: Plus },
     ] : []),
@@ -169,7 +174,7 @@ export default function Layout() {
     <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-base)' }}>
       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:bg-verus-blue focus:text-white focus:rounded-lg focus:text-sm focus:font-medium">Skip to main content</a>
       {/* Header */}
-      <header className="border-b sticky top-0 z-50 backdrop-blur-xl" style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'rgba(5, 5, 8, 0.85)' }}>
+      <header className="border-b sticky top-0 z-50 backdrop-blur-xl" style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'rgba(6, 8, 22, 0.85)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-4 md:gap-6 min-w-0">
             {/* Mobile hamburger */}
@@ -183,8 +188,7 @@ export default function Layout() {
             </button>
 
             <Link to="/" className="flex items-center gap-2 shrink-0">
-              <span className="text-lg font-bold" style={{ fontFamily: "'Lexend', sans-serif", color: '#A78BFA', letterSpacing: '-0.02em' }}>J41</span>
-              <span className="font-medium text-white hidden lg:inline text-sm" style={{ fontFamily: "'Outfit', sans-serif" }}>Junction41</span>
+              <StreetSignLogo size="sm" />
             </Link>
             
             {/* Desktop nav — just core items */}
@@ -226,7 +230,7 @@ export default function Layout() {
                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'}
                     onMouseLeave={(e) => { if (!avatarMenuOpen) e.currentTarget.style.backgroundColor = 'transparent'; }}
                   >
-                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0" style={{ background: 'linear-gradient(135deg, #A78BFA, #7C3AED)' }}>
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0" style={{ background: 'linear-gradient(135deg, #34D399, #059669)' }}>
                       {initials}
                     </div>
                     <span className="hidden sm:inline text-sm font-medium max-w-[120px] truncate" style={{ color: 'var(--text-primary)' }}>
@@ -292,7 +296,7 @@ export default function Layout() {
               <button
                 onClick={requireAuth}
                 className="px-4 py-2 text-sm font-medium rounded-lg transition-all hover:opacity-90"
-                style={{ backgroundColor: '#A78BFA', color: 'white', fontFamily: "'Outfit', sans-serif" }}
+                style={{ backgroundColor: '#34D399', color: '#060816', fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}
               >
                 Sign In
               </button>
@@ -333,7 +337,7 @@ export default function Layout() {
           <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 flex items-center gap-3">
             <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
             <p className="text-amber-200 text-sm flex-1">
-              Your profile is empty — nobody knows what you're offering! <Link to="/profile" className="text-violet-400 hover:underline font-medium">Set up your profile →</Link>
+              Your profile is empty — nobody knows what you're offering! <Link to="/profile" className="text-teal-400 hover:underline font-medium">Set up your profile →</Link>
             </p>
             <button onClick={() => { setProfileBannerDismissed(true); sessionStorage.setItem('profileBannerDismissed', 'true'); }}
               className="text-gray-500 hover:text-gray-300 text-xs">Dismiss</button>
@@ -354,7 +358,7 @@ export default function Layout() {
             <div>
               <p className="text-white text-sm font-medium">Your profile is empty!</p>
               <p className="text-gray-400 text-xs mt-1">Nobody knows what you're offering. Set up your profile so others can find you.</p>
-              <Link to="/profile" onClick={() => setShowToast(false)} className="text-violet-400 hover:text-violet-300 text-xs font-medium mt-2 inline-block">
+              <Link to="/profile" onClick={() => setShowToast(false)} className="text-teal-400 hover:text-teal-300 text-xs font-medium mt-2 inline-block">
                 Set up profile →
               </Link>
             </div>

@@ -158,7 +158,7 @@ export default function AgentDetailPage() {
 
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <h1 style={{ margin: 0, fontSize: 26, lineHeight: 1.2 }}>{agent.name}</h1>
+              <ResolvedId address={agent.id} size="lg" showAddress={false} />
               {transparency && <TrustBadge level={transparency.trustLevel} score={transparency.trustScore} />}
               {agent.online ? (
                 <span style={{
@@ -185,8 +185,14 @@ export default function AgentDetailPage() {
               )}
             </div>
 
-            <div style={{ marginTop: 6 }}>
-              <ResolvedId address={agent.id} name={agent.name} size="md" />
+            {agent.name && (
+              <div style={{ marginTop: 4, fontSize: 18, fontWeight: 600, color: 'var(--text-primary)' }}>
+                {agent.name}
+              </div>
+            )}
+
+            <div style={{ marginTop: 4, fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-muted)' }}>
+              {agent.id}
             </div>
 
             {agent.description && (
@@ -200,8 +206,8 @@ export default function AgentDetailPage() {
               {agent.category && (
                 <span style={{
                   fontSize: 12, fontWeight: 500, padding: '3px 10px', borderRadius: 6,
-                  background: 'rgba(167, 139, 250, 0.1)', color: 'var(--accent-primary)',
-                  border: '1px solid rgba(167, 139, 250, 0.15)',
+                  background: 'rgba(52, 211, 153, 0.1)', color: 'var(--accent-primary)',
+                  border: '1px solid rgba(52, 211, 153, 0.15)',
                 }}>{agent.category}</span>
               )}
               <span style={{
@@ -657,7 +663,7 @@ export default function AgentDetailPage() {
                     <span style={{ color: 'var(--text-muted)' }}>Trust Level</span>
                     <span style={{
                       fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4,
-                      background: agent.declaredTrustLevel === 'verified' ? 'rgba(0, 230, 167, 0.1)' : 'rgba(167, 139, 250, 0.1)',
+                      background: agent.declaredTrustLevel === 'verified' ? 'rgba(0, 230, 167, 0.1)' : 'rgba(52, 211, 153, 0.1)',
                       color: agent.declaredTrustLevel === 'verified' ? '#00e6a7' : 'var(--accent-primary)',
                     }}>{agent.declaredTrustLevel}</span>
                   </div>

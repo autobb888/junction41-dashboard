@@ -269,7 +269,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
                   type="text"
                   value={verusId}
                   onChange={(e) => setVerusId(e.target.value)}
-                  placeholder="yourname.agentplatform@"
+                  placeholder="yourname.SovAgent@"
                   className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-verus-blue"
                   required
                 />

@@ -7,7 +7,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 
 const STEPS = [
   { num: 1, title: 'Get a Verus Wallet', desc: 'Download a wallet to hold your identity' },
-  { num: 2, title: 'Choose a Name', desc: 'Pick your unique agentplatform@ identity' },
+  { num: 2, title: 'Choose a Name', desc: 'Pick your unique SovAgent@ identity' },
   { num: 3, title: 'Enter Your Address', desc: 'Paste your R-address from your Verus wallet' },
   { num: 4, title: 'Done!', desc: 'Your identity is ready to use' },
 ];
@@ -124,7 +124,7 @@ export default function GetIdPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white">Get Your Free Identity</h1>
         <p className="text-gray-400 mt-1">
-          Register a free <span className="text-verus-blue font-mono">yourname.agentplatform@</span> identity on the Verus blockchain
+          Register a free <span className="text-verus-blue font-mono">yourname.SovAgent@</span> identity on the Verus blockchain
         </p>
       </div>
 
@@ -210,7 +210,7 @@ export default function GetIdPage() {
         <div className="card !p-8">
           <h2 className="text-xl font-semibold text-white mb-4">✨ Step 2: Choose Your Name</h2>
           <p className="text-gray-300 mb-6">
-            Your identity will be <span className="font-mono text-verus-blue">{name || 'yourname'}.agentplatform@</span>
+            Your identity will be <span className="font-mono text-verus-blue">{name || 'yourname'}.SovAgent@</span>
           </p>
 
           <form onSubmit={(e) => { e.preventDefault(); if (name.trim()) setStep(3); }}>
@@ -226,7 +226,7 @@ export default function GetIdPage() {
                   maxLength={32}
                   autoFocus
                 />
-                <span className="px-3 text-gray-500 font-mono text-sm">.agentplatform@</span>
+                <span className="px-3 text-gray-500 font-mono text-sm">.SovAgent@</span>
               </div>
               <p className="text-xs text-gray-400 mt-1">Lowercase letters and numbers only. 3-32 characters.</p>
             </div>
@@ -249,7 +249,7 @@ export default function GetIdPage() {
           <h2 className="text-xl font-semibold text-white mb-4">🔑 Step 3: Your Wallet Address</h2>
           <p className="text-gray-300 mb-6">
             Paste your R-address from your Verus wallet.
-            This connects your new <span className="font-mono text-verus-blue">{name}.agentplatform@</span> identity to your wallet.
+            This connects your new <span className="font-mono text-verus-blue">{name}.SovAgent@</span> identity to your wallet.
           </p>
 
           <form onSubmit={handleRegister}>
@@ -414,7 +414,7 @@ export default function GetIdPage() {
       <div className="mt-8 bg-white/[0.02] border border-white/10 rounded-lg p-4">
         <h3 className="text-sm font-medium text-gray-300 mb-2">ℹ️ About VerusIDs</h3>
         <p className="text-xs text-gray-400">
-          Your <span className="text-verus-blue">agentplatform@</span> identity is a real VerusID on the Verus blockchain.
+          Your <span className="text-verus-blue">SovAgent@</span> identity is a real VerusID on the Verus blockchain.
           You own it — not us. It travels with you if you leave the platform.
           Registration costs are covered by the platform. You receive a small amount of VRSCTEST
           to get started updating your identity.

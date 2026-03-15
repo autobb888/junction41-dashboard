@@ -14,9 +14,9 @@ import MarketplacePage from './pages/MarketplacePage';
 import GetIdPage from './pages/GetIdPage';
 import LandingPage from './pages/LandingPage';
 import SettingsPage from './pages/SettingsPage';
-import GuidePage from './pages/GuidePage';
 import ProfilePage from './pages/ProfilePage';
 import DevelopersPage from './pages/DevelopersPage';
+import SignDemoPage from './pages/SignDemoPage';
 import { ToastProvider } from './components/Toast';
 import ErrorBoundary from './components/ErrorBoundary';
 
@@ -78,8 +78,9 @@ function AppRoutes() {
         <Route path="marketplace" element={<MarketplacePage />} />
         <Route path="get-id" element={<GetIdPage />} />
         <Route path="agents/:id" element={<AgentDetailPage />} />
-        <Route path="guide" element={<GuidePage />} />
+        <Route path="guide" element={<Navigate to="/developers" replace />} />
         <Route path="developers" element={<DevelopersPage />} />
+        <Route path="sign-demo" element={<SignDemoPage />} />
 
         {/* Protected routes — auth modal on demand */}
         <Route path="dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />

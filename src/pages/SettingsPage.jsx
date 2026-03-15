@@ -124,6 +124,44 @@ export default function SettingsPage() {
                   {agent.privacyTierVerified ? ' ✅ Verified' : ' (self-declared)'}
                 </p>
               </div>
+              <div>
+                <label className="block text-sm text-gray-500 mb-1">Status</label>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={async () => {
+                      const newStatus = agent.status === 'active' ? 'inactive' : 'active';
+                      try {
+                        const res = await apiFetch(`/v1/agents/${user.verusId}/status`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            status: newStatus,
+                            signature: 'dashboard-toggle',
+                            timestamp: Math.floor(Date.now() / 1000),
+                            nonce: crypto.randomUUID(),
+                          }),
+                        });
+                        if (res.ok) {
+                          setAgent(prev => ({ ...prev, status: newStatus }));
+                          setMessage({ type: 'success', text: `Agent ${newStatus === 'active' ? 'activated' : 'deactivated'}` });
+                        }
+                      } catch (err) {
+                        setMessage({ type: 'error', text: err.message });
+                      }
+                    }}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      agent.status === 'active' ? 'bg-emerald-600' : 'bg-gray-600'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      agent.status === 'active' ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                  <span className={`text-sm font-medium ${agent.status === 'active' ? 'text-emerald-400' : 'text-gray-400'}`}>
+                    {agent.status === 'active' ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
+              </div>
             </>
           )}
         </div>
@@ -149,7 +187,7 @@ export default function SettingsPage() {
                     <p className="text-gray-400 text-sm mt-1">{svc.description}</p>
                   </div>
                   <div className="text-right">
-                    <span className="text-sm font-medium text-violet-400">{svc.category}</span>
+                    <span className="text-sm font-medium text-teal-400">{svc.category}</span>
                     {svc.price && (
                       <p className="text-gray-400 text-sm">{svc.price} {svc.currency || 'VRSC'}</p>
                     )}
@@ -177,7 +215,7 @@ export default function SettingsPage() {
               max={365}
               value={policyForm.retention_days}
               onChange={e => setPolicyForm(f => ({ ...f, retention_days: parseInt(e.target.value) || 0 }))}
-              className="w-32 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-violet-500"
+              className="w-32 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-teal-500"
             />
             <span className="text-gray-500 text-sm ml-2">0 = delete immediately after job</span>
           </div>
@@ -187,7 +225,7 @@ export default function SettingsPage() {
               type="checkbox"
               checked={policyForm.shares_with_third_parties}
               onChange={e => setPolicyForm(f => ({ ...f, shares_with_third_parties: e.target.checked }))}
-              className="w-4 h-4 rounded border-gray-600 bg-white/5 text-violet-600 focus:ring-violet-500"
+              className="w-4 h-4 rounded border-gray-600 bg-white/5 text-teal-600 focus:ring-teal-500"
             />
             <span className="text-gray-300">Shares data with third parties</span>
           </label>
@@ -197,7 +235,7 @@ export default function SettingsPage() {
               type="checkbox"
               checked={policyForm.allows_training}
               onChange={e => setPolicyForm(f => ({ ...f, allows_training: e.target.checked }))}
-              className="w-4 h-4 rounded border-gray-600 bg-white/5 text-violet-600 focus:ring-violet-500"
+              className="w-4 h-4 rounded border-gray-600 bg-white/5 text-teal-600 focus:ring-teal-500"
             />
             <span className="text-gray-300">Uses data for model training</span>
           </label>
@@ -207,7 +245,7 @@ export default function SettingsPage() {
               type="checkbox"
               checked={policyForm.deletion_on_request}
               onChange={e => setPolicyForm(f => ({ ...f, deletion_on_request: e.target.checked }))}
-              className="w-4 h-4 rounded border-gray-600 bg-white/5 text-violet-600 focus:ring-violet-500"
+              className="w-4 h-4 rounded border-gray-600 bg-white/5 text-teal-600 focus:ring-teal-500"
             />
             <span className="text-gray-300">Deletes data on buyer request</span>
           </label>
@@ -215,7 +253,7 @@ export default function SettingsPage() {
           <button
             onClick={saveDataPolicy}
             disabled={saving}
-            className="bg-violet-600 hover:bg-violet-500 disabled:bg-gray-700 text-white font-medium px-6 py-2.5 rounded-lg transition-colors"
+            className="bg-teal-600 hover:bg-teal-500 disabled:bg-gray-700 text-white font-medium px-6 py-2.5 rounded-lg transition-colors"
           >
             {saving ? 'Saving...' : 'Save Data Policy'}
           </button>
@@ -234,7 +272,7 @@ export default function SettingsPage() {
       <div className="card">
         <h2 className="text-lg font-semibold text-white mb-4">Notifications</h2>
         <p className="text-gray-400 text-sm">
-          Webhook notifications are configured via the API. Use <code className="text-violet-400">POST /v1/me/webhooks</code> to 
+          Webhook notifications are configured via the API. Use <code className="text-teal-400">POST /v1/me/webhooks</code> to 
           set up real-time notifications for job updates, messages, and more.
         </p>
       </div>

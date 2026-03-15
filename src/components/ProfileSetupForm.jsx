@@ -3,7 +3,6 @@ import CopyButton from './CopyButton';
 
 // Agent DefinedKeys (agentplatform@)
 const AGENT_KEYS = {
-  version:      'iBShCc1dESnTq25WkxzrKGjHvHwZFSoq6b',
   type:         'i9YN6ovGcotCnFdNyUtNh72Nw11WcBuD8y',
   name:         'i3oa8uNjgZjmC1RS8rg1od8czBP8bsh5A8',
   description:  'i9Ww2jR4sFt7nzdc5vRy5MHUCjTWULXCqH',
@@ -32,7 +31,7 @@ function toHex(value) {
   return Array.from(new TextEncoder().encode(json)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-export default function ProfileSetupForm({ identityName, parentIAddress = 'i7xKUpKQDSriYFfgHYfRpFc2uzRKWLDkjW' }) {
+export default function ProfileSetupForm({ identityName, parentIAddress }) {
   const [values, setValues] = useState({
     name: '', type: 'ai-assistant', description: '', status: 'active',
     capabilities: '', endpoints: '', protocols: '', owner: '',
@@ -72,9 +71,6 @@ export default function ProfileSetupForm({ identityName, parentIAddress = 'i7xKU
       cmm[iAddr] = [toHex(encoded)];
     }
 
-    // Version
-    cmm[AGENT_KEYS.version] = [toHex('1.0')];
-
     // Services
     const validServices = services.filter(s => s.name.trim());
     if (validServices.length > 0) {
@@ -90,24 +86,20 @@ export default function ProfileSetupForm({ identityName, parentIAddress = 'i7xKU
       });
     }
 
-    // Extract short name from identityName (e.g. "behappy.agentplatform@" → "behappy")
-    const shortName = identityName?.split('.')[0] || 'yourname';
+    const idObj = { name: identityName || 'yourname@', contentmultimap: cmm };
+    if (parentIAddress) idObj.parent = parentIAddress;
 
-    return `updateidentity '${JSON.stringify({
-      name: shortName,
-      parent: parentIAddress,
-      contentmultimap: cmm,
-    })}'`;
+    return `updateidentity '${JSON.stringify(idObj)}'`;
   }
 
   const command = buildCommand();
 
   return (
     <div className="space-y-6">
-      <div className="bg-violet-500/10 border border-violet-500/20 rounded-lg p-4">
-        <h3 className="text-violet-300 font-medium mb-1">📝 Complete Your Agent Profile</h3>
+      <div className="bg-teal-500/10 border border-teal-500/20 rounded-lg p-4">
+        <h3 className="text-teal-300 font-medium mb-1">📝 Complete Your Agent Profile</h3>
         <p className="text-gray-400 text-sm">
-          Fill out the fields below, then copy the generated <code className="text-violet-400">updateidentity</code> command 
+          Fill out the fields below, then copy the generated <code className="text-teal-400">updateidentity</code> command 
           and run it in Verus Desktop console or CLI. Your data will be stored on-chain in your VerusID.
         </p>
       </div>
@@ -146,7 +138,7 @@ export default function ProfileSetupForm({ identityName, parentIAddress = 'i7xKU
       <div className="card !p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-white font-semibold text-lg">Services</h3>
-          <button onClick={addService} className="text-xs text-violet-400 hover:text-violet-300">+ Add Service</button>
+          <button onClick={addService} className="text-xs text-teal-400 hover:text-teal-300">+ Add Service</button>
         </div>
         {services.map((svc, i) => (
           <div key={i} className="bg-gray-800/50 rounded-lg p-4 space-y-3 border border-gray-700/50">

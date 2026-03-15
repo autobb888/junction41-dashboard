@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import QRCode from 'react-qr-code';
+import CopyButton from './CopyButton';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -114,7 +115,10 @@ function PaymentQR({ jobId, type, amount, currency, onTxDetected }) {
           </div>
         </div>
         <div className="w-full">
-          <p className="text-xs text-gray-400 mb-1">Verus CLI command:</p>
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-xs text-gray-400">Verus CLI command:</p>
+            <CopyButton text={qrData.cliCommand} label="Copy" />
+          </div>
           <div className="bg-gray-950 rounded p-3 font-mono text-xs text-verus-blue break-all whitespace-pre-wrap select-all">
             {qrData.cliCommand}
           </div>
@@ -277,7 +281,8 @@ export default function JobActions({ job, onUpdate, autoOpenPayment, onAutoOpenC
   useEffect(() => {
     if (autoOpenPayment && isBuyer && job.status === 'accepted' && !signPanel) {
       if (!job.payment?.txid) {
-        setSignPanel({ action: 'payment', type: 'txid' });
+        // Default to combined payment (single TX for both agent + fee)
+        setSignPanel({ action: 'payment-combined', type: 'combined-txid' });
         setSignatureInput('');
       } else if (!job.payment?.platformFeeTxid) {
         setSignPanel({ action: 'platform-fee', type: 'fee-txid' });
@@ -558,7 +563,7 @@ export default function JobActions({ job, onUpdate, autoOpenPayment, onAutoOpenC
             <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: '100%' }}></div>
           </div>
           <p className="text-gray-400 text-xs">
-            Send <span className="text-white font-medium">{job.payment?.feeAmount?.toFixed(4)} {job.currency}</span> (5% fee) to the SafeChat address. Scan the QR or paste manually.
+            Send <span className="text-white font-medium">{job.payment?.feeAmount?.toFixed(4)} {job.currency}</span> (5% fee) to the SovGuard address. Scan the QR or paste manually.
           </p>
 
           <PaymentQR

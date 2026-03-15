@@ -283,8 +283,8 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
       if (isSeller) {
         setEndSessionPanel('deliver');
       } else {
-        // Buyer just signals — seller needs to deliver first
-        setSessionEndingInfo({ requestedBy: user?.verusId, reason: 'user_requested' });
+        // Buyer goes straight to complete+review
+        setEndSessionPanel('complete');
       }
     } catch (err) {
       setActionError(err.message);
@@ -533,7 +533,7 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
               </p>
               <div style={{
                 background: 'var(--bg-secondary)', borderRadius: 6, padding: 8,
-                fontFamily: 'monospace', fontSize: 11, color: '#A78BFA',
+                fontFamily: 'monospace', fontSize: 11, color: '#34D399',
                 wordBreak: 'break-all', whiteSpace: 'pre-wrap', marginBottom: 8,
               }}>
                 {buildSignCmd(idName, reviewSignData.message)}
@@ -609,7 +609,7 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
           </p>
           <div style={{
             background: 'var(--bg-secondary)', borderRadius: 6, padding: 8,
-            fontFamily: 'monospace', fontSize: 11, color: '#A78BFA',
+            fontFamily: 'monospace', fontSize: 11, color: '#34D399',
             wordBreak: 'break-all', whiteSpace: 'pre-wrap', marginBottom: 8,
           }}>
             {cmd}
@@ -690,7 +690,7 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
           </p>
           <div style={{
             background: 'var(--bg-secondary)', borderRadius: 6, padding: 8,
-            fontFamily: 'monospace', fontSize: 11, color: '#A78BFA',
+            fontFamily: 'monospace', fontSize: 11, color: '#34D399',
             wordBreak: 'break-all', whiteSpace: 'pre-wrap', marginBottom: 8,
           }}>
             {cmd}
@@ -851,11 +851,11 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
       if (isBuyer) {
         return (
           <div style={{
-            padding: '10px 16px', background: 'rgba(167, 139, 250, 0.1)',
-            borderTop: '1px solid rgba(167, 139, 250, 0.3)',
+            padding: '10px 16px', background: 'rgba(52, 211, 153, 0.1)',
+            borderTop: '1px solid rgba(52, 211, 153, 0.3)',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}>
-            <span style={{ color: '#A78BFA', fontWeight: 600, fontSize: 13 }}>
+            <span style={{ color: '#34D399', fontWeight: 600, fontSize: 13 }}>
               Work delivered — ready to confirm?
             </span>
             <button
@@ -870,11 +870,11 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
       }
       return (
         <div style={{
-          padding: '10px 16px', background: 'rgba(167, 139, 250, 0.1)',
-          borderTop: '1px solid rgba(167, 139, 250, 0.3)',
+          padding: '10px 16px', background: 'rgba(52, 211, 153, 0.1)',
+          borderTop: '1px solid rgba(52, 211, 153, 0.3)',
           display: 'flex', alignItems: 'center', gap: 8,
         }}>
-          <span style={{ color: '#A78BFA', fontWeight: 600, fontSize: 13 }}>
+          <span style={{ color: '#34D399', fontWeight: 600, fontSize: 13 }}>
             Delivered — waiting for buyer confirmation
           </span>
         </div>
@@ -1014,7 +1014,7 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
                   borderRadius: 8,
                   maxWidth: '80%',
                   alignSelf: isMe ? 'flex-end' : 'flex-start',
-                  background: isMe ? 'rgba(167, 139, 250, 0.15)' : 'var(--bg-tertiary)',
+                  background: isMe ? 'rgba(52, 211, 153, 0.15)' : 'var(--bg-tertiary)',
                   border: isFlagged ? '1px solid #eab308' : '1px solid transparent',
                   opacity: msg.pending ? 0.6 : 1,
                 }}

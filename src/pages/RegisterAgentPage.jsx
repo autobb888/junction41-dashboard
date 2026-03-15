@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { CATEGORIES } from '../components/marketplace/categories';
 
 // In dev, use empty string to go through Vite proxy (avoids CORS)
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -14,6 +15,16 @@ export default function RegisterAgentPage() {
     name: '',
     type: 'autonomous',
     description: '',
+    categories: [],      // up to 3 category IDs
+    paymentTerms: 'postpay',
+    privateMode: false,
+    sovguard: false,
+    dataPolicy: {
+      retention: '30 days',
+      allowTraining: false,
+      allowThirdParty: false,
+      requireDeletion: true,
+    },
   });
   const [signature, setSignature] = useState('');
   const [payload, setPayload] = useState(null);
@@ -35,6 +46,11 @@ export default function RegisterAgentPage() {
         type: formData.type,
         description: formData.description || undefined,
         owner: user.verusId,
+        category: formData.categories.join(',') || undefined,
+        paymentTerms: formData.paymentTerms,
+        privateMode: formData.privateMode,
+        sovguard: formData.sovguard,
+        dataPolicy: formData.dataPolicy,
       },
     };
     
@@ -80,7 +96,7 @@ export default function RegisterAgentPage() {
         </p>
         <Link
           to="/"
-          className="inline-block px-6 py-3 bg-verus-blue hover:bg-violet-500 text-white font-medium rounded-lg transition-colors"
+          className="inline-block px-6 py-3 bg-verus-blue hover:bg-teal-500 text-white font-medium rounded-lg transition-colors"
         >
           View My Agents
         </Link>
@@ -168,10 +184,141 @@ export default function RegisterAgentPage() {
               />
             </div>
 
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                Categories (up to 3)
+              </label>
+              <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                {CATEGORIES.map(cat => {
+                  const selected = formData.categories.includes(cat.id);
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => {
+                        if (selected) {
+                          setFormData({ ...formData, categories: formData.categories.filter(c => c !== cat.id) });
+                        } else if (formData.categories.length < 3) {
+                          setFormData({ ...formData, categories: [...formData.categories, cat.id] });
+                        }
+                      }}
+                      className={`text-left px-3 py-2 rounded-lg text-sm border transition-colors ${
+                        selected
+                          ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400'
+                          : 'border-white/10 bg-[#0a0b10] text-gray-400 hover:border-white/20'
+                      }`}
+                    >
+                      <span className="mr-1.5">{cat.icon}</span>
+                      {cat.name}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                {formData.categories.length}/3 selected
+                {formData.categories.length > 0 && (
+                  <span className="ml-2">
+                    — Primary: {CATEGORIES.find(c => c.id === formData.categories[0])?.name}
+                  </span>
+                )}
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                Payment Terms
+              </label>
+              <select
+                value={formData.paymentTerms}
+                onChange={(e) => setFormData({ ...formData, paymentTerms: e.target.value })}
+                className="w-full px-4 py-2 bg-[#0a0b10] border border-white/10 rounded-lg text-white focus:outline-none focus:border-verus-blue"
+              >
+                <option value="prepay">Prepay — Buyer pays before work begins</option>
+                <option value="postpay">Postpay — Buyer pays after delivery</option>
+                <option value="split">Split — 50% upfront, 50% on delivery</option>
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <label className="flex items-center gap-3 p-3 rounded-lg border border-white/10 bg-[#0a0b10] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.privateMode}
+                  onChange={(e) => setFormData({ ...formData, privateMode: e.target.checked })}
+                  className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-emerald-500"
+                />
+                <div>
+                  <span className="text-sm text-gray-300">Private Mode</span>
+                  <p className="text-xs text-gray-500">Minimized logging</p>
+                </div>
+              </label>
+              <label className="flex items-center gap-3 p-3 rounded-lg border border-white/10 bg-[#0a0b10] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.sovguard}
+                  onChange={(e) => setFormData({ ...formData, sovguard: e.target.checked })}
+                  className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-emerald-500"
+                />
+                <div>
+                  <span className="text-sm text-gray-300">SovGuard</span>
+                  <p className="text-xs text-gray-500">Sovereign protection</p>
+                </div>
+              </label>
+            </div>
+
+            <div className="border-t border-white/10 pt-4">
+              <label className="block text-sm font-medium text-gray-300 mb-3">
+                Data Policy
+              </label>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Data Retention</label>
+                  <select
+                    value={formData.dataPolicy.retention}
+                    onChange={(e) => setFormData({ ...formData, dataPolicy: { ...formData.dataPolicy, retention: e.target.value } })}
+                    className="w-full px-4 py-2 bg-[#0a0b10] border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-verus-blue"
+                  >
+                    <option value="none">No retention</option>
+                    <option value="7 days">7 days</option>
+                    <option value="30 days">30 days</option>
+                    <option value="90 days">90 days</option>
+                    <option value="365 days">1 year</option>
+                  </select>
+                </div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.dataPolicy.allowTraining}
+                    onChange={(e) => setFormData({ ...formData, dataPolicy: { ...formData.dataPolicy, allowTraining: e.target.checked } })}
+                    className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-emerald-500"
+                  />
+                  <span className="text-sm text-gray-400">Allow data for model training</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.dataPolicy.allowThirdParty}
+                    onChange={(e) => setFormData({ ...formData, dataPolicy: { ...formData.dataPolicy, allowThirdParty: e.target.checked } })}
+                    className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-emerald-500"
+                  />
+                  <span className="text-sm text-gray-400">Allow third-party data sharing</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.dataPolicy.requireDeletion}
+                    onChange={(e) => setFormData({ ...formData, dataPolicy: { ...formData.dataPolicy, requireDeletion: e.target.checked } })}
+                    className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-emerald-500"
+                  />
+                  <span className="text-sm text-gray-400">Support deletion on request</span>
+                </label>
+              </div>
+            </div>
+
             <button
               onClick={generatePayload}
               disabled={!formData.verusId || !formData.name}
-              className="w-full py-3 px-4 bg-verus-blue hover:bg-violet-500 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+              className="w-full py-3 px-4 bg-verus-blue hover:bg-teal-500 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
             >
               Continue to Sign
             </button>
@@ -222,7 +369,7 @@ export default function RegisterAgentPage() {
             <button
               onClick={handleSubmit}
               disabled={loading || !signature}
-              className="flex-1 py-3 px-4 bg-verus-blue hover:bg-violet-500 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+              className="flex-1 py-3 px-4 bg-verus-blue hover:bg-teal-500 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
             >
               {loading ? 'Registering...' : 'Register Agent'}
             </button>
