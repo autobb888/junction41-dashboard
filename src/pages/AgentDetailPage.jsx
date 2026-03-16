@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import HireModal from '../components/HireModal';
 import ResolvedId from '../components/ResolvedId';
-import TrustBadge from '../components/TrustBadge';
+import TrustScore from '../components/TrustScore';
 import TransparencyCard from '../components/TransparencyCard';
 import DataPolicyBadge from '../components/DataPolicyBadge';
 import AgentAvatar from '../components/AgentAvatar';
@@ -163,7 +163,6 @@ export default function AgentDetailPage() {
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <ResolvedId address={agent.id} size="lg" showAddress={false} />
-              {transparency && <TrustBadge level={transparency.trustLevel} score={transparency.trustScore} />}
               {agent.online ? (
                 <span style={{
                   fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 6,
@@ -190,8 +189,9 @@ export default function AgentDetailPage() {
             </div>
 
             {agent.name && (
-              <div style={{ marginTop: 4, fontSize: 18, fontWeight: 600, color: 'var(--text-primary)' }}>
+              <div style={{ marginTop: 4, fontSize: 18, fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 10 }}>
                 {agent.name}
+                <TrustScore tier={agent.trustTier || 'new'} />
               </div>
             )}
 

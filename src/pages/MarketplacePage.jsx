@@ -6,6 +6,7 @@ import MobileFilterOverlay from '../components/marketplace/MobileFilterOverlay';
 import MarketplaceSearchBar from '../components/marketplace/MarketplaceSearchBar';
 import MarketplaceCard from '../components/marketplace/MarketplaceCard';
 import FeaturedCard from '../components/marketplace/FeaturedCard';
+import TrustScore from '../components/TrustScore';
 import HorizontalScroll from '../components/marketplace/HorizontalScroll';
 import { SkeletonList } from '../components/Skeleton';
 import usePageTitle from '../hooks/usePageTitle';
@@ -169,13 +170,14 @@ export default function MarketplacePage() {
       if (catRes?.ok) {
         const data = await catRes.json();
         if (data.counts) {
-          // Build case-insensitive lookup so "Development" matches "development"
+          // Build normalized lookup — store both raw key and lowercase
           const normalized = {};
           for (const [key, val] of Object.entries(data.counts)) {
-            normalized[key.toLowerCase()] = val;
+            normalized[key] = (normalized[key] || 0) + val;
+            normalized[key.toLowerCase()] = (normalized[key.toLowerCase()] || 0) + val;
           }
           setCategoryCounts(normalized);
-          // Sum all category counts for the "All Agents" total
+          // Sum unique category counts for the "All Agents" total
           const sum = Object.values(data.counts).reduce((a, b) => a + b, 0);
           setAllAgentsTotal(sum);
         }
@@ -237,6 +239,16 @@ export default function MarketplacePage() {
   if (filters.sovguard) activeFilters.push({ key: 'sovguard', label: 'SovGuard', clear: () => setFilters(f => ({ ...f, sovguard: false })) });
   if (filters.privateMode) activeFilters.push({ key: 'privateMode', label: 'Private Mode', clear: () => setFilters(f => ({ ...f, privateMode: false })) });
   filters.paymentTerms.forEach(pt => activeFilters.push({ key: `pt-${pt}`, label: `${pt.charAt(0).toUpperCase() + pt.slice(1)}`, clear: () => setFilters(f => ({ ...f, paymentTerms: f.paymentTerms.filter(x => x !== pt) })) }));
+
+  // Split agents by trust tier: filter out suspended, separate low-trust
+  const regularAgents = services.filter(s => {
+    const tier = s.trustTier || s.transparency?.trustTier;
+    return tier !== 'suspended' && tier !== 'low';
+  });
+  const riskyAgents = services.filter(s => {
+    const tier = s.trustTier || s.transparency?.trustTier;
+    return tier === 'low';
+  });
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg-base)' }}>
@@ -360,7 +372,7 @@ export default function MarketplacePage() {
           <div className="flex-1 min-w-0">
             {loading ? (
               <SkeletonList count={6} lines={2} />
-            ) : services.length === 0 ? (
+            ) : (services.length === 0 || regularAgents.length === 0) && riskyAgents.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <div className="text-4xl mb-3">&#128269;</div>
                 <h3 className="text-lg font-medium text-white mb-2">
@@ -379,13 +391,35 @@ export default function MarketplacePage() {
                   Register your agent &#8594;
                 </Link>
               </div>
+            ) : regularAgents.length === 0 ? (
+              <div className="text-center py-8 text-sm" style={{ color: 'var(--text-tertiary)' }}>
+                No high-trust agents match your filters. See risky agents below.
+              </div>
             ) : viewMode === 'grid' ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                {services.map(s => <MarketplaceCard key={s.id} service={s} variant="grid" />)}
+                {regularAgents.map(s => (
+                  <div key={s.id} className="relative">
+                    <MarketplaceCard service={s} variant="grid" />
+                    {(s.trustTier || s.transparency?.trustTier) && (
+                      <div className="absolute top-2 right-2 z-10">
+                        <TrustScore tier={s.trustTier || s.transparency?.trustTier} />
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             ) : (
               <div className="space-y-3">
-                {services.map(s => <MarketplaceCard key={s.id} service={s} variant="list" />)}
+                {regularAgents.map(s => (
+                  <div key={s.id} className="relative">
+                    <MarketplaceCard service={s} variant="list" />
+                    {(s.trustTier || s.transparency?.trustTier) && (
+                      <div className="absolute top-3 right-3 z-10">
+                        <TrustScore tier={s.trustTier || s.transparency?.trustTier} />
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
 
@@ -406,6 +440,35 @@ export default function MarketplacePage() {
                 >
                   {loadingMore ? 'Loading...' : 'Load More Agents'}
                 </button>
+              </div>
+            )}
+
+            {/* Risky Agents section */}
+            {!loading && riskyAgents.length > 0 && (
+              <div className="mt-12 pt-8" style={{ borderTop: '1px solid rgba(239, 68, 68, 0.15)' }}>
+                <div className="flex items-center gap-3 mb-2">
+                  <h3 className="text-base font-bold" style={{ color: '#EF4444', fontFamily: 'var(--font-display)' }}>
+                    Risky Agents
+                  </h3>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                    style={{ background: 'rgba(239,68,68,0.1)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.2)' }}>
+                    Low Trust
+                  </span>
+                </div>
+                <p className="text-xs mb-6" style={{ color: 'var(--text-tertiary)' }}>
+                  These agents have low trust scores. Proceed with caution and review their profiles carefully before hiring.
+                </p>
+                <div className={`${viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4' : 'space-y-3'}`}
+                  style={{ opacity: 0.75 }}>
+                  {riskyAgents.map(s => (
+                    <div key={s.id} className="relative">
+                      <MarketplaceCard service={s} variant={viewMode} />
+                      <div className={`absolute ${viewMode === 'grid' ? 'top-2 right-2' : 'top-3 right-3'} z-10`}>
+                        <TrustScore tier="low" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Copy, Check, ChevronDown, ChevronRight, ExternalLink, Shield, Key, User, Database, FileCode, AlertTriangle } from 'lucide-react';
 import ProfileSetupForm from '../components/ProfileSetupForm';
+import TrustBreakdown from '../components/TrustBreakdown';
 import { SkeletonCard } from '../components/Skeleton';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -267,6 +268,9 @@ export default function ProfilePage() {
           )}
         </div>
       </CollapsibleSection>
+
+      {/* Trust Score Breakdown — agent only */}
+      {isAgent && <TrustBreakdown />}
 
       {/* Agent: empty profile warning + setup form */}
       {isAgent && decodedCmmCount === 0 && decodedCmCount === 0 && (

@@ -49,7 +49,12 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
         <span className="text-xs px-2 py-1 rounded-full hidden sm:block"
           style={{ background: 'rgba(52, 211, 153, 0.08)', color: 'var(--text-tertiary)' }}>{category}</span>
         {rating > 0 && <StarRating rating={rating} />}
-        <span className="text-white text-sm font-semibold whitespace-nowrap">{service.price} {service.currency}</span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-white text-sm font-semibold whitespace-nowrap">{service.price} {service.currency}</span>
+          {service.acceptedCurrencies?.length > 1 && (
+            <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>+{service.acceptedCurrencies.length - 1}</span>
+          )}
+        </div>
       </div>
     );
   }
@@ -115,13 +120,18 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
         </div>
       )}
 
-      {/* Footer: price + jobs */}
+      {/* Footer: price + accepted currencies + jobs */}
       <div className="flex items-center justify-between pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <span className="text-white font-semibold text-sm">{service.price}</span>
           <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{service.currency}</span>
+          {service.acceptedCurrencies?.length > 1 && (
+            <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(52, 211, 153, 0.08)', color: 'var(--text-tertiary)' }}>
+              +{service.acceptedCurrencies.length - 1} more
+            </span>
+          )}
         </div>
-        {jobs > 0 && <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{jobs} jobs</span>}
+        {jobs > 0 && <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-tertiary)' }}>{jobs} jobs</span>}
       </div>
     </div>
   );

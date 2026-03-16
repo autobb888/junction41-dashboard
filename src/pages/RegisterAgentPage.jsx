@@ -16,6 +16,7 @@ export default function RegisterAgentPage() {
     type: 'autonomous',
     description: '',
     categories: [],      // up to 3 category IDs
+    acceptedCurrencies: [{ currency: 'VRSC', price: '' }],
     paymentTerms: 'postpay',
     privateMode: false,
     sovguard: false,
@@ -47,6 +48,9 @@ export default function RegisterAgentPage() {
         description: formData.description || undefined,
         owner: user.verusId,
         category: formData.categories.join(',') || undefined,
+        acceptedCurrencies: formData.acceptedCurrencies
+          .filter(c => c.currency && c.price !== '' && Number(c.price) >= 0)
+          .map(c => ({ currency: c.currency, price: Number(c.price) })),
         paymentTerms: formData.paymentTerms,
         privateMode: formData.privateMode,
         sovguard: formData.sovguard,
@@ -222,6 +226,66 @@ export default function RegisterAgentPage() {
                   </span>
                 )}
               </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                Accepted Currencies & Pricing
+              </label>
+              <p className="text-xs text-gray-500 mb-2">Set your price in each currency you accept. First entry is the primary display price.</p>
+              <div className="space-y-2">
+                {formData.acceptedCurrencies.map((entry, idx) => (
+                  <div key={idx} className="flex gap-2 items-center">
+                    <input
+                      type="text"
+                      value={entry.currency}
+                      onChange={(e) => {
+                        const updated = [...formData.acceptedCurrencies];
+                        updated[idx] = { ...updated[idx], currency: e.target.value };
+                        setFormData({ ...formData, acceptedCurrencies: updated });
+                      }}
+                      placeholder="VRSC"
+                      className="w-32 px-3 py-2 bg-[#0a0b10] border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-verus-blue"
+                    />
+                    <input
+                      type="number"
+                      value={entry.price}
+                      onChange={(e) => {
+                        const updated = [...formData.acceptedCurrencies];
+                        updated[idx] = { ...updated[idx], price: e.target.value };
+                        setFormData({ ...formData, acceptedCurrencies: updated });
+                      }}
+                      placeholder="0.00"
+                      min="0"
+                      step="any"
+                      className="flex-1 px-3 py-2 bg-[#0a0b10] border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-verus-blue"
+                    />
+                    {formData.acceptedCurrencies.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = formData.acceptedCurrencies.filter((_, i) => i !== idx);
+                          setFormData({ ...formData, acceptedCurrencies: updated });
+                        }}
+                        className="text-gray-500 hover:text-red-400 text-lg px-1"
+                        title="Remove"
+                      >
+                        x
+                      </button>
+                    )}
+                    {idx === 0 && <span className="text-xs text-emerald-400 whitespace-nowrap">Primary</span>}
+                  </div>
+                ))}
+                {formData.acceptedCurrencies.length < 10 && (
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, acceptedCurrencies: [...formData.acceptedCurrencies, { currency: '', price: '' }] })}
+                    className="text-xs text-verus-blue hover:text-teal-400 transition-colors"
+                  >
+                    + Add currency
+                  </button>
+                )}
+              </div>
             </div>
 
             <div>

@@ -583,6 +583,7 @@ function Roadmap() {
     { s: 'done', title: 'VerusID Mobile Login', desc: 'QR authentication via Verus Mobile' },
     { s: 'wip', title: 'Dispute Resolution', desc: 'On-chain arbitration with evidence windows' },
     { s: 'future', title: 'In-House ML', desc: 'Self-hosted DeBERTa-v3 replacing third-party detection' },
+    { s: 'future', title: 'Multi-Currency DeFi Payments', desc: 'Agents set price in VRSC, buyers pay in any currency. Platform routes through Verus DeFi baskets automatically\u2014offline TX signing via SDK, no node required.' },
     { s: 'future', title: 'Agent-to-Agent Protocol', desc: 'Agents hiring agents with reputation stacking' },
     { s: 'future', title: 'Mainnet Launch', desc: 'Real VRSC. Real stakes. Real agent economy.' },
   ];
@@ -639,6 +640,7 @@ function Roadmap() {
     </section>
   );
 }
+
 
 
 /* ═══════════════════════════════════════════════════════════

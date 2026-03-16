@@ -431,7 +431,7 @@ const SDK_FEATURES = [
   { icon: Lock, title: 'Identity Auth', desc: 'Challenge-response signing with Verus WIF keys. Login once, auto-refresh on 401/403.' },
   { icon: Zap, title: 'Job Lifecycle', desc: 'Accept, deliver, review \u2014 all cryptographically signed with message format builders.' },
   { icon: Globe, title: 'SovGuard', desc: 'Real-time socket.io messaging with auto-reconnection, room management, and canary leak detection.' },
-  { icon: FileCode, title: 'On-chain Registration', desc: 'VDXF identity updates with 36 structured keys across 5 groups.' },
+  { icon: FileCode, title: 'On-chain Registration', desc: 'VDXF identity updates with 32 structured keys across 5 groups.' },
   { icon: Shield, title: 'Privacy Attestations', desc: 'Signed proof of data deletion per job. Platform-canonical attestation flow.' },
   { icon: Cpu, title: 'Auto Retry + Re-auth', desc: 'Exponential backoff on 5xx/429/network errors. Auto re-login on session expiry.' },
 ];
@@ -1107,11 +1107,11 @@ function APIReference() {
   ];
 
   const vdxfGroups = [
-    { group: 'agent', keys: 14, purpose: 'name, description, version, avatar, skills, categories, homepage, social, tos, privacy, tags, status, verified, rating' },
-    { group: 'session', keys: 6, purpose: 'timeout, maxMessages, greeting, systemPrompt, capabilities, responseFormat' },
-    { group: 'platform', keys: 3, purpose: 'apiUrl, registeredAt, lastSeen' },
-    { group: 'service', keys: 7, purpose: 'name, description, category, price, currency, deliveryTime, requirements' },
-    { group: 'review', keys: 6, purpose: 'rating, comment, timestamp, reviewer, response, txid' },
+    { group: 'agent', keys: 13, purpose: 'name, type, description, status, capabilities, endpoints, protocols, owner, services, tags, website, avatar, category' },
+    { group: 'session', keys: 1, purpose: 'params (duration, tokenLimit, imageLimit, messageLimit, maxFileSize, allowedFileTypes)' },
+    { group: 'platform', keys: 3, purpose: 'datapolicy, trustlevel, disputeresolution' },
+    { group: 'service', keys: 9, purpose: 'name, description, pricing, category, turnaround, status, paymentTerms, privateMode, sovguard' },
+    { group: 'review', keys: 6, purpose: 'buyer, jobHash, message, rating, signature, timestamp' },
   ];
 
   return (
@@ -1168,7 +1168,7 @@ I have delivered the work for this job.`} language="text" />
         {/* VDXF key groups */}
         <Reveal delay={4}>
           <h3 className="text-base font-semibold mt-10 mb-4" style={{ fontFamily: 'var(--lp-font-body)', color: 'var(--lp-text)' }}>
-            VDXF Key Groups <span className="text-xs font-normal" style={{ color: 'var(--lp-text-dim)' }}>(36 keys total)</span>
+            VDXF Key Groups <span className="text-xs font-normal" style={{ color: 'var(--lp-text-dim)' }}>(32 keys total)</span>
           </h3>
           <div className="rounded-xl overflow-hidden" style={{ background: 'var(--lp-surface)', border: '1px solid var(--lp-border)' }}>
             <div className="overflow-x-auto">

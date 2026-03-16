@@ -44,9 +44,9 @@ export default function CategorySidebar({
             >
               <span className="w-5 text-center text-xs">{cat.icon}</span>
               <span className="flex-1 truncate">{cat.name}</span>
-              {categoryCounts[cat.name.toLowerCase()] > 0 && (
+              {(categoryCounts[cat.id] || categoryCounts[cat.name.toLowerCase()]) > 0 && (
                 <span className="text-xs tabular-nums" style={{ color: 'var(--text-tertiary)' }}>
-                  {categoryCounts[cat.name.toLowerCase()]}
+                  {categoryCounts[cat.id] || categoryCounts[cat.name.toLowerCase()]}
                 </span>
               )}
             </button>

@@ -133,8 +133,12 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
     service?.sellerVerusId ||
     agent?.verusId ||
     agent?.id;
-  const amount = Number(service?.price) || 0;
-  const currency = service?.currency || 'VRSCTEST';
+  // Multi-currency support: let buyer pick from accepted currencies
+  const acceptedCurrencies = service?.acceptedCurrencies || [{ currency: service?.currency || 'VRSCTEST', price: Number(service?.price) || 0 }];
+  const [selectedCurrencyIdx, setSelectedCurrencyIdx] = useState(0);
+  const selectedPricing = acceptedCurrencies[selectedCurrencyIdx] || acceptedCurrencies[0];
+  const amount = Number(selectedPricing?.price) || 0;
+  const currency = selectedPricing?.currency || 'VRSCTEST';
   // Data sharing discount — discount off agent price (data has value to the agent, not the platform)
   const dataDiscountRate = (allowTraining ? 0.10 : 0) + (allowThirdParty ? 0.10 : 0) + (!requireDeletion ? 0.05 : 0);
   const agentAmount = Math.max(amount * (1 - dataDiscountRate), 0);
@@ -150,7 +154,7 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
   // Clear signature when any signed field changes (stale signature protection)
   useEffect(() => {
     setSignature('');
-  }, [description, deadlineDate, deadlineTime, sovguardEnabled, dataRetention, allowTraining, allowThirdParty, requireDeletion, privateMode, timestamp]);
+  }, [description, deadlineDate, deadlineTime, sovguardEnabled, dataRetention, allowTraining, allowThirdParty, requireDeletion, privateMode, timestamp, selectedCurrencyIdx]);
   const paymentTerms = service?.paymentTerms || service?.payment_terms || 'prepay';
   const dataTermsStr = `Retain:${dataRetention}|Train:${allowTraining ? 'yes' : 'no'}|3rdParty:${allowThirdParty ? 'yes' : 'no'}|DelAttest:${requireDeletion ? 'yes' : 'no'}`;
   const paymentCommitment = paymentTerms === 'prepay'
@@ -192,7 +196,7 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
           description: description.trim(),
           message: message.trim() || undefined,
           amount: agentAmount,
-          currency: service?.currency || 'VRSCTEST',
+          currency,
           deadline: deadline || undefined,
           paymentTerms,
           sovguardEnabled,
@@ -259,7 +263,7 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
               </div>
               <div className="text-right">
                 <p className="text-xl font-bold text-verus-blue">
-                  {service?.price} {service?.currency}
+                  {amount} {currency}
                 </p>
                 <span className={`inline-block mt-1 text-xs font-medium px-2 py-0.5 rounded-full ${
                   paymentTerms === 'prepay' ? 'bg-amber-900/50 text-amber-300' :
@@ -273,6 +277,32 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
               </div>
             </div>
           </div>
+
+          {/* Currency selection */}
+          {acceptedCurrencies.length > 1 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Pay with
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {acceptedCurrencies.map((ac, idx) => (
+                  <button
+                    key={ac.currency}
+                    type="button"
+                    onClick={() => setSelectedCurrencyIdx(idx)}
+                    className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                    style={{
+                      border: idx === selectedCurrencyIdx ? '1px solid rgba(52, 211, 153, 0.5)' : '1px solid rgba(255,255,255,0.1)',
+                      background: idx === selectedCurrencyIdx ? 'rgba(52, 211, 153, 0.1)' : 'transparent',
+                      color: idx === selectedCurrencyIdx ? 'var(--accent)' : 'var(--text-secondary)',
+                    }}
+                  >
+                    {ac.price} {ac.currency}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Job details */}
           <div className="space-y-4">
