@@ -1,14 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { apiFetch } from '../utils/api';
 import ResolvedId from '../components/ResolvedId';
 import JobStepper from '../components/JobStepper';
 import Chat from '../components/Chat';
 import AlertBanner from '../components/AlertBanner';
 import JobActions from '../components/JobActions';
 import ReviewModal from '../components/ReviewModal';
-
-const API_BASE = import.meta.env.VITE_API_URL || '';
 
 // Status badges now use CSS classes from index.css (badge + badge-{status})
 
@@ -70,18 +69,26 @@ export default function JobDetailPage() {
 
   async function fetchJob() {
     try {
-      const res = await fetch(`${API_BASE}/v1/jobs/${id}`, { credentials: 'include' });
+      const res = await apiFetch(`/v1/jobs/${id}`);
+      if (res.status === 401) return; // apiFetch triggers auth modal
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error?.message || 'Failed to fetch job');
+      }
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error?.message || 'Failed to fetch job');
       setJob(data.data);
-      
+
       // Check for existing review on this job
       if (data.data?.jobHash) {
         try {
-          const reviewRes = await fetch(`${API_BASE}/v1/reviews/job/${data.data.jobHash}`);
-          const reviewData = await reviewRes.json();
-          if (reviewRes.ok && reviewData.data?.length > 0) {
-            setExistingReview(reviewData.data[0]);
+          const reviewRes = await apiFetch(`/v1/reviews/job/${data.data.jobHash}`);
+          if (reviewRes.ok) {
+            const reviewData = await reviewRes.json();
+            if (reviewData.data) {
+              // API returns single review object or array
+              const review = Array.isArray(reviewData.data) ? reviewData.data[0] : reviewData.data;
+              if (review) setExistingReview(review);
+            }
           }
         } catch { /* no review yet */ }
       }

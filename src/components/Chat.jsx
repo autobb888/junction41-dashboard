@@ -6,6 +6,7 @@ import ResolvedId from './ResolvedId';
 import CopyButton from './CopyButton';
 import { useDisplayName } from '../context/IdentityContext';
 import { useAuth } from '../context/AuthContext';
+import { apiFetch } from '../utils/api';
 import HeldMessageIndicator from './HeldMessageIndicator';
 import SafetyScanBadge from './SafetyScanBadge';
 
@@ -24,16 +25,15 @@ function buildSignCmd(idName, message) {
   return `signmessage "${idName}" "${message.replace(/"/g, '\\"')}"`;
 }
 
-const STAR_LABELS = ['Terrible', 'Poor', 'Okay', 'Good', 'Excellent'];
-
 function FileMessage({ content, jobId, messageId }) {
   const [fileInfo, setFileInfo] = useState(null);
   useEffect(() => {
     async function loadFile() {
       try {
-        const res = await fetch(`${API_BASE}/v1/jobs/${jobId}/files`, { credentials: 'include' });
+        const res = await apiFetch(`/v1/jobs/${jobId}/files`);
+        if (!res.ok) return;
         const data = await res.json();
-        if (res.ok && data.data) {
+        if (data.data) {
           const file = data.data.find(f => f.messageId === messageId);
           if (file) setFileInfo(file);
         }
@@ -42,24 +42,54 @@ function FileMessage({ content, jobId, messageId }) {
     loadFile();
   }, [jobId, messageId]);
 
+  if (!fileInfo) return <span>{content}</span>;
+  return <FileAttachment fileInfo={fileInfo} jobId={jobId} />;
+}
+
+function FileAttachment({ fileInfo, jobId }) {
+  const isImage = fileInfo.mimeType?.startsWith('image/');
+  const downloadUrl = `${API_BASE}/v1/jobs/${jobId}/files/${fileInfo.id}`;
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <span>{content}</span>
-      {fileInfo && (
+    <div style={{ maxWidth: 320 }}>
+      {isImage && (
+        <a href={downloadUrl} target="_blank" rel="noopener noreferrer">
+          <img
+            src={downloadUrl}
+            alt={fileInfo.filename}
+            style={{
+              maxWidth: '100%', maxHeight: 240, borderRadius: 8,
+              border: '1px solid var(--border-default)', display: 'block',
+              marginBottom: 6, cursor: 'pointer',
+            }}
+            loading="lazy"
+          />
+        </a>
+      )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {!isImage && <span style={{ fontSize: 16 }}>{'\uD83D\uDCC4'}</span>}
+        <span style={{ fontSize: 13, color: 'var(--text-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {fileInfo.filename}
+          <span style={{ color: 'var(--text-muted)', marginLeft: 6, fontSize: 11 }}>
+            {fileInfo.sizeBytes < 1024 ? `${fileInfo.sizeBytes} B`
+              : fileInfo.sizeBytes < 1048576 ? `${(fileInfo.sizeBytes / 1024).toFixed(1)} KB`
+              : `${(fileInfo.sizeBytes / 1048576).toFixed(1)} MB`}
+          </span>
+        </span>
         <a
-          href={`${API_BASE}/v1/jobs/${jobId}/files/${fileInfo.id}`}
+          href={downloadUrl}
           target="_blank"
           rel="noopener noreferrer"
           style={{
             color: 'var(--accent)', fontSize: 12, textDecoration: 'none',
             padding: '2px 8px', borderRadius: 4,
             border: '1px solid rgba(52, 211, 153, 0.3)',
-            whiteSpace: 'nowrap',
+            whiteSpace: 'nowrap', flexShrink: 0,
           }}
         >
           Download
         </a>
-      )}
+      </div>
     </div>
   );
 }
@@ -94,17 +124,15 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
   const [deliverySig, setDeliverySig] = useState('');
   const [deliveryTs, setDeliveryTs] = useState(null);
 
-  // Complete panel state
+  // Complete + review panel state
   const [completeSig, setCompleteSig] = useState('');
   const [completeTs, setCompleteTs] = useState(null);
-
-  // Review panel state
+  const [completeStep, setCompleteStep] = useState('review'); // review | sign
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewHover, setReviewHover] = useState(0);
   const [reviewMessage, setReviewMessage] = useState('');
-  const [reviewSignData, setReviewSignData] = useState(null);
-  const [reviewSig, setReviewSig] = useState('');
-  const [reviewStep, setReviewStep] = useState('compose'); // compose | sign | submitting
+  const [reviewPublic, setReviewPublic] = useState(true);
+
 
   // Extension panel state
   const [extAmount, setExtAmount] = useState('');
@@ -112,6 +140,7 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
 
   // File upload state
   const [uploading, setUploading] = useState(false);
+  const [pendingFile, setPendingFile] = useState(null); // { file, preview }
   const fileInputRef = useRef(null);
 
   const isBuyer = job?.buyerVerusId === user?.verusId;
@@ -135,9 +164,10 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
   useEffect(() => {
     async function loadMessages() {
       try {
-        const res = await fetch(`${API_BASE}/v1/jobs/${jobId}/messages`, { credentials: 'include' });
+        const res = await apiFetch(`/v1/jobs/${jobId}/messages`);
+        if (!res.ok) return;
         const data = await res.json();
-        if (res.ok && data.data) {
+        if (data.data) {
           setMessages(data.data);
         }
       } catch { /* ignore */ }
@@ -243,9 +273,29 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
     });
 
     socket.on('file_uploaded', (data) => {
-      // File upload creates a chat message server-side — it'll arrive via 'message' event.
-      // But if the uploader is us, we already showed it optimistically, so just ensure
-      // the files list is fresh if we ever add one.
+      // Server creates the chat message via REST, not socket, so add it here
+      setMessages(prev => {
+        // If message already exists (e.g. arrived via 'message' event), enrich it
+        const exists = prev.some(m => m.id === data.messageId);
+        if (exists) {
+          return prev.map(m =>
+            m.id === data.messageId
+              ? { ...m, fileId: data.id, fileName: data.filename, fileMimeType: data.mimeType, fileSizeBytes: data.sizeBytes }
+              : m
+          );
+        }
+        // Otherwise add as new message with file metadata
+        return [...prev, {
+          id: data.messageId,
+          senderVerusId: data.uploaderVerusId,
+          content: `\uD83D\uDCCE Uploaded file: ${data.filename}`,
+          createdAt: new Date().toISOString(),
+          fileId: data.id,
+          fileName: data.filename,
+          fileMimeType: data.mimeType,
+          fileSizeBytes: data.sizeBytes,
+        }];
+      });
     });
 
     socket.on('job_status_changed', (data) => {
@@ -287,6 +337,11 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
 
   function handleSend(e) {
     e.preventDefault();
+    // If there's a pending file, send it
+    if (pendingFile) {
+      sendFile();
+      return;
+    }
     const content = input.trim();
     if (!content || !socketRef.current || !connected) return;
 
@@ -314,27 +369,38 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
     }
   }
 
-  // File upload
-  async function handleFileUpload(e) {
+  // File selection — stages the file, doesn't upload yet
+  function handleFileSelect(e) {
     const file = e.target.files?.[0];
     if (!file) return;
-    // Reset input so same file can be re-selected
     e.target.value = '';
+    const preview = file.type.startsWith('image/') ? URL.createObjectURL(file) : null;
+    setPendingFile({ file, preview });
+  }
 
+  function clearPendingFile() {
+    if (pendingFile?.preview) URL.revokeObjectURL(pendingFile.preview);
+    setPendingFile(null);
+  }
+
+  // Upload the pending file
+  async function sendFile() {
+    if (!pendingFile) return;
     setUploading(true);
     try {
       const formData = new FormData();
-      formData.append('file', file);
-      const res = await fetch(`${API_BASE}/v1/jobs/${jobId}/files`, {
+      formData.append('file', pendingFile.file);
+      const res = await apiFetch(`/v1/jobs/${jobId}/files`, {
         method: 'POST',
-        credentials: 'include',
         body: formData,
       });
-      const data = await res.json();
+      if (res.status === 401) return;
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         alert(data.error?.message || 'Upload failed');
+        return;
       }
-      // Server auto-creates a chat message + emits WS event, so the message list will update
+      clearPendingFile();
     } catch (err) {
       alert('Upload failed: ' + err.message);
     } finally {
@@ -402,87 +468,29 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
     setActionLoading(true);
     setActionError(null);
     try {
+      const body = {
+        timestamp: completeTs,
+        signature: completeSig.trim(),
+      };
+      if (reviewRating >= 1) {
+        body.rating = reviewRating;
+        body.reviewMessage = reviewMessage || '';
+        body.publicReview = reviewPublic;
+      }
       const res = await fetch(`${API_BASE}/v1/jobs/${jobId}/complete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          timestamp: completeTs,
-          signature: completeSig.trim(),
-        }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error?.message || 'Completion failed');
       setCompleteSig('');
       setCompleteTs(null);
-      setEndSessionPanel('review');
-      onJobStatusChanged?.();
-    } catch (err) {
-      setActionError(err.message);
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-  async function handleGetReviewSignMessage() {
-    if (reviewRating < 1) {
-      setActionError('Please select a rating');
-      return;
-    }
-    setActionLoading(true);
-    setActionError(null);
-    try {
-      const timestamp = Math.floor(Date.now() / 1000);
-      const agentVerusId = job.sellerVerusId;
-      const params = new URLSearchParams({
-        agentVerusId,
-        jobHash: job.jobHash,
-        message: reviewMessage || '',
-        rating: String(reviewRating),
-        timestamp: String(timestamp),
-      });
-      const res = await fetch(`${API_BASE}/v1/reviews/message?${params}`, { credentials: 'include' });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error?.message || 'Failed to get sign message');
-      setReviewSignData({ message: data.data.message, timestamp: data.data.timestamp });
-      setReviewStep('sign');
-    } catch (err) {
-      setActionError(err.message);
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-  async function handleSubmitReview() {
-    if (!reviewSig.trim()) {
-      setActionError('Please paste your signature');
-      return;
-    }
-    setActionLoading(true);
-    setActionError(null);
-    setReviewStep('submitting');
-    try {
-      const res = await fetch(`${API_BASE}/v1/reviews`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          agentVerusId: job.sellerVerusId,
-          buyerVerusId: user.verusId,
-          jobHash: job.jobHash,
-          message: reviewMessage || '',
-          rating: reviewRating,
-          timestamp: reviewSignData.timestamp,
-          signature: reviewSig.trim(),
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error?.message || 'Failed to submit review');
       setEndSessionPanel('done');
       onJobStatusChanged?.();
     } catch (err) {
       setActionError(err.message);
-      setReviewStep('sign');
     } finally {
       setActionLoading(false);
     }
@@ -533,143 +541,99 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
       );
     }
 
-    // Review panel (after completion, buyer only)
-    if (endSessionPanel === 'review' && isBuyer) {
-      return (
-        <div style={{
-          padding: '12px 16px', background: 'var(--bg-tertiary)',
-          borderTop: '1px solid var(--border-primary)',
-        }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>
-            Leave a Review
-          </div>
-
-          {reviewStep === 'compose' && (
-            <>
-              <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
-                {[1, 2, 3, 4, 5].map(star => (
-                  <button
-                    key={star}
-                    onMouseEnter={() => setReviewHover(star)}
-                    onMouseLeave={() => setReviewHover(0)}
-                    onClick={() => setReviewRating(star)}
-                    style={{
-                      background: 'none', border: 'none', cursor: 'pointer',
-                      fontSize: 24, color: star <= (reviewHover || reviewRating) ? '#eab308' : '#4b5563',
-                    }}
-                  >
-                    {star <= (reviewHover || reviewRating) ? '\u2605' : '\u2606'}
-                  </button>
-                ))}
-                {(reviewHover || reviewRating) > 0 && (
-                  <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 8, alignSelf: 'center' }}>
-                    {STAR_LABELS[(reviewHover || reviewRating) - 1]}
-                  </span>
-                )}
-              </div>
-              <textarea
-                value={reviewMessage}
-                onChange={e => setReviewMessage(e.target.value)}
-                placeholder="How was your experience? (optional)"
-                rows={2}
-                maxLength={500}
-                style={{
-                  width: '100%', background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)',
-                  borderRadius: 6, padding: '6px 10px', color: 'var(--text-primary)', fontSize: 13,
-                  resize: 'none', outline: 'none',
-                }}
-              />
-              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                <button
-                  onClick={handleGetReviewSignMessage}
-                  disabled={reviewRating < 1 || actionLoading}
-                  className="btn-primary"
-                  style={{ padding: '6px 14px', fontSize: 13 }}
-                >
-                  {actionLoading ? 'Loading...' : 'Continue to Sign'}
-                </button>
-                <button
-                  onClick={() => setEndSessionPanel('done')}
-                  style={{
-                    background: 'none', border: '1px solid var(--border-primary)',
-                    borderRadius: 6, padding: '6px 14px', fontSize: 13,
-                    color: 'var(--text-muted)', cursor: 'pointer',
-                  }}
-                >
-                  Skip
-                </button>
-              </div>
-            </>
-          )}
-
-          {reviewStep === 'sign' && reviewSignData && (
-            <>
-              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>
-                Sign this with your VerusID:
-              </p>
-              <div style={{
-                background: 'var(--bg-secondary)', borderRadius: 6, padding: 8,
-                fontFamily: 'monospace', fontSize: 11, color: '#34D399',
-                wordBreak: 'break-all', whiteSpace: 'pre-wrap', marginBottom: 8,
-              }}>
-                {buildSignCmd(idName, reviewSignData.message)}
-              </div>
-              <CopyButton text={buildSignCmd(idName, reviewSignData.message)} label="Copy command" />
-              <input
-                type="text"
-                value={reviewSig}
-                onChange={e => {
-                  let val = e.target.value;
-                  if (val.trim().startsWith('{')) {
-                    try { const p = JSON.parse(val.trim()); if (p.signature) val = p.signature; } catch { /* not JSON */ }
-                  }
-                  setReviewSig(val);
-                }}
-                placeholder="Paste signature..."
-                style={{
-                  width: '100%', marginTop: 8, background: 'var(--bg-secondary)',
-                  border: '1px solid var(--border-primary)', borderRadius: 6,
-                  padding: '6px 10px', color: 'var(--text-primary)', fontFamily: 'monospace',
-                  fontSize: 13, outline: 'none',
-                }}
-              />
-              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                <button
-                  onClick={handleSubmitReview}
-                  disabled={!reviewSig.trim() || actionLoading}
-                  className="btn-primary"
-                  style={{ padding: '6px 14px', fontSize: 13 }}
-                >
-                  {actionLoading ? 'Submitting...' : 'Submit Review'}
-                </button>
-                <button
-                  onClick={() => { setReviewStep('compose'); setReviewSignData(null); setReviewSig(''); }}
-                  style={{
-                    background: 'none', border: '1px solid var(--border-primary)',
-                    borderRadius: 6, padding: '6px 14px', fontSize: 13,
-                    color: 'var(--text-muted)', cursor: 'pointer',
-                  }}
-                >
-                  Back
-                </button>
-              </div>
-            </>
-          )}
-
-          {reviewStep === 'submitting' && (
-            <div style={{ textAlign: 'center', padding: '12px 0', color: 'var(--text-muted)', fontSize: 13 }}>
-              Verifying and submitting review...
-            </div>
-          )}
-        </div>
-      );
-    }
 
     // Completion panel (buyer, job delivered)
     if (endSessionPanel === 'complete' && isBuyer) {
       if (!completeTs) setCompleteTs(Math.floor(Date.now() / 1000));
       const ts = completeTs || Math.floor(Date.now() / 1000);
-      const msg = `J41-COMPLETE|Job:${job.jobHash}|Ts:${ts}|I confirm the work has been delivered satisfactorily.`;
+
+      // Step 1: Review (stars + message)
+      if (completeStep === 'review') {
+        return (
+          <div style={{
+            padding: '12px 16px', background: 'var(--bg-tertiary)',
+            borderTop: '1px solid var(--border-primary)',
+          }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>
+              Complete & Review
+            </div>
+            <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
+              {[1, 2, 3, 4, 5].map(star => (
+                <button
+                  key={star}
+                  onMouseEnter={() => setReviewHover(star)}
+                  onMouseLeave={() => setReviewHover(0)}
+                  onClick={() => setReviewRating(star)}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    fontSize: 24, color: star <= (reviewHover || reviewRating) ? '#eab308' : '#4b5563',
+                  }}
+                >
+                  {star <= (reviewHover || reviewRating) ? '\u2605' : '\u2606'}
+                </button>
+              ))}
+              {(reviewHover || reviewRating) > 0 && (
+                <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 8, alignSelf: 'center' }}>
+                  {['Terrible', 'Poor', 'Okay', 'Good', 'Excellent'][(reviewHover || reviewRating) - 1]}
+                </span>
+              )}
+            </div>
+            <textarea
+              value={reviewMessage}
+              onChange={e => setReviewMessage(e.target.value)}
+              placeholder="How was your experience? (optional)"
+              rows={2}
+              maxLength={500}
+              style={{
+                width: '100%', background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)',
+                borderRadius: 6, padding: '6px 10px', color: 'var(--text-primary)', fontSize: 13,
+                resize: 'none', outline: 'none',
+              }}
+            />
+            <label style={{
+              display: 'flex', alignItems: 'center', gap: 8, marginTop: 8,
+              cursor: 'pointer', fontSize: 12, color: 'var(--text-muted)',
+            }}>
+              <input
+                type="checkbox"
+                checked={reviewPublic}
+                onChange={e => setReviewPublic(e.target.checked)}
+                style={{ accentColor: 'var(--accent)' }}
+              />
+              <span>
+                {reviewPublic
+                  ? 'Public review \u2014 visible on agent profile with your name'
+                  : 'Private feedback \u2014 only the agent sees this, not published on-chain'}
+              </span>
+            </label>
+            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+              <button
+                onClick={() => { setCompleteStep('sign'); setCompleteSig(''); }}
+                disabled={reviewRating < 1}
+                className="btn-primary"
+                style={{ padding: '6px 14px', fontSize: 13 }}
+              >
+                Continue to Sign
+              </button>
+              <button
+                onClick={() => { setEndSessionPanel(null); setCompleteTs(null); setReviewRating(0); setReviewMessage(''); }}
+                style={{
+                  background: 'none', border: '1px solid var(--border-primary)',
+                  borderRadius: 6, padding: '6px 14px', fontSize: 13,
+                  color: 'var(--text-muted)', cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        );
+      }
+
+      // Step 2: Sign (includes review data in message)
+      const msg = reviewRating >= 1
+        ? `J41-COMPLETE|Job:${job.jobHash}|Rating:${reviewRating}|Msg:${reviewMessage || ''}|Ts:${ts}|I confirm delivery and submit this review.`
+        : `J41-COMPLETE|Job:${job.jobHash}|Ts:${ts}|I confirm the work has been delivered satisfactorily.`;
       const cmd = buildSignCmd(idName, msg);
 
       return (
@@ -678,10 +642,10 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
           borderTop: '1px solid var(--border-primary)',
         }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>
-            Confirm Completion
+            Sign to Complete{reviewRating >= 1 ? ` (${reviewRating}\u2605)` : ''}
           </div>
           <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>
-            Sign this to confirm you received satisfactory work:
+            Sign this to confirm completion{reviewRating >= 1 ? ' and submit your review' : ''}:
           </p>
           <div style={{
             background: 'var(--bg-secondary)', borderRadius: 6, padding: 8,
@@ -719,14 +683,14 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
               {actionLoading ? 'Submitting...' : 'Confirm Complete'}
             </button>
             <button
-              onClick={() => { setEndSessionPanel(null); setCompleteSig(''); setCompleteTs(null); }}
+              onClick={() => { setCompleteStep('review'); setCompleteSig(''); }}
               style={{
                 background: 'none', border: '1px solid var(--border-primary)',
                 borderRadius: 6, padding: '6px 14px', fontSize: 13,
                 color: 'var(--text-muted)', cursor: 'pointer',
               }}
             >
-              Cancel
+              Back
             </button>
           </div>
         </div>
@@ -887,29 +851,8 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
 
     // --- Banners and action buttons (no panel open) ---
 
-    // Completed state — auto-open review for buyer, show done for seller
+    // Completed state — show done banner (review is on the JobDetailPage)
     if (jobStatus === 'completed' && !endSessionPanel) {
-      if (isBuyer) {
-        return (
-          <div style={{
-            padding: '10px 16px', background: 'rgba(34, 197, 94, 0.1)',
-            borderTop: '1px solid rgba(34, 197, 94, 0.3)',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ color: '#22c55e', fontSize: 14 }}>&#10003;</span>
-              <span style={{ color: '#22c55e', fontWeight: 600, fontSize: 13 }}>Job completed</span>
-            </div>
-            <button
-              onClick={() => setEndSessionPanel('review')}
-              className="btn-primary"
-              style={{ padding: '6px 14px', fontSize: 13 }}
-            >
-              Leave a Review
-            </button>
-          </div>
-        );
-      }
       return (
         <div style={{
           padding: '10px 16px', background: 'rgba(34, 197, 94, 0.1)',
@@ -917,7 +860,9 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
           display: 'flex', alignItems: 'center', gap: 8,
         }}>
           <span style={{ color: '#22c55e', fontSize: 14 }}>&#10003;</span>
-          <span style={{ color: '#22c55e', fontWeight: 600, fontSize: 13 }}>Session Complete</span>
+          <span style={{ color: '#22c55e', fontWeight: 600, fontSize: 13 }}>
+            {isBuyer ? 'Job completed — scroll down to leave a review' : 'Session Complete'}
+          </span>
         </div>
       );
     }
@@ -1107,22 +1052,7 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
                 </div>
                 <div style={{ margin: 0, color: 'var(--text-primary)', fontSize: 14, wordBreak: 'break-word' }} className="chat-markdown">
                   {msg.content?.startsWith('\uD83D\uDCCE Uploaded file:') && msg.fileId ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span>{msg.content}</span>
-                      <a
-                        href={`${API_BASE}/v1/jobs/${jobId}/files/${msg.fileId}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          color: 'var(--accent)', fontSize: 12, textDecoration: 'none',
-                          padding: '2px 8px', borderRadius: 4,
-                          border: '1px solid rgba(52, 211, 153, 0.3)',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        Download
-                      </a>
-                    </div>
+                    <FileAttachment fileInfo={{ id: msg.fileId, filename: msg.fileName, mimeType: msg.fileMimeType, sizeBytes: msg.fileSizeBytes }} jobId={jobId} />
                   ) : msg.content?.startsWith('\uD83D\uDCCE Uploaded file:') ? (
                     <FileMessage content={msg.content} jobId={jobId} messageId={msg.id} />
                   ) : (
@@ -1198,19 +1128,65 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
         </div>
       )}
 
+      {/* Pending file preview */}
+      {pendingFile && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px',
+          borderTop: '1px solid var(--border-primary)',
+          background: 'var(--bg-tertiary)',
+        }}>
+          {pendingFile.preview ? (
+            <img src={pendingFile.preview} alt="preview" style={{
+              width: 48, height: 48, objectFit: 'cover', borderRadius: 6,
+              border: '1px solid var(--border-default)',
+            }} />
+          ) : (
+            <div style={{
+              width: 48, height: 48, borderRadius: 6, display: 'flex',
+              alignItems: 'center', justifyContent: 'center', fontSize: 20,
+              background: 'var(--bg-base)', border: '1px solid var(--border-default)',
+            }}>
+              {'\uD83D\uDCC4'}
+            </div>
+          )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 13, color: 'var(--text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {pendingFile.file.name}
+            </p>
+            <p style={{ fontSize: 11, color: 'var(--text-tertiary)', margin: 0 }}>
+              {(pendingFile.file.size / 1024).toFixed(1)} KB
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={clearPendingFile}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'var(--text-tertiary)', fontSize: 18, padding: '4px 8px',
+              borderRadius: 4, lineHeight: 1,
+            }}
+            onMouseEnter={e => e.target.style.color = '#ef4444'}
+            onMouseLeave={e => e.target.style.color = 'var(--text-tertiary)'}
+            title="Remove attachment"
+          >
+            {'\u2715'}
+          </button>
+        </div>
+      )}
+
       {/* Input */}
       <form
         onSubmit={handleSend}
         style={{
           display: 'flex', gap: 8, padding: '12px 16px',
-          borderTop: '1px solid var(--border-primary)',
+          borderTop: pendingFile ? 'none' : '1px solid var(--border-primary)',
           alignItems: 'center',
         }}
       >
         <input
           ref={fileInputRef}
           type="file"
-          onChange={handleFileUpload}
+          onChange={handleFileSelect}
           style={{ display: 'none' }}
           accept="image/*,.pdf,.txt,.md,.csv,.json,.xml,.zip,.tar,.gz,.7z,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
         />
@@ -1234,7 +1210,7 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
           type="text"
           value={input}
           onChange={handleInputChange}
-          placeholder={inputDisabled ? 'Session ended' : 'Type a message...'}
+          placeholder={pendingFile ? `Send ${pendingFile.file.name}` : inputDisabled ? 'Session ended' : 'Type a message...'}
           maxLength={4000}
           disabled={inputDisabled}
           style={{
@@ -1246,11 +1222,11 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
         />
         <button
           type="submit"
-          disabled={!input.trim() || !connected || inputDisabled}
+          disabled={(!input.trim() && !pendingFile) || !connected || inputDisabled || uploading}
           className="btn-primary"
           style={{ padding: '8px 16px' }}
         >
-          Send
+          {uploading ? 'Sending...' : 'Send'}
         </button>
       </form>
     </div>

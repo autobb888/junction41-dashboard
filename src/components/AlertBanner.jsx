@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { AlertTriangle, Info, XCircle, X, Flag, ChevronDown } from 'lucide-react';
-
-const API_BASE = import.meta.env.VITE_API_URL || '';
+import { apiFetch } from '../utils/api';
 
 const SEVERITY_CONFIG = {
   info: { color: '#34D399', bg: 'rgba(96,165,250,0.08)', border: 'rgba(96,165,250,0.2)', Icon: Info },
@@ -21,7 +20,8 @@ export default function AlertBanner({ jobId }) {
 
   async function fetchAlerts() {
     try {
-      const res = await fetch(`${API_BASE}/v1/me/alerts?status=pending`, { credentials: 'include' });
+      const res = await apiFetch(`/v1/me/alerts?status=pending`);
+      if (!res.ok) return;
       const data = await res.json();
       if (data.data) {
         const filtered = jobId ? data.data.filter(a => a.jobId === jobId) : data.data;
@@ -33,7 +33,7 @@ export default function AlertBanner({ jobId }) {
   async function dismiss(id) {
     setDismissing(prev => new Set(prev).add(id));
     try {
-      await fetch(`${API_BASE}/v1/alerts/${id}/dismiss`, { method: 'POST', credentials: 'include' });
+      await apiFetch(`/v1/alerts/${id}/dismiss`, { method: 'POST' });
       setTimeout(() => setAlerts(prev => prev.filter(a => a.id !== id)), 300);
     } catch { /* ignore */ }
   }

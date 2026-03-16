@@ -75,6 +75,7 @@ export default function AgentDetailPage() {
   const [reputation, setReputation] = useState(null);
   const [transparency, setTransparency] = useState(null);
   const [services, setServices] = useState([]);
+  const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [hireService, setHireService] = useState(null);
@@ -85,12 +86,13 @@ export default function AgentDetailPage() {
 
   async function fetchAgent() {
     try {
-      const [agentRes, verifyRes, repRes, servicesRes, transRes] = await Promise.all([
+      const [agentRes, verifyRes, repRes, servicesRes, transRes, reviewsRes] = await Promise.all([
         fetch(`${API_BASE}/v1/agents/${encodeURIComponent(id)}`, { credentials: 'include' }),
         fetch(`${API_BASE}/v1/agents/${encodeURIComponent(id)}/verification`, { credentials: 'include' }),
         fetch(`${API_BASE}/v1/reputation/${encodeURIComponent(id)}`, { credentials: 'include' }),
         fetch(`${API_BASE}/v1/services/agent/${encodeURIComponent(id)}`, { credentials: 'include' }),
         fetch(`${API_BASE}/v1/agents/${encodeURIComponent(id)}/transparency`, { credentials: 'include' }).catch(() => ({ ok: false })),
+        fetch(`${API_BASE}/v1/reviews/agent/${encodeURIComponent(id)}?limit=10`, { credentials: 'include' }).catch(() => ({ ok: false })),
       ]);
 
       const agentData = await agentRes.json();
@@ -98,6 +100,7 @@ export default function AgentDetailPage() {
       const repData = await repRes.json();
       const servicesData = await servicesRes.json();
       const transData = transRes.ok ? await transRes.json() : {};
+      const reviewsData = reviewsRes.ok ? await reviewsRes.json() : {};
 
       if (agentData.data) setAgent(agentData.data);
       else setError(agentData.error?.message || 'Agent not found');
@@ -105,6 +108,7 @@ export default function AgentDetailPage() {
       if (repData.data) setReputation(repData.data);
       if (servicesData.data) setServices(servicesData.data);
       if (transData.data) setTransparency(transData.data);
+      if (reviewsData.data) setReviews(reviewsData.data);
     } catch {
       setError('Failed to fetch agent');
     } finally {
@@ -605,6 +609,57 @@ export default function AgentDetailPage() {
                 <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                   {reputation.recentReviews} reviews in last 30 days
                 </span>
+              </div>
+            </div>
+          )}
+
+          {/* Individual Reviews */}
+          {reviews.length > 0 && (
+            <div className="card" style={{ marginBottom: 20 }}>
+              <SectionHeader icon={Star} title="Reviews" count={reviews.length} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {reviews.map(review => (
+                  <div key={review.id} style={{
+                    background: 'var(--bg-elevated)', borderRadius: 10, padding: 14,
+                    border: '1px solid var(--border-subtle)',
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ color: '#fbbf24', fontSize: 14 }}>
+                          {'★'.repeat(review.rating || 0)}{'☆'.repeat(5 - (review.rating || 0))}
+                        </span>
+                        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{review.rating}/5</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {review.verified && (
+                          <span style={{ fontSize: 10, color: '#22c55e', display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Check size={10} /> verified
+                          </span>
+                        )}
+                        {review.isPublic === false && (
+                          <span style={{ fontSize: 10, color: 'var(--text-muted)', fontStyle: 'italic' }}>private</span>
+                        )}
+                      </div>
+                    </div>
+                    {review.message && (
+                      <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '4px 0 8px', lineHeight: 1.4 }}>
+                        {review.message}
+                      </p>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                        {review.buyerVerusId ? (
+                          <ResolvedId address={review.buyerVerusId} size="xs" />
+                        ) : (
+                          <span style={{ fontStyle: 'italic' }}>Anonymous</span>
+                        )}
+                      </span>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                        {review.timestamp ? new Date(review.timestamp * 1000).toLocaleDateString() : ''}
+                      </span>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}

@@ -11,9 +11,7 @@ export default class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    if (import.meta.env.DEV) {
-      console.error('ErrorBoundary caught:', error, errorInfo);
-    }
+    console.error('ErrorBoundary caught:', error, errorInfo);
   }
 
   render() {
@@ -21,13 +19,22 @@ export default class ErrorBoundary extends Component {
       return (
         <div className="min-h-screen flex flex-col items-center justify-center text-center px-4" style={{ backgroundColor: 'var(--bg-base)' }}>
           <h1 className="text-4xl font-bold text-gray-300 mb-4">Something went wrong</h1>
-          <p className="text-gray-400 mb-6 max-w-md">An unexpected error occurred. Please try refreshing the page.</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-6 py-3 bg-verus-blue hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
-          >
-            Refresh Page
-          </button>
+          <p className="text-gray-400 mb-6 max-w-md">An unexpected error occurred. This may be due to an expired session.</p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-3 bg-verus-blue hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
+            >
+              Refresh Page
+            </button>
+            <button
+              onClick={() => { window.location.href = '/'; }}
+              className="px-6 py-3 text-gray-300 hover:text-white font-medium rounded-lg transition-colors"
+              style={{ border: '1px solid var(--border-default)' }}
+            >
+              Go Home
+            </button>
+          </div>
         </div>
       );
     }
