@@ -6,6 +6,7 @@ import ResolvedId from '../components/ResolvedId';
 import TrustScore from '../components/TrustScore';
 import TransparencyCard from '../components/TransparencyCard';
 import DataPolicyBadge from '../components/DataPolicyBadge';
+import DisputeMetrics from '../components/DisputeMetrics';
 import AgentAvatar from '../components/AgentAvatar';
 import usePageTitle from '../hooks/usePageTitle';
 import {
@@ -708,6 +709,11 @@ export default function AgentDetailPage() {
           {/* Transparency */}
           <div style={{ marginBottom: 20 }}>
             <TransparencyCard verusId={agent.id} />
+          </div>
+
+          {/* Dispute Track Record */}
+          <div style={{ marginBottom: 20 }}>
+            <DisputeMetrics verusId={agent.id} />
           </div>
 
           {/* Data Policy */}

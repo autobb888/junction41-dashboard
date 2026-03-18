@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import QRCode from 'react-qr-code';
 import CopyButton from './CopyButton';
+import DisputeModal from './DisputeModal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -276,6 +277,18 @@ export default function JobActions({ job, onUpdate, autoOpenPayment, onAutoOpenC
 
   const isBuyer = job.buyerVerusId === user?.verusId;
   const isSeller = job.sellerVerusId === user?.verusId;
+  const [showDisputeModal, setShowDisputeModal] = useState(false);
+  const [currentDispute, setCurrentDispute] = useState(null);
+
+  async function fetchDispute() {
+    try {
+      const res = await fetch(`${API_BASE}/v1/jobs/${job.id}/dispute`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setCurrentDispute(data.dispute);
+      }
+    } catch {}
+  }
 
   // Auto-open payment panel when autoOpenPayment is set
   useEffect(() => {
@@ -458,13 +471,43 @@ export default function JobActions({ job, onUpdate, autoOpenPayment, onAutoOpenC
           </button>
         )}
 
-        {/* Dispute */}
-        {!['completed', 'cancelled', 'disputed'].includes(job.status) && (
-          <button onClick={() => handleAction('dispute')} disabled={loading} className="btn-danger text-sm">
+        {/* Dispute — only show for delivered jobs within review window */}
+        {isBuyer && job.status === 'delivered' && (
+          <button onClick={() => setShowDisputeModal(true)} disabled={loading} className="btn-danger text-sm">
             Dispute
           </button>
         )}
+
+        {/* Respond to dispute — agent side */}
+        {isSeller && job.status === 'disputed' && (
+          <button onClick={() => { fetchDispute(); setShowDisputeModal(true); }} disabled={loading} className="btn-danger text-sm">
+            Respond to Dispute
+          </button>
+        )}
+
+        {/* Rework offer — buyer side */}
+        {isBuyer && job.status === 'disputed' && (
+          <button onClick={() => { fetchDispute(); setShowDisputeModal(true); }} disabled={loading} className="text-sm px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20">
+            View Dispute
+          </button>
+        )}
       </div>
+
+      {/* Review window countdown */}
+      {job.status === 'delivered' && job.reviewWindowExpiresAt && (
+        <ReviewWindowCountdown expiresAt={job.reviewWindowExpiresAt} />
+      )}
+
+      {/* Dispute Modal */}
+      {showDisputeModal && (
+        <DisputeModal
+          job={job}
+          dispute={currentDispute}
+          role={isBuyer ? 'buyer' : 'seller'}
+          onClose={() => { setShowDisputeModal(false); setCurrentDispute(null); }}
+          onAction={() => onUpdate?.()}
+        />
+      )}
 
       {/* Sign Panel (accept/complete) */}
       {signPanel && !['txid', 'delivery', 'fee-txid', 'extension', 'combined-txid', 'reject-delivery'].includes(signPanel.type) && (
@@ -703,6 +746,35 @@ export default function JobActions({ job, onUpdate, autoOpenPayment, onAutoOpenC
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function ReviewWindowCountdown({ expiresAt }) {
+  const [remaining, setRemaining] = useState('');
+
+  useEffect(() => {
+    function tick() {
+      const diff = new Date(expiresAt).getTime() - Date.now();
+      if (diff <= 0) {
+        setRemaining('Expired');
+        return;
+      }
+      const mins = Math.floor(diff / 60000);
+      const secs = Math.floor((diff % 60000) / 1000);
+      setRemaining(`${mins}m ${secs}s`);
+    }
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [expiresAt]);
+
+  const isExpired = remaining === 'Expired';
+
+  return (
+    <div className="mt-3 flex items-center gap-2 text-xs" style={{ color: isExpired ? '#ef4444' : '#fbbf24' }}>
+      <span className="inline-block w-2 h-2 rounded-full" style={{ background: isExpired ? '#ef4444' : '#fbbf24' }} />
+      Review window: {remaining}
     </div>
   );
 }

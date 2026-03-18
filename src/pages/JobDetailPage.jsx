@@ -7,6 +7,7 @@ import JobStepper from '../components/JobStepper';
 import Chat from '../components/Chat';
 import AlertBanner from '../components/AlertBanner';
 import JobActions from '../components/JobActions';
+import DisputeTimeline from '../components/DisputeTimeline';
 import ReviewModal from '../components/ReviewModal';
 
 // Status badges now use CSS classes from index.css (badge + badge-{status})
@@ -281,6 +282,11 @@ export default function JobDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Dispute Timeline */}
+      {['disputed', 'resolved', 'resolved_rejected', 'rework'].includes(job.status) && (
+        <DisputeTimeline jobId={id} />
+      )}
 
       {/* Job Actions */}
       {(isBuyer || isSeller) && (

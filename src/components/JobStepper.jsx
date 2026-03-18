@@ -9,14 +9,28 @@ function getStepIndex(status, hasPayment) {
     in_progress: hasPayment ? 2 : 1,
     delivered: 3,
     completed: 4,
+    rework: 3,
+    resolved: 4,
+    resolved_rejected: 4,
     disputed: -1,
     cancelled: -1,
   };
   return map[status] ?? 0;
 }
 
+function getStatusLabel(status) {
+  const labels = {
+    disputed: 'Disputed',
+    cancelled: 'Cancelled',
+    rework: 'Rework',
+    resolved: 'Resolved',
+    resolved_rejected: 'Rejected',
+  };
+  return labels[status] || status;
+}
+
 export default function JobStepper({ status, hasPayment = false }) {
-  const isError = status === 'disputed' || status === 'cancelled';
+  const isError = ['disputed', 'cancelled', 'resolved_rejected'].includes(status);
   const currentIndex = getStepIndex(status, hasPayment);
 
   // For error states, figure out where we were
@@ -89,7 +103,7 @@ export default function JobStepper({ status, hasPayment = false }) {
                   whiteSpace: 'nowrap',
                 }}
               >
-                {isErrorStep ? (status === 'disputed' ? 'Disputed' : 'Cancelled') : STEP_LABELS[i]}
+                {isErrorStep ? getStatusLabel(status) : STEP_LABELS[i]}
               </span>
             </div>
           </div>

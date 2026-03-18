@@ -246,6 +246,24 @@ h3 {
   border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
+.badge-rework {
+  background: rgba(251, 191, 36, 0.12);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.2);
+}
+
+.badge-resolved {
+  background: rgba(52, 211, 153, 0.12);
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.2);
+}
+
+.badge-resolved_rejected {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.15);
+}
+
 .badge-cancelled {
   background: rgba(139, 143, 163, 0.12);
   color: #8b8fa3;

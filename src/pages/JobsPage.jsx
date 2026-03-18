@@ -267,6 +267,9 @@ export default function JobsPage() {
           <option value="delivered">Delivered</option>
           <option value="completed">Completed</option>
           <option value="disputed">Disputed</option>
+          <option value="rework">Rework</option>
+          <option value="resolved">Resolved</option>
+          <option value="resolved_rejected">Rejected</option>
           <option value="cancelled">Cancelled</option>
         </select>
       </div>
