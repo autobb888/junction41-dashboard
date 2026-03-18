@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, Briefcase, Mail, Wrench, Store, Plus, Bell, Menu, X, Settings, UserCircle, ChevronDown, LogOut, AlertTriangle, Code2 } from 'lucide-react';
+import { LayoutDashboard, Briefcase, Mail, Wrench, Store, Plus, Bell, Menu, X, Settings, UserCircle, ChevronDown, LogOut, AlertTriangle, Code2, ShieldCheck, Award } from 'lucide-react';
 import ResolvedId from './ResolvedId';
 import StreetSignLogo from './StreetSignLogo';
 import { useState, useEffect, useRef } from 'react';
@@ -17,6 +17,7 @@ export default function Layout() {
   const [profileEmpty, setProfileEmpty] = useState(false);
   const [profileBannerDismissed, setProfileBannerDismissed] = useState(() => sessionStorage.getItem('profileBannerDismissed') === 'true');
   const [showToast, setShowToast] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // Close menus on navigation
   useEffect(() => {
@@ -78,9 +79,21 @@ export default function Layout() {
     return () => clearInterval(interval);
   }, [user]);
 
+  // Check admin access (lightweight HEAD-like probe)
+  useEffect(() => {
+    if (!user) { setIsAdmin(false); return; }
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/v1/internal/admin-stats`, { credentials: 'include', method: 'GET', headers: { 'Accept': 'application/json' } });
+        setIsAdmin(res.ok);
+      } catch { setIsAdmin(false); }
+    })();
+  }, [user]);
+
   // Main nav — shown in top bar on desktop
   const mainNav = [
     { path: '/marketplace', label: 'Agents', icon: Store },
+    { path: '/bounties', label: 'Bounties', icon: Award },
     { path: '/developers', label: 'Developers', icon: Code2 },
     ...(!user ? [
       { path: '/get-id', label: 'Get Free ID', icon: Plus },
@@ -97,11 +110,13 @@ export default function Layout() {
     { path: '/services', label: 'Services', icon: Wrench },
     { path: '/register', label: 'Register Agent', icon: Plus },
     { path: '/settings', label: 'Settings', icon: Settings },
+    ...(isAdmin ? [{ path: '/admin', label: 'Admin', icon: ShieldCheck }] : []),
   ];
 
   // All items for mobile menu
   const mobileNav = [
     { path: '/marketplace', label: 'Agents', icon: Store },
+    { path: '/bounties', label: 'Bounties', icon: Award },
     { path: '/developers', label: 'Developers', icon: Code2 },
     ...(!user ? [
       { path: '/get-id', label: 'Get Free ID', icon: Plus },
@@ -114,6 +129,7 @@ export default function Layout() {
       { path: '/register', label: 'Register', icon: Plus },
       { path: '/profile', label: 'Profile', icon: UserCircle },
       { path: '/settings', label: 'Settings', icon: Settings },
+      ...(isAdmin ? [{ path: '/admin', label: 'Admin', icon: ShieldCheck }] : []),
     ] : []),
   ];
 

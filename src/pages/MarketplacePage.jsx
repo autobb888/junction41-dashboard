@@ -324,15 +324,6 @@ export default function MarketplacePage() {
           </div>
         )}
 
-        {/* Featured carousel (hide when category selected) */}
-        {!selectedCategory && featured.length > 0 && (
-          <div className="mb-10">
-            <HorizontalScroll label="Featured Agents" sublabel="Hand-picked by the Junction41 team">
-              {featured.map(a => <FeaturedCard key={a.id} agent={a} />)}
-            </HorizontalScroll>
-          </div>
-        )}
-
         {/* Trending carousel (hide when category selected) */}
         {!selectedCategory && trending.length > 0 && (
           <div className="mb-10">

@@ -18,8 +18,50 @@ export default function DashboardPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetchAgents();
-    fetchStats();
+    let cancelled = false;
+
+    async function load() {
+      // fetchStats is fire-and-forget, safe to call unconditionally
+      fetchStats();
+
+      if (!user?.verusId) {
+        if (!cancelled) setLoading(false);
+        return;
+      }
+      try {
+        const res = await apiFetch(`/v1/agents?owner=${encodeURIComponent(user.verusId)}`);
+        const data = await res.json();
+
+        if (cancelled) return;
+
+        if (data.data) {
+          const enriched = await Promise.all(
+            data.data.map(async (agent) => {
+              const agentId = agent.verusId || agent.id;
+              if (!agentId) return agent;
+              try {
+                const repRes = await apiFetch(`/v1/reputation/${encodeURIComponent(agentId)}?quick=true`);
+                if (repRes.ok) {
+                  const repData = await repRes.json();
+                  return { ...agent, reputation: repData.data };
+                }
+              } catch {}
+              return agent;
+            })
+          );
+          if (!cancelled) setAgents(enriched);
+        } else if (data.error) {
+          if (!cancelled) setError(data.error.message);
+        }
+      } catch {
+        if (!cancelled) setError('Failed to fetch agents');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    load();
+    return () => { cancelled = true; };
   }, [user]);
 
   async function fetchStats() {
@@ -29,43 +71,6 @@ export default function DashboardPage() {
       if (data.data) setStats(data.data);
     } catch (err) {
       console.warn('Failed to fetch stats:', err);
-    }
-  }
-
-  async function fetchAgents() {
-    if (!user?.verusId) {
-      setLoading(false);
-      return;
-    }
-    try {
-      // Fetch agents owned by current user
-      const res = await apiFetch(`/v1/agents?owner=${encodeURIComponent(user.verusId)}`);
-      const data = await res.json();
-
-      if (data.data) {
-        // Enrich with reputation
-        const enriched = await Promise.all(
-          data.data.map(async (agent) => {
-            const agentId = agent.verusId || agent.id;
-            if (!agentId) return agent;
-            try {
-              const repRes = await apiFetch(`/v1/reputation/${encodeURIComponent(agentId)}?quick=true`);
-              if (repRes.ok) {
-                const repData = await repRes.json();
-                return { ...agent, reputation: repData.data };
-              }
-            } catch {}
-            return agent;
-          })
-        );
-        setAgents(enriched);
-      } else if (data.error) {
-        setError(data.error.message);
-      }
-    } catch {
-      setError('Failed to fetch agents');
-    } finally {
-      setLoading(false);
     }
   }
 

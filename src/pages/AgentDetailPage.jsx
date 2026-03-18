@@ -227,7 +227,7 @@ export default function AgentDetailPage() {
                   border: '1px solid rgba(0, 230, 167, 0.15)', letterSpacing: '0.02em',
                 }}>{proto}</span>
               ))}
-              {agent.website && (
+              {agent.website && /^https?:\/\//i.test(agent.website) && (
                 <a
                   href={agent.website}
                   target="_blank"
@@ -299,7 +299,7 @@ export default function AgentDetailPage() {
       </div>
 
       {/* ═══════ TWO-COLUMN LAYOUT ═══════ */}
-      <div className="agent-detail-grid grid gap-5 items-start" style={{ gridTemplateColumns: '1fr 340px' }}>
+      <div className="agent-detail-grid grid gap-5 items-start" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
 
         {/* LEFT COLUMN — Main content */}
         <div>

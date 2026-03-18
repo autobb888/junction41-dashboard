@@ -225,10 +225,17 @@ export default function InboxPage() {
   const [error, setError] = useState('');
   const [selectedItem, setSelectedItem] = useState(null);
   const [pendingCount, setPendingCount] = useState(0);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
 
   useEffect(() => {
     fetchInbox();
-  }, []);
+  }, [user]);
 
   async function fetchInbox() {
     setLoading(true);
@@ -335,11 +342,13 @@ export default function InboxPage() {
         }}
       >
         {/* Left Panel - Item List */}
+        {(!isMobile || !selectedItem) && (
         <div
           style={{
-            width: 340,
-            minWidth: 340,
-            borderRight: '1px solid var(--border-subtle)',
+            width: isMobile ? '100%' : 340,
+            minWidth: isMobile ? 0 : 280,
+            flexShrink: 0,
+            borderRight: isMobile ? 'none' : '1px solid var(--border-subtle)',
             overflowY: 'auto',
             display: 'flex',
             flexDirection: 'column',
@@ -455,8 +464,10 @@ export default function InboxPage() {
             </div>
           )}
         </div>
+        )}
 
         {/* Right Panel - Details */}
+        {(!isMobile || selectedItem) && (
         <div
           style={{
             flex: 1,
@@ -465,12 +476,30 @@ export default function InboxPage() {
             flexDirection: 'column',
           }}
         >
-          <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border-subtle)' }}>
+          <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: 12 }}>
+            {isMobile && selectedItem && (
+              <button
+                onClick={() => setSelectedItem(null)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  padding: '4px 0',
+                  fontSize: 14,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
+              >
+                ← Back
+              </button>
+            )}
             <h2 className="font-semibold text-white" style={{ fontSize: 14 }}>
-              {selectedItem 
-                ? (selectedItem.type === 'review' ? 'Review Details' 
-                  : selectedItem.jobDetails ? 'Job Progress' 
-                  : 'Message Details') 
+              {selectedItem
+                ? (selectedItem.type === 'review' ? 'Review Details'
+                  : selectedItem.jobDetails ? 'Job Progress'
+                  : 'Message Details')
                 : 'Details'}
             </h2>
           </div>
@@ -624,6 +653,7 @@ export default function InboxPage() {
             </div>
           )}
         </div>
+        )}
       </div>
     </div>
   );

@@ -16,7 +16,10 @@ import LandingPage from './pages/LandingPage';
 import SettingsPage from './pages/SettingsPage';
 import ProfilePage from './pages/ProfilePage';
 import DevelopersPage from './pages/DevelopersPage';
+import BountiesPage from './pages/BountiesPage';
+import BountyDetailPage from './pages/BountyDetailPage';
 import SignDemoPage from './pages/SignDemoPage';
+import AdminDashboard from './pages/AdminDashboard';
 import { ToastProvider } from './components/Toast';
 import ErrorBoundary from './components/ErrorBoundary';
 
@@ -80,6 +83,8 @@ function AppRoutes() {
         <Route path="agents/:id" element={<AgentDetailPage />} />
         <Route path="guide" element={<Navigate to="/developers" replace />} />
         <Route path="developers" element={<DevelopersPage />} />
+        <Route path="bounties" element={<BountiesPage />} />
+        <Route path="bounties/:id" element={<BountyDetailPage />} />
         <Route path="sign-demo" element={<SignDemoPage />} />
 
         {/* Protected routes — auth modal on demand */}
@@ -91,6 +96,7 @@ function AppRoutes() {
         <Route path="jobs/:id" element={<ProtectedRoute><JobDetailPage /></ProtectedRoute>} />
         <Route path="settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
         <Route path="profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+        <Route path="admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
 
         {/* 404 catch-all */}
         <Route path="*" element={

@@ -135,6 +135,11 @@ export default function JobDetailPage() {
         <span className={`badge badge-${job.status}`}>
           {job.status.replace('_', ' ')}
         </span>
+        {job.bountyId && (
+          <Link to={`/bounties/${job.bountyId}`} style={{ fontSize: 13, color: 'var(--accent-primary)' }}>
+            From bounty →
+          </Link>
+        )}
       </div>
 
       {/* Job Progress Stepper */}
