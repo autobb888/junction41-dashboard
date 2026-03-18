@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { apiFetch } from '../utils/api';
 import { io } from 'socket.io-client';
-import { Terminal, Copy, Check, Shield, Eye, Pause, Play, XCircle } from 'lucide-react';
+import { Terminal, Copy, Check, Shield, Eye, XCircle } from 'lucide-react';
 
 const WS_URL = import.meta.env.VITE_WS_URL || window.location.origin;
 
@@ -16,8 +16,8 @@ export default function WorkspacePanel({ job }) {
   const [mode, setMode] = useState('supervised');
   const [writeEnabled, setWriteEnabled] = useState(true);
 
-  // Generated token data
-  const [tokenData, setTokenData] = useState(null);
+  // Generated token data — only store the command string, not the full response
+  const [command, setCommand] = useState(null);
 
   // Fetch existing session on mount
   useEffect(() => {
@@ -25,19 +25,18 @@ export default function WorkspacePanel({ job }) {
   }, [job.id]);
 
   // Socket.IO for real-time workspace status updates
-  // Uses the main /ws namespace (same as Chat.jsx) — workspace updates are emitted to job rooms
   useEffect(() => {
     if (!session) return;
     let socket;
+    let cancelled = false;
 
     (async () => {
-      // Get chat token for Socket.IO auth (same pattern as Chat.jsx)
       try {
-        const tokenRes = await apiFetch('/v1/chat/token');
-        if (!tokenRes.ok) return;
-        const tokenData = await tokenRes.json();
-        const chatToken = tokenData.data?.token;
-        if (!chatToken) return;
+        const chatTokenRes = await apiFetch('/v1/chat/token');
+        if (cancelled || !chatTokenRes.ok) return;
+        const chatTokenData = await chatTokenRes.json();
+        const chatToken = chatTokenData.data?.token;
+        if (cancelled || !chatToken) return;
 
         socket = io(WS_URL, {
           path: '/ws',
@@ -46,36 +45,47 @@ export default function WorkspacePanel({ job }) {
           transports: ['websocket', 'polling'],
         });
 
+        if (cancelled) { socket.disconnect(); return; }
+
         socket.on('connect', () => {
           socket.emit('join_job', { jobId: job.id });
         });
 
         socket.on('workspace:update', (data) => {
+          const { status, counts } = data;
           setSession((prev) => prev ? {
             ...prev,
-            status: data.status,
-            counts: data.counts || prev.counts,
+            status,
+            counts: counts || prev.counts,
           } : prev);
         });
       } catch {
-        // Socket.IO connection failed — fall back to polling
+        // Socket.IO connection failed — status will refresh on next poll
       }
     })();
 
-    return () => { if (socket) socket.disconnect(); };
+    return () => {
+      cancelled = true;
+      if (socket) {
+        socket.emit('leave_job', { jobId: job.id });
+        socket.disconnect();
+      }
+    };
   }, [session?.id, job.id]);
 
   async function fetchSession() {
     try {
       const res = await apiFetch(`/v1/workspace/${job.id}`);
       if (res.status === 401) return;
-      if (!res.ok) return;
-      const data = await res.json();
-      if (data.data) {
-        setSession(data.data);
+      if (!res.ok) {
+        setError('Unable to check workspace status');
+        return;
       }
+      const data = await res.json();
+      // I4: Always sync session state — clear when backend returns null
+      setSession(data.data || null);
     } catch {
-      // No session yet — that's fine
+      setError('Unable to check workspace status');
     } finally {
       setLoading(false);
     }
@@ -99,8 +109,8 @@ export default function WorkspacePanel({ job }) {
         setError(data.error?.message || 'Failed to generate token');
         return;
       }
-      setTokenData(data.data);
-      // Refresh session status
+      // I11: Only store the command string, not workspaceUid or other credentials
+      setCommand(data.data.command);
       await fetchSession();
     } catch (err) {
       setError(err.message);
@@ -122,9 +132,21 @@ export default function WorkspacePanel({ job }) {
   }
 
   function copyCommand() {
-    if (!tokenData) return;
-    const full = `# Install (once):\nyarn global add @j41/workspace\n\n# Start workspace:\n${tokenData.command}`;
-    navigator.clipboard.writeText(full);
+    if (!command) return;
+    const full = `# Install (once):\nyarn global add @j41/workspace\n\n# Start workspace:\n${command}`;
+    try {
+      navigator.clipboard.writeText(full);
+    } catch {
+      // I5: Fallback for insecure contexts
+      const textarea = document.createElement('textarea');
+      textarea.value = full;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
@@ -144,15 +166,13 @@ export default function WorkspacePanel({ job }) {
             <span className={`badge badge-${session.status === 'active' ? 'in_progress' : session.status}`}>
               {session.status}
             </span>
-            {session.status !== 'aborted' && (
-              <button
-                onClick={abortWorkspace}
-                className="text-red-400 hover:text-red-300 transition-colors"
-                title="Abort workspace"
-              >
-                <XCircle size={18} />
-              </button>
-            )}
+            <button
+              onClick={abortWorkspace}
+              className="text-red-400 hover:text-red-300 transition-colors"
+              title="Abort workspace"
+            >
+              <XCircle size={18} />
+            </button>
           </div>
         </div>
 
@@ -165,6 +185,15 @@ export default function WorkspacePanel({ job }) {
           <span>Read: on</span>
           {session.permissions?.write && <span>Write: on</span>}
         </div>
+
+        {/* Supervised mode note */}
+        {session.mode === 'supervised' && session.status === 'active' && (
+          <div className="p-3 rounded-lg mb-4" style={{ background: 'var(--bg-inset)', border: '1px solid var(--border-subtle)' }}>
+            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+              Supervised mode — approve/reject operations in your CLI terminal
+            </p>
+          </div>
+        )}
 
         {/* Operation Counts */}
         {session.counts && (
@@ -210,6 +239,7 @@ export default function WorkspacePanel({ job }) {
         {session.counts && (
           <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
             {session.counts.reads} files read, {session.counts.writes} written, {session.counts.blocked} blocked
+            {session.mode && <span> — {session.mode} mode</span>}
           </p>
         )}
         {session.attestation && (
@@ -240,7 +270,7 @@ export default function WorkspacePanel({ job }) {
         <label className="text-sm font-medium text-white block mb-2">Mode</label>
         <div className="flex gap-3">
           {[
-            { value: 'supervised', label: 'Supervised', desc: 'Approve each action' },
+            { value: 'supervised', label: 'Supervised', desc: 'Approve each action in CLI' },
             { value: 'standard', label: 'Standard', desc: 'Watch live feed' },
           ].map((opt) => (
             <label key={opt.value}
@@ -293,13 +323,13 @@ export default function WorkspacePanel({ job }) {
       )}
 
       {/* Generated Command */}
-      {tokenData ? (
+      {command ? (
         <div className="mb-4">
           <div className="rounded-lg p-4 font-mono text-xs" style={{ background: 'var(--bg-inset)', border: '1px solid var(--border-subtle)' }}>
             <p style={{ color: 'var(--text-tertiary)' }}># Install (once):</p>
             <p className="text-white mb-2">yarn global add @j41/workspace</p>
             <p style={{ color: 'var(--text-tertiary)' }}># Start workspace:</p>
-            <p className="text-white break-all">{tokenData.command}</p>
+            <p className="text-white break-all">{command}</p>
           </div>
           <button
             onClick={copyCommand}
