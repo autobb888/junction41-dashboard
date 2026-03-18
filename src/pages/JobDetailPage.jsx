@@ -9,6 +9,7 @@ import AlertBanner from '../components/AlertBanner';
 import JobActions from '../components/JobActions';
 import DisputeTimeline from '../components/DisputeTimeline';
 import ReviewModal from '../components/ReviewModal';
+import WorkspacePanel from '../components/WorkspacePanel';
 
 // Status badges now use CSS classes from index.css (badge + badge-{status})
 
@@ -298,6 +299,11 @@ export default function JobDetailPage() {
         <div className="card">
           <JobActions job={job} onUpdate={fetchJob} autoOpenPayment={autoOpenPayment} onAutoOpenConsumed={() => setAutoOpenPayment(false)} onJobStarted={handleJobStarted} />
         </div>
+      )}
+
+      {/* Workspace Panel — buyer only, in_progress jobs */}
+      {isBuyer && job.status === 'in_progress' && (
+        <WorkspacePanel job={job} />
       )}
 
       {/* Real-time Chat */}
