@@ -178,10 +178,6 @@ export class WorkspaceClient {
         }
       });
 
-      this.socket.on('workspace:agent_disconnected', (data: any) => {
-        // This is about the OTHER agent disconnecting, not us
-      });
-
       this.socket.on('ws:error', (data: { code: string; message: string }) => {
         if (!settled) {
           settled = true;
@@ -357,13 +353,15 @@ git commit -m "feat(workspace): WorkspaceClient — Socket.IO relay connection, 
 - Modify: `/home/bigbox/code/j41-sovagent-sdk/src/agent.ts`
 - Modify: `/home/bigbox/code/j41-sovagent-sdk/src/index.ts`
 
-- [ ] **Step 1: Add getWorkspaceConnectToken to client/index.ts**
+- [ ] **Step 1: Add getWorkspaceStatus to client/index.ts**
+
+The WorkspaceClient handles its own connect-token REST call internally (matching the ChatClient pattern). This method is for the MCP server to check workspace status:
 
 Find the end of the J41Client class (before the closing `}`). Add this method:
 
 ```typescript
-  async getWorkspaceConnectToken(jobId: string): Promise<{ token: string; wsUrl: string; namespace: string }> {
-    const res = await this.request<{ data: { token: string; wsUrl: string; namespace: string } }>('GET', `/v1/workspace/${jobId}/connect-token`);
+  async getWorkspaceStatus(jobId: string): Promise<any> {
+    const res = await this.request<{ data: any }>('GET', `/v1/workspace/${jobId}`);
     return res.data;
   }
 ```
@@ -441,7 +439,7 @@ In `src/cli.js`, find the `handleWebhookEvent()` function (starts around line 22
 ```javascript
       case 'workspace.ready': {
         // Workspace token generated — notify running job-agent via IPC (local mode only)
-        const wsJobId = data.jobId || event_data?.jobId;
+        const wsJobId = jobId; // jobId already extracted at top of handleWebhookEvent
         const activeInfo = state.active.get(wsJobId);
         if (activeInfo?.process?.send) {
           activeInfo.process.send({
@@ -460,7 +458,7 @@ In `src/cli.js`, find the `handleWebhookEvent()` function (starts around line 22
 
       case 'workspace.disconnected':
       case 'workspace.completed': {
-        const wsJobId2 = data.jobId || event_data?.jobId;
+        const wsJobId2 = jobId;
         const activeInfo2 = state.active.get(wsJobId2);
         if (activeInfo2?.process?.send) {
           activeInfo2.process.send({
@@ -602,16 +600,34 @@ In the `processJob()` function, find where the executor handles tool calls from 
 
 Find where `executor.handleMessage()` is called (around line 299-310). After the executor returns its response, add workspace tool availability to the system context. The exact integration depends on the executor, but the key function is `handleWorkspaceToolCall()` which is already defined above.
 
-For executors that support dynamic tool injection, add the workspace tools:
+In the `processJob()` function, find the executor's message handling loop. For the **local-llm executor** (the primary one), tool calls are processed in the Kimi API response. Find where tool_calls are iterated and executed (the section that calls functions based on `tool_call.function.name`). Add workspace tool routing before the existing tool switch:
+
 ```javascript
-// If workspace is connected, make tools available to executor
-if (_workspaceConnected && _workspaceTools.length > 0) {
-  // The executor's LLM will see these tools and can call them
-  // Tool calls with workspace_ prefix are routed to handleWorkspaceToolCall()
+// In the tool call execution section of processJob():
+for (const toolCall of toolCalls) {
+  const fnName = toolCall.function.name;
+  const fnArgs = JSON.parse(toolCall.function.arguments);
+
+  // Route workspace tools to SDK
+  if (fnName.startsWith('workspace_')) {
+    const result = await handleWorkspaceToolCall(fnName, fnArgs);
+    toolResults.push({ role: 'tool', tool_call_id: toolCall.id, content: result });
+    continue;
+  }
+
+  // ... existing tool handling ...
 }
 ```
 
-The exact wiring depends on the executor pattern. The `handleWorkspaceToolCall()` function is the routing layer — it's called whenever the LLM invokes a `workspace_*` tool.
+When building the LLM request's `tools` array, append workspace tools if connected:
+```javascript
+const tools = [...existingTools];
+if (_workspaceConnected) {
+  tools.push(..._workspaceTools);
+}
+```
+
+**Note:** For other executors (mcp, webhook, etc.), workspace tools are not automatically injected — those executors have their own tool discovery. The local-llm executor is the primary integration target for v1.
 
 - [ ] **Step 5: Add cleanup**
 
@@ -654,7 +670,8 @@ import { errorResult } from './error.js';
 import { requireState, getAgent, AgentState } from '../state.js';
 import { WorkspaceClient } from '@j41/sovagent-sdk';
 
-// Active workspace connections (one per job)
+// Active workspace connections — one per job for multi-job support.
+// Each job gets its own WorkspaceClient instance (NOT agent.workspace singleton).
 const workspaces = new Map<string, WorkspaceClient>();
 
 function getWorkspace(jobId: string): WorkspaceClient {
@@ -684,7 +701,11 @@ export function registerWorkspaceTools(server: McpServer): void {
           workspaces.delete(jobId);
         }
 
-        const ws = agent.workspace;
+        // Create a fresh WorkspaceClient per job (not agent.workspace singleton)
+        const ws = new WorkspaceClient({
+          apiUrl: agent.client.getBaseUrl(),
+          sessionToken: agent.client.getSessionToken()!,
+        });
         await ws.connect(jobId);
         workspaces.set(jobId, ws);
 
@@ -768,7 +789,7 @@ export function registerWorkspaceTools(server: McpServer): void {
       try {
         requireState(AgentState.Authenticated);
         const agent = getAgent();
-        const res = await agent.client.request<any>('GET', `/v1/workspace/${jobId}`);
+        const res = await agent.client.getWorkspaceStatus(jobId);
         return {
           content: [{ type: 'text' as const, text: JSON.stringify(res.data, null, 2) }],
         };
