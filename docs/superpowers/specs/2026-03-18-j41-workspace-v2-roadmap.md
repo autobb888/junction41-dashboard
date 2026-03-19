@@ -1,6 +1,7 @@
 # J41 Workspace v2 Roadmap
 
-> **Prerequisite:** v1 must be deployed and battle-tested before v2 work begins. v1 = read + write + supervised/standard + Docker default.
+> **Status:** v1 DEPLOYED 2026-03-19 across 6 repos. Package renamed to `@j41/connect`, CLI is `j41-connect`.
+> **Prerequisite:** v1 must be battle-tested before v2 work begins. v1 = read + write + supervised/standard + Docker required.
 
 ## What v2 Adds
 
@@ -243,17 +244,109 @@ chmod +x j41-workspace
 | Install packages | Buyer approves each | Blocked | Buyer checks box + trust Medium+ + Docker |
 | Binary files | Buyer approves each | Free within type restrictions | Free within type restrictions |
 
+## 7. Persistent Workspaces
+
+### What Changes
+
+v1 workspaces are ephemeral — one session, one connection. v2 adds persistent workspaces where the agent can reconnect across days and maintain context about the buyer's codebase.
+
+### Implementation
+
+- New session mode: `--persistent` flag
+- Workspace session stays `paused` (not `completed`) when agent signals done
+- Agent can reconnect to the same session later with a new connect token
+- Session state stored: last directory hash, operation history, agent notes
+- Buyer can revoke persistence at any time from dashboard
+- Session auto-expires after configurable idle period (default: 7 days)
+
+### Use Cases
+
+- Long-running projects where the agent needs to understand the full codebase
+- Weekly maintenance tasks (agent reconnects, checks for issues, fixes them)
+- Ongoing refactoring across multiple sessions
+
+---
+
+## 8. Custom MCP Tools (`--expose` flag)
+
+### What Changes
+
+v1 hardcodes 3 tools (list_directory, read_file, write_file). v2 lets the buyer expose arbitrary MCP tools from their machine — the workspace becomes a general-purpose sandboxed compute interface.
+
+### Implementation
+
+Buyer defines custom tools in a config file or via CLI flags:
+
+```bash
+j41-connect ./my-project --uid <token> \
+  --expose "verusd_rpc:./tools/verusd-rpc.js" \
+  --expose "gpu_train:./tools/gpu-train.js"
+```
+
+Each tool is a script that:
+- Receives JSON input on stdin
+- Returns JSON output on stdout
+- Runs inside the Docker container (sandboxed)
+- SovGuard scans input/output
+
+### Tool Definition Format
+
+```json
+{
+  "name": "verusd_rpc",
+  "description": "Execute a Verus RPC command",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "method": { "type": "string" },
+      "params": { "type": "array" }
+    },
+    "required": ["method"]
+  }
+}
+```
+
+### Use Cases
+
+- Expose a verusd node for agents to query
+- Expose GPU compute for ML training tasks
+- Expose database access (read-only) for data analysis
+- Expose any local service the buyer wants an agent to interact with
+
+---
+
+## 9. Dispatcher Docker Mode Workspace Support
+
+### What Changes
+
+v1 workspace only works with dispatcher in local mode (IPC limitation). v2 adds workspace support for Docker-mode job-agents.
+
+### Implementation Options
+
+| Option | Approach |
+|--------|----------|
+| HTTP sidecar | Small HTTP server inside the container that receives workspace notifications |
+| File watcher | Dispatcher writes to a shared volume, job-agent watches for changes |
+| WebSocket bridge | Job-agent polls platform REST endpoint for workspace status |
+
+### Recommendation
+
+**WebSocket bridge** — the job-agent already has a Socket.IO connection for chat. Add a workspace status check on the same connection. When the job-agent sees a workspace is ready (via REST poll or chat event), it connects independently via the SDK.
+
+---
+
 ## v2 Flag Reference
 
 ```bash
-j41-workspace ./my-project --uid <token> \
+j41-connect ./my-project --uid <token> \
   --read --write \
   --commands \
   --install \
   --allow "npm run dev" \
   --allow "python scripts/validate.py" \
+  --expose "verusd_rpc:./tools/verusd.js" \
   --supervised | --standard | --autonomous \
-  --docker | --no-docker \
+  --persistent \
   --resume <reconnect-token>
 ```
 
@@ -262,6 +355,9 @@ j41-workspace ./my-project --uid <token> \
 1. **Command execution** — highest demand, enables build/test workflows
 2. **Dashboard live stream** — improves buyer experience significantly
 3. **Autonomous mode** — requires command execution + behavioral monitoring
-4. **Binary file support** — specific use cases (frontend, design work)
-5. **Package installation** — most dangerous, needs Docker enforcement proven
-6. **Standalone binary** — widens audience, can happen anytime
+4. **Custom MCP tools** — unlocks compute rental and non-coding use cases
+5. **Binary file support** — specific use cases (frontend, design work)
+6. **Persistent workspaces** — long-running agent relationships
+7. **Package installation** — most dangerous, needs Docker enforcement proven
+8. **Dispatcher Docker mode** — removes local-only limitation
+9. **Standalone binary** — widens audience, can happen anytime
