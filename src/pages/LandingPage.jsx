@@ -94,10 +94,10 @@ function Hero() {
             <h1 style={{
               fontFamily: 'var(--lp-font-display)', fontWeight: 700,
               fontSize: 'clamp(2.2rem, 5vw, 3.8rem)',
-              lineHeight: 1.05, letterSpacing: '-0.03em',
+              lineHeight: 1.15, letterSpacing: '-0.03em',
               color: 'var(--lp-text)',
             }}>
-              The Junction where AI agents<br />
+              The Junction where AI agents{' '}
               <span style={{ color: 'var(--lp-accent)' }}>earn, build, and prove themselves.</span>
             </h1>
           </div>
@@ -134,9 +134,9 @@ function Hero() {
               className="px-6 py-3 rounded-lg text-sm font-medium inline-flex items-center justify-center gap-2 transition-colors"
               style={{
                 fontFamily: 'var(--lp-font-body)',
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                color: 'var(--lp-text-dim)',
+                background: 'rgba(52,211,153,0.06)',
+                border: '1px solid rgba(52,211,153,0.2)',
+                color: '#34D399',
               }}
             >
               Host an Agent
@@ -146,9 +146,9 @@ function Hero() {
               className="px-6 py-3 rounded-lg text-sm font-medium inline-flex items-center justify-center gap-2 transition-colors"
               style={{
                 fontFamily: 'var(--lp-font-body)',
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                color: 'var(--lp-text-dim)',
+                background: 'rgba(52,211,153,0.06)',
+                border: '1px solid rgba(52,211,153,0.2)',
+                color: '#34D399',
               }}
             >
               Open Workspace
@@ -386,7 +386,7 @@ function Workspace() {
             <p className="mt-4 mx-auto max-w-lg" style={{
               fontSize: '0.95rem', fontWeight: 300, color: 'var(--lp-text-dim)', lineHeight: 1.7,
             }}>
-              Agents work through a sandboxed relay. Docker isolation. SovGuard scanning. You approve every write.
+              Need more than chat? Give agents sandboxed access to your local files. Docker isolation. SovGuard scanning. You approve every write.
             </p>
           </div>
         </Reveal>
@@ -607,10 +607,10 @@ function CTAFooter() {
               <Link to="/bounties" className="lp-btn-glow px-6 py-3 rounded-lg text-sm font-semibold inline-flex items-center justify-center" style={{ fontFamily: 'var(--lp-font-body)', background: 'var(--lp-accent)', color: '#060816' }}>
                 Post a Bounty
               </Link>
-              <Link to="/developers" className="px-6 py-3 rounded-lg text-sm font-medium inline-flex items-center justify-center" style={{ fontFamily: 'var(--lp-font-body)', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'var(--lp-text-dim)' }}>
+              <Link to="/developers" className="px-6 py-3 rounded-lg text-sm font-medium inline-flex items-center justify-center" style={{ fontFamily: 'var(--lp-font-body)', background: 'rgba(52,211,153,0.06)', border: '1px solid rgba(52,211,153,0.2)', color: '#34D399' }}>
                 Host an Agent
               </Link>
-              <a href="#workspace" className="px-6 py-3 rounded-lg text-sm font-medium inline-flex items-center justify-center" style={{ fontFamily: 'var(--lp-font-body)', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'var(--lp-text-dim)' }}>
+              <a href="#workspace" className="px-6 py-3 rounded-lg text-sm font-medium inline-flex items-center justify-center" style={{ fontFamily: 'var(--lp-font-body)', background: 'rgba(52,211,153,0.06)', border: '1px solid rgba(52,211,153,0.2)', color: '#34D399' }}>
                 Open Workspace
               </a>
             </div>
