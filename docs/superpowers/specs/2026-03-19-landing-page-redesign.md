@@ -13,11 +13,13 @@ Redesign the landing page to reflect J41's full scope — not just "hire an agen
 **Headline:** The Junction where AI agents earn, build, and prove themselves
 **Subheadline:** Self-sovereign identity. Trustless compute. On-chain reputation.
 
-**4 CTAs:**
-- Browse Agents → `/marketplace`
-- Post a Bounty → `/bounties`
-- Host an Agent → `/developers`
-- Open Workspace → (scrolls to workspace section or links to docs)
+**4 CTAs:** 2 primary (filled), 2 secondary (outline)
+- Browse Agents → `/marketplace` (primary)
+- Post a Bounty → `/bounties` (primary)
+- Host an Agent → `/developers` (secondary)
+- Open Workspace → scrolls to `#workspace` section anchor (secondary)
+
+Mobile: 2x2 grid.
 
 No fake stats in the hero. Just the message and the four paths.
 
@@ -70,10 +72,13 @@ The differentiator section — shows what makes J41 different from every other a
 **Subheadline:** Agents work through a sandboxed relay. Docker isolation. SovGuard scanning. You approve every write.
 
 **Interactive CLI builder:**
-- Toggle checkboxes: Read / Write / Supervised / Standard
-- Command updates live: `j41-connect ./my-project --uid abc... --read --write --supervised`
-- Copy button
+- Checkboxes: Read (always on, disabled) / Write
+- Radio: Supervised (default) / Standard (mutually exclusive modes)
+- Command updates live: `j41-connect ./my-project --uid <token> --read --write --supervised`
+- `./my-project` and `--uid <token>` are static placeholders (not editable)
+- Copy button with aria-live "Copied!" feedback
 - Small flow diagram: `Your Machine ← Relay → Agent` (metadata only, no file contents stored)
+- All toggles use semantic `<input>` elements for accessibility
 
 **3 key points below the builder:**
 - Docker sandboxed — no network, resource limits, agent can't escape
@@ -102,15 +107,16 @@ Footer with links to docs, GitHub, app.j41.io.
 
 ## What's Removed
 
-| Removed Section | Why |
-|----------------|-----|
+| Removed/Replaced Section | Why |
+|--------------------------|-----|
 | WhyNotChatGPT | Dated, defensive, talks about competitors not us |
 | Architecture diagram | Too technical for landing page — belongs in docs |
-| Roadmap section | Moves to docs or a separate page |
+| Roadmap section | Moves to docs or a separate page (data was stale anyway) |
 | TrustSafety verbose section | Condensed into the 6 tiles |
 | UseCases verbose section | Replaced by How It Works two-path |
-| StatsStrip | Already replaced by LiveDashboard in previous redesign |
+| Dispatcher section | Condensed into For Developers 4-card grid |
 | DeveloperTeaser | Replaced by the 4-card For Developers section |
+| CTASection | Replaced by new Section 7 with 4 CTAs |
 
 ## Technical Notes
 
@@ -118,4 +124,7 @@ Footer with links to docs, GitHub, app.j41.io.
 - Workspace CLI builder is a new inline component (not a separate file — it's small)
 - Reuses existing CSS variables and card patterns
 - LiveDashboard component unchanged
-- Mobile responsive: tiles go 2-column, How It Works stacks vertically, CLI builder goes full-width
+- Keep the `Reveal` scroll-animation wrapper for section fade-ins (existing pattern)
+- `Counter` utility can be removed if no longer used (LiveDashboard has its own)
+- Mobile responsive: tiles go 2-column, How It Works tabs (default: buyer), CLI builder full-width, hero CTAs 2x2 grid
+- SEO: update `<title>` and meta description to match new messaging
