@@ -86,7 +86,7 @@ export default function MarketplacePage() {
     if (filters.privateMode) params.set('privateMode', 'true');
     if (filters.paymentTerms.length > 0) params.set('paymentTerms', filters.paymentTerms[0]);
     return params;
-  }, [selectedCategories, selectedSub, debouncedSearch, sortBy, filters]);
+  }, [selectedCategories.join(','), selectedSub, debouncedSearch, sortBy, filters]);
 
   // Enrich services with reputation/transparency data
   async function enrichWithReputation(serviceList) {
@@ -200,7 +200,7 @@ export default function MarketplacePage() {
   // Re-fetch on filter/sort/search/category change
   useEffect(() => {
     fetchServices(false);
-  }, [selectedCategories, selectedSub, debouncedSearch, sortBy, filters.minPrice, filters.maxPrice, filters.minRating, filters.onlineOnly, filters.protocols.length, filters.sovguard, filters.paymentTerms.length, filters.privateMode]);
+  }, [selectedCategories.join(','), selectedSub, debouncedSearch, sortBy, filters.minPrice, filters.maxPrice, filters.minRating, filters.onlineOnly, filters.protocols.length, filters.sovguard, filters.paymentTerms.length, filters.privateMode]);
 
   // Fetch subcategory counts when a category is expanded
   useEffect(() => {
