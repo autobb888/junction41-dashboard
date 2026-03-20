@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CATEGORIES } from './categories';
 import { ChevronDown, ChevronRight } from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 export default function CategorySidebar({
   totalCount,
@@ -17,6 +19,14 @@ export default function CategorySidebar({
 }) {
   const [categoriesOpen, setCategoriesOpen] = useState(true);
   const [filtersOpen, setFiltersOpen] = useState(true);
+  const [pricingOpen, setPricingOpen] = useState(false);
+  const [pricingData, setPricingData] = useState(null);
+
+  useEffect(() => {
+    if (pricingOpen && !pricingData) {
+      fetch(`${API_BASE}/v1/pricing/models`).then(r => r.json()).then(d => setPricingData(d)).catch(() => {});
+    }
+  }, [pricingOpen]);
 
   return (
     <div className="w-[240px] flex-shrink-0 sticky top-24 self-start hidden lg:block">
@@ -307,6 +317,68 @@ export default function CategorySidebar({
                 })}
               </div>
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* Pricing Guide — collapsible, lazy-loaded */}
+      <div className="pt-4" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+        <button
+          onClick={() => setPricingOpen(!pricingOpen)}
+          className="w-full flex items-center justify-between py-2 px-1 mb-1"
+        >
+          <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-tertiary)' }}>
+            Pricing Guide
+          </h3>
+          {pricingOpen
+            ? <ChevronDown size={14} style={{ color: 'var(--text-tertiary)' }} />
+            : <ChevronRight size={14} style={{ color: 'var(--text-tertiary)' }} />
+          }
+        </button>
+
+        {pricingOpen && pricingData && (
+          <div className="space-y-3">
+            <div>
+              <p className="text-xs mb-1.5" style={{ color: 'var(--text-secondary)' }}>Typical AI model costs per job:</p>
+              <div className="space-y-1">
+                {pricingData.models?.slice(0, 8).map(m => (
+                  <div key={m.model} className="flex items-center justify-between text-xs">
+                    <span className="truncate" style={{ color: 'var(--text-tertiary)', maxWidth: 120 }}>{m.model}</span>
+                    <span className="font-mono" style={{ color: 'var(--accent)' }}>${m.typicalJobCost}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs mb-1.5" style={{ color: 'var(--text-secondary)' }}>Category markups:</p>
+              <div className="space-y-1">
+                {pricingData.categories?.map(c => (
+                  <div key={c.name} className="flex items-center justify-between text-xs">
+                    <span className="capitalize" style={{ color: 'var(--text-tertiary)' }}>{c.name}</span>
+                    <span className="font-mono" style={{ color: 'var(--text-secondary)' }}>{c.markupMin}-{c.markupMax}x</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs mb-1.5" style={{ color: 'var(--text-secondary)' }}>Privacy tier premiums:</p>
+              <div className="space-y-1">
+                {pricingData.privacyTiers?.map(t => (
+                  <div key={t.tier} className="flex items-center justify-between text-xs">
+                    <span className="capitalize" style={{ color: 'var(--text-tertiary)' }}>{t.tier}</span>
+                    <span className="font-mono" style={{ color: 'var(--text-secondary)' }}>
+                      {t.premiumPercent > 0 ? `+${t.premiumPercent}%` : 'base'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <p className="text-xs" style={{ color: 'var(--text-tertiary)', fontStyle: 'italic' }}>
+              5% platform fee on all jobs
+            </p>
           </div>
         )}
       </div>
