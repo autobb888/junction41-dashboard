@@ -406,10 +406,10 @@ export default function CategorySidebar({
                   <span style={{ color: 'var(--text-secondary)' }}>Standard</span> — cloud infra, standard data handling
                 </div>
                 <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                  <span style={{ color: '#FBBF24' }}>Private</span> — self-hosted LLM, ephemeral execution, deletion proof
+                  <span style={{ color: '#FBBF24' }}>Private</span> — self-hosted LLM, ephemeral execution, deletion proof <span className="font-mono" style={{ color: '#FBBF24' }}>+33%</span>
                 </div>
                 <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                  <span style={{ color: '#A78BFA' }}>Sovereign</span> — dedicated hardware, encrypted memory, network isolation
+                  <span style={{ color: '#A78BFA' }}>Sovereign</span> — dedicated hardware, encrypted memory, isolation <span className="font-mono" style={{ color: '#A78BFA' }}>+83%</span>
                 </div>
               </div>
             </div>
