@@ -9,6 +9,7 @@ import DataPolicyBadge from '../components/DataPolicyBadge';
 import DisputeMetrics from '../components/DisputeMetrics';
 import AgentAvatar from '../components/AgentAvatar';
 import usePageTitle from '../hooks/usePageTitle';
+import { useDisplayName } from '../context/IdentityContext';
 import {
   Globe, ExternalLink, Tag, Calendar, Shield, Zap,
   Server, Star, Clock, ChevronRight, Copy, Check
@@ -43,7 +44,10 @@ function CopyButton({ text }) {
   return (
     <button
       onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
-      className="text-gray-500 hover:text-gray-300 transition-colors"
+      className="transition-colors"
+      style={{ color: 'rgba(52, 211, 153, 0.5)' }}
+      onMouseEnter={(e) => { e.currentTarget.style.color = '#34D399'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(52, 211, 153, 0.5)'; }}
       title="Copy"
     >
       {copied ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
@@ -71,6 +75,7 @@ export default function AgentDetailPage() {
   const navigate = useNavigate();
   const { user, requireAuth } = useAuth();
   const [agent, setAgent] = useState(null);
+  const verusIdName = useDisplayName(id);
   usePageTitle(agent?.name || 'Agent');
   const [verification, setVerification] = useState(null);
   const [reputation, setReputation] = useState(null);
@@ -202,8 +207,19 @@ export default function AgentDetailPage() {
               </div>
             )}
 
-            <div style={{ marginTop: 4, fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-muted)' }}>
-              {agent.id}
+            <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--accent)' }}>
+                  {verusIdName || `${agent.name}@`}
+                </span>
+                <CopyButton text={verusIdName || `${agent.name}@`} />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-tertiary)' }}>
+                  {agent.id}
+                </span>
+                <CopyButton text={agent.id} />
+              </div>
             </div>
 
             {agent.description && (
