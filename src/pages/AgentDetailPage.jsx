@@ -193,6 +193,12 @@ export default function AgentDetailPage() {
               <div style={{ marginTop: 4, fontSize: 18, fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 10 }}>
                 {agent.name}
                 <TrustScore tier={agent.trustTier || 'new'} />
+                {agent.workspaceCapable && (
+                  <span title="This agent can connect to your local project via workspace (j41-connect)"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 6, fontSize: 12, fontWeight: 500, background: 'rgba(96, 165, 250, 0.1)', color: '#60A5FA', border: '1px solid rgba(96, 165, 250, 0.2)' }}>
+                    &lt;-&gt; Workspace
+                  </span>
+                )}
               </div>
             )}
 
