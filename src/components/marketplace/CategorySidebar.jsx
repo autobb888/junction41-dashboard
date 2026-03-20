@@ -337,21 +337,44 @@ export default function CategorySidebar({
         </button>
 
         {pricingOpen && pricingData && (
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div>
-              <p className="text-xs mb-1.5" style={{ color: 'var(--text-secondary)' }}>Typical AI model costs per job:</p>
-              <div className="space-y-1">
-                {pricingData.models?.slice(0, 8).map(m => (
-                  <div key={m.model} className="flex items-center justify-between text-xs">
-                    <span className="truncate" style={{ color: 'var(--text-tertiary)', maxWidth: 120 }}>{m.model}</span>
-                    <span className="font-mono" style={{ color: 'var(--accent)' }}>${m.typicalJobCost}</span>
+              <p className="text-xs mb-1.5 font-medium" style={{ color: 'var(--text-secondary)' }}>Cost per 1K tokens (USD)</p>
+              <div className="rounded-lg overflow-hidden" style={{ border: '1px solid var(--border-subtle)' }}>
+                <div className="grid grid-cols-3 text-xs py-1 px-2" style={{ background: 'rgba(52, 211, 153, 0.05)', color: 'var(--text-tertiary)' }}>
+                  <span>Model</span><span className="text-right">In</span><span className="text-right">Out</span>
+                </div>
+                {pricingData.models?.slice(0, 10).map(m => (
+                  <div key={m.model} className="grid grid-cols-3 text-xs py-1 px-2" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+                    <span className="truncate" style={{ color: 'var(--text-tertiary)' }} title={m.notes}>{m.model.replace('claude-3.5-', 'c3.5-').replace('claude-3-', 'c3-').replace('gemini-1.5-', 'gem-')}</span>
+                    <span className="text-right font-mono" style={{ color: 'var(--text-secondary)' }}>${m.inputPer1k}</span>
+                    <span className="text-right font-mono" style={{ color: 'var(--accent)' }}>${m.outputPer1k}</span>
                   </div>
                 ))}
               </div>
             </div>
 
             <div>
-              <p className="text-xs mb-1.5" style={{ color: 'var(--text-secondary)' }}>Category markups:</p>
+              <p className="text-xs mb-1.5 font-medium" style={{ color: 'var(--text-secondary)' }}>Example job costs (50K tokens)</p>
+              <div className="space-y-1">
+                {[
+                  { label: 'Budget (Haiku/Flash)', cost: (25 * 0.00025 + 25 * 0.00125).toFixed(3) },
+                  { label: 'Mid (Sonnet/GPT-4o)', cost: (25 * 0.003 + 25 * 0.015).toFixed(2) },
+                  { label: 'Premium (Opus/O1)', cost: (25 * 0.015 + 25 * 0.075).toFixed(2) },
+                ].map(e => (
+                  <div key={e.label} className="flex items-center justify-between text-xs">
+                    <span style={{ color: 'var(--text-tertiary)' }}>{e.label}</span>
+                    <span className="font-mono" style={{ color: 'var(--accent)' }}>${e.cost}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)', fontStyle: 'italic' }}>
+                Raw model cost only — agents set their own prices
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs mb-1.5 font-medium" style={{ color: 'var(--text-secondary)' }}>Agent markup by complexity</p>
               <div className="space-y-1">
                 {pricingData.categories?.map(c => (
                   <div key={c.name} className="flex items-center justify-between text-xs">
@@ -363,7 +386,7 @@ export default function CategorySidebar({
             </div>
 
             <div>
-              <p className="text-xs mb-1.5" style={{ color: 'var(--text-secondary)' }}>Privacy tier premiums:</p>
+              <p className="text-xs mb-1.5 font-medium" style={{ color: 'var(--text-secondary)' }}>Privacy tier premiums</p>
               <div className="space-y-1">
                 {pricingData.privacyTiers?.map(t => (
                   <div key={t.tier} className="flex items-center justify-between text-xs">
