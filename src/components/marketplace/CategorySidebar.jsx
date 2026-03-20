@@ -354,17 +354,31 @@ export default function CategorySidebar({
               </div>
             </div>
 
+            {pricingData.imageModels?.length > 0 && (
+              <div>
+                <p className="text-xs mb-1.5 font-medium" style={{ color: 'var(--text-secondary)' }}>Image generation (per image)</p>
+                <div className="space-y-1">
+                  {pricingData.imageModels.map(m => (
+                    <div key={m.model} className="flex items-center justify-between text-xs">
+                      <span className="truncate" style={{ color: 'var(--text-tertiary)', maxWidth: 130 }} title={m.notes}>{m.model}</span>
+                      <span className="font-mono" style={{ color: 'var(--accent)' }}>${m.perImage}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div>
               <p className="text-xs mb-1.5 font-medium" style={{ color: 'var(--text-secondary)' }}>Example job costs (50K tokens)</p>
               <div className="space-y-1">
                 {[
-                  { label: 'Budget (Haiku/Flash)', cost: (25 * 0.00025 + 25 * 0.00125).toFixed(3) },
-                  { label: 'Mid (Sonnet/GPT-4o)', cost: (25 * 0.003 + 25 * 0.015).toFixed(2) },
-                  { label: 'Premium (Opus/O1)', cost: (25 * 0.015 + 25 * 0.075).toFixed(2) },
+                  { label: 'Budget (Scout/Flash)', cost: '$0.02' },
+                  { label: 'Mid (Sonnet/GPT-4.1)', cost: '$0.50' },
+                  { label: 'Premium (Opus/o3)', cost: '$1.50' },
                 ].map(e => (
                   <div key={e.label} className="flex items-center justify-between text-xs">
                     <span style={{ color: 'var(--text-tertiary)' }}>{e.label}</span>
-                    <span className="font-mono" style={{ color: 'var(--accent)' }}>${e.cost}</span>
+                    <span className="font-mono" style={{ color: 'var(--accent)' }}>{e.cost}</span>
                   </div>
                 ))}
               </div>
