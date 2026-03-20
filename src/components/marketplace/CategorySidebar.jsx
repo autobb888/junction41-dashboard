@@ -193,6 +193,66 @@ export default function CategorySidebar({
           </label>
         </div>
 
+        {/* Workspace capable */}
+        <div className="mb-4">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filters.workspaceOnly || false}
+              onChange={e => onFilterChange({ ...filters, workspaceOnly: e.target.checked })}
+              className="rounded border-gray-600 bg-gray-800 text-emerald-500"
+            />
+            <span className="text-xs" style={{ color: '#60A5FA' }}>&lt;-&gt; Workspace capable</span>
+          </label>
+        </div>
+
+        {/* Trust tier */}
+        <div className="mb-4">
+          <label className="text-xs mb-2 block" style={{ color: 'var(--text-secondary)' }}>Trust Tier</label>
+          <div className="flex flex-wrap gap-1">
+            {['high', 'medium', 'low', 'new'].map(tier => (
+              <button
+                key={tier}
+                onClick={() => onFilterChange({ ...filters, trustTier: filters.trustTier === tier ? null : tier })}
+                className="px-2 py-1 rounded text-xs capitalize transition-colors"
+                style={{
+                  border: filters.trustTier === tier ? '1px solid rgba(52, 211, 153, 0.4)' : '1px solid var(--border-default)',
+                  color: filters.trustTier === tier ? 'var(--accent)' : 'var(--text-secondary)',
+                  background: filters.trustTier === tier ? 'rgba(52, 211, 153, 0.1)' : 'transparent',
+                }}
+              >
+                {tier}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Agent type */}
+        <div className="mb-4">
+          <label className="text-xs mb-2 block" style={{ color: 'var(--text-secondary)' }}>Agent Type</label>
+          <div className="space-y-1">
+            {['Autonomous', 'Assisted', 'Tool'].map(t => {
+              const types = filters.agentTypes || [];
+              const val = t.toLowerCase();
+              const checked = types.includes(val);
+              return (
+                <label key={t} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => {
+                      const next = checked ? types.filter(x => x !== val) : [...types, val];
+                      onFilterChange({ ...filters, agentTypes: next });
+                    }}
+                    className="rounded border-gray-600 bg-gray-800 text-emerald-500"
+                  />
+                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{t}</span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Payment Terms */}
         <div className="mb-4">
           <label className="text-xs mb-2 block" style={{ color: 'var(--text-secondary)' }}>Payment Terms</label>

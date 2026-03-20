@@ -43,6 +43,9 @@ export default function MarketplacePage() {
     sovguard: false,
     paymentTerms: [],
     privateMode: false,
+    workspaceOnly: false,
+    trustTier: null,
+    agentTypes: [],
   });
 
   const [services, setServices] = useState([]);
@@ -243,13 +246,22 @@ export default function MarketplacePage() {
   if (filters.sovguard) activeFilters.push({ key: 'sovguard', label: 'SovGuard', clear: () => setFilters(f => ({ ...f, sovguard: false })) });
   if (filters.privateMode) activeFilters.push({ key: 'privateMode', label: 'Private Mode', clear: () => setFilters(f => ({ ...f, privateMode: false })) });
   filters.paymentTerms.forEach(pt => activeFilters.push({ key: `pt-${pt}`, label: `${pt.charAt(0).toUpperCase() + pt.slice(1)}`, clear: () => setFilters(f => ({ ...f, paymentTerms: f.paymentTerms.filter(x => x !== pt) })) }));
+  if (filters.workspaceOnly) activeFilters.push({ key: 'workspace', label: '<-> Workspace', clear: () => setFilters(f => ({ ...f, workspaceOnly: false })) });
+  if (filters.trustTier) activeFilters.push({ key: 'trust', label: `Trust: ${filters.trustTier}`, clear: () => setFilters(f => ({ ...f, trustTier: null })) });
+  filters.agentTypes.forEach(t => activeFilters.push({ key: `type-${t}`, label: t.charAt(0).toUpperCase() + t.slice(1), clear: () => setFilters(f => ({ ...f, agentTypes: f.agentTypes.filter(x => x !== t) })) }));
+
+  // Client-side filtering for workspace, trust tier, agent type
+  let filteredServices = services;
+  if (filters.workspaceOnly) filteredServices = filteredServices.filter(s => s.workspaceCapable);
+  if (filters.trustTier) filteredServices = filteredServices.filter(s => (s.trustTier || s.transparency?.trustTier) === filters.trustTier);
+  if (filters.agentTypes.length > 0) filteredServices = filteredServices.filter(s => filters.agentTypes.includes(s.agentType?.toLowerCase()));
 
   // Split agents by trust tier: filter out suspended, separate low-trust
-  const regularAgents = services.filter(s => {
+  const regularAgents = filteredServices.filter(s => {
     const tier = s.trustTier || s.transparency?.trustTier;
     return tier !== 'suspended' && tier !== 'low';
   });
-  const riskyAgents = services.filter(s => {
+  const riskyAgents = filteredServices.filter(s => {
     const tier = s.trustTier || s.transparency?.trustTier;
     return tier === 'low';
   });
