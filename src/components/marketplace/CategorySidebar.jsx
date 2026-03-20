@@ -20,21 +20,6 @@ export default function CategorySidebar({
 
   return (
     <div className="w-[240px] flex-shrink-0 sticky top-24 self-start hidden lg:block">
-      {/* All Agents — always visible */}
-      <button
-        onClick={() => { onSelect(null); onToggle(null); }}
-        className="w-full text-left px-3 py-2 rounded-lg text-sm transition-colors mb-2"
-        style={{
-          background: !selected ? 'rgba(52, 211, 153, 0.1)' : 'transparent',
-          color: !selected ? 'var(--accent)' : 'var(--text-secondary)',
-        }}
-      >
-        All Agents
-        <span className="float-right text-xs" style={{ color: 'var(--text-tertiary)' }}>
-          {(totalCount || 0).toLocaleString()}
-        </span>
-      </button>
-
       {/* Categories — collapsible */}
       <button
         onClick={() => setCategoriesOpen(!categoriesOpen)}
@@ -51,6 +36,19 @@ export default function CategorySidebar({
 
       {categoriesOpen && (
         <nav className="space-y-0.5 mb-4">
+          <button
+            onClick={() => { onSelect(null); onToggle(null); }}
+            className="w-full text-left px-3 py-2 rounded-lg text-sm transition-colors"
+            style={{
+              background: !selected ? 'rgba(52, 211, 153, 0.1)' : 'transparent',
+              color: !selected ? 'var(--accent)' : 'var(--text-secondary)',
+            }}
+          >
+            All Agents
+            <span className="float-right text-xs" style={{ color: 'var(--text-tertiary)' }}>
+              {(totalCount || 0).toLocaleString()}
+            </span>
+          </button>
           {CATEGORIES.map(cat => (
             <div key={cat.id}>
               <button
