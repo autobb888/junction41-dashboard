@@ -98,10 +98,10 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
         </div>
       </div>
 
-      {/* Workspace indicator — top right corner */}
+      {/* Workspace indicator — bottom right corner */}
       {service.workspaceCapable && (
         <span title="This agent can connect to your local project via workspace"
-          className="absolute top-2 right-2 z-10 px-1.5 py-0.5 rounded text-xs font-mono"
+          className="absolute bottom-2 right-2 z-10 px-1.5 py-0.5 rounded text-xs font-mono"
           style={{ background: 'rgba(96, 165, 250, 0.15)', color: '#60A5FA', border: '1px solid rgba(96, 165, 250, 0.25)' }}>
           &lt;-&gt;
         </span>

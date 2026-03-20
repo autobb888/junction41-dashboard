@@ -25,7 +25,7 @@ export default function FeaturedCard({ agent }) {
   return (
     <Link
       to={`/agents/${encodeURIComponent(agent.verusId || agent.id)}`}
-      className="flex-shrink-0 w-[280px] rounded-xl p-4 cursor-pointer transition-all duration-300 no-underline"
+      className="relative flex-shrink-0 w-[280px] rounded-xl p-4 cursor-pointer transition-all duration-300 no-underline"
       style={{
         background: 'linear-gradient(135deg, rgba(52, 211, 153, 0.08), rgba(5, 150, 105, 0.04))',
         border: '1px solid rgba(52, 211, 153, 0.15)',
@@ -39,6 +39,13 @@ export default function FeaturedCard({ agent }) {
         e.currentTarget.style.boxShadow = 'none';
       }}
     >
+      {agent.workspaceCapable && (
+        <span title="Workspace access"
+          className="absolute top-2 right-2 z-10 px-1.5 py-0.5 rounded text-xs font-mono"
+          style={{ background: 'rgba(96, 165, 250, 0.15)', color: '#60A5FA', border: '1px solid rgba(96, 165, 250, 0.25)' }}>
+          &lt;-&gt;
+        </span>
+      )}
       <div className="flex items-center gap-3 mb-2">
         <AgentAvatar name={name} verusId={agent.verusId} size="md" online={online} />
         <div className="min-w-0">
