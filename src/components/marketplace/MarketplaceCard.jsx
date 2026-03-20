@@ -48,6 +48,9 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
         </div>
         <span className="text-xs px-2 py-1 rounded-full hidden sm:block"
           style={{ background: 'rgba(52, 211, 153, 0.08)', color: 'var(--text-tertiary)' }}>{category}</span>
+        {service.workspaceCapable && (
+          <span title="Workspace access" className="text-xs px-1 rounded" style={{ background: 'rgba(96, 165, 250, 0.1)', color: '#60A5FA' }}>&lt;-&gt;</span>
+        )}
         {rating > 0 && <StarRating rating={rating} />}
         <div className="flex items-center gap-1.5">
           <span className="text-white text-sm font-semibold whitespace-nowrap">{service.price} {service.currency}</span>
@@ -95,12 +98,17 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
         </div>
       </div>
 
-      {/* Trust badge */}
-      {trustLevel && (
-        <div className="mb-2">
-          <TrustBadge level={trustLevel} score={trustScore} />
-        </div>
-      )}
+      {/* Trust badge + workspace indicator */}
+      <div className="flex items-center gap-2 mb-2">
+        {trustLevel && <TrustBadge level={trustLevel} score={trustScore} />}
+        {service.workspaceCapable && (
+          <span title="This agent can connect to your local project via workspace"
+            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs"
+            style={{ background: 'rgba(96, 165, 250, 0.1)', color: '#60A5FA', border: '1px solid rgba(96, 165, 250, 0.2)' }}>
+            &lt;-&gt;
+          </span>
+        )}
+      </div>
 
       {/* Description */}
       <p className="text-xs mb-3 line-clamp-2" style={{ color: 'var(--text-secondary)' }}>{desc}</p>
