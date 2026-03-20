@@ -28,7 +28,7 @@ export default function MarketplacePage() {
 
   // State
   const [search, setSearch] = useState('');
-  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedSub, setSelectedSub] = useState(null);
   const [expandedCategory, setExpandedCategory] = useState(null);
   const [sortBy, setSortBy] = useState('created_at');
@@ -71,9 +71,9 @@ export default function MarketplacePage() {
       limit: String(PAGE_SIZE),
       offset: String(extraOffset || 0),
     });
-    if (selectedCategories.length > 0) {
-      const catNames = selectedCategories.map(id => getCategoryById(id)?.name?.toLowerCase()).filter(Boolean);
-      if (catNames.length > 0) params.set('category', catNames.join(','));
+    if (selectedCategory) {
+      const cat = getCategoryById(selectedCategory);
+      if (cat) params.set('category', cat.name.toLowerCase());
     }
     if (selectedSub) params.set('q', selectedSub);
     else if (debouncedSearch) params.set('q', debouncedSearch);
@@ -86,7 +86,7 @@ export default function MarketplacePage() {
     if (filters.privateMode) params.set('privateMode', 'true');
     if (filters.paymentTerms.length > 0) params.set('paymentTerms', filters.paymentTerms[0]);
     return params;
-  }, [selectedCategories.join(','), selectedSub, debouncedSearch, sortBy, filters]);
+  }, [selectedCategory, selectedSub, debouncedSearch, sortBy, filters]);
 
   // Enrich services with reputation/transparency data
   async function enrichWithReputation(serviceList) {
@@ -200,7 +200,7 @@ export default function MarketplacePage() {
   // Re-fetch on filter/sort/search/category change
   useEffect(() => {
     fetchServices(false);
-  }, [selectedCategories.join(','), selectedSub, debouncedSearch, sortBy, filters.minPrice, filters.maxPrice, filters.minRating, filters.onlineOnly, filters.protocols.length, filters.sovguard, filters.paymentTerms.length, filters.privateMode]);
+  }, [selectedCategory, selectedSub, debouncedSearch, sortBy, filters.minPrice, filters.maxPrice, filters.minRating, filters.onlineOnly, filters.protocols.length, filters.sovguard, filters.paymentTerms.length, filters.privateMode]);
 
   // Fetch subcategory counts when a category is expanded
   useEffect(() => {
@@ -232,10 +232,10 @@ export default function MarketplacePage() {
 
   // Active filter pills
   const activeFilters = [];
-  selectedCategories.forEach(catId => {
-    const name = getCategoryById(catId)?.name;
-    if (name) activeFilters.push({ key: `cat-${catId}`, label: name, clear: () => { setSelectedCategories(prev => prev.filter(c => c !== catId)); setSelectedSub(null); } });
-  });
+  if (selectedCategory) {
+    const catName = getCategoryById(selectedCategory)?.name;
+    if (catName) activeFilters.push({ key: 'category', label: catName, clear: () => { setSelectedCategory(null); setSelectedSub(null); } });
+  }
   if (selectedSub) activeFilters.push({ key: 'sub', label: selectedSub, clear: () => setSelectedSub(null) });
   if (filters.minRating) activeFilters.push({ key: 'rating', label: `★ ${filters.minRating}+`, clear: () => setFilters(f => ({ ...f, minRating: null })) });
   if (filters.onlineOnly) activeFilters.push({ key: 'online', label: 'Online only', clear: () => setFilters(f => ({ ...f, onlineOnly: false })) });
@@ -329,7 +329,7 @@ export default function MarketplacePage() {
                 className="text-xs px-3 py-1.5 rounded-full"
                 style={{ color: 'var(--text-tertiary)' }}
                 onClick={() => {
-                  setSelectedCategories([]);
+                  setSelectedCategory(null);
                   setSelectedSub(null);
                   setFilters({ minPrice: '', maxPrice: '', minRating: null, onlineOnly: false, protocols: [], sovguard: false, paymentTerms: [], privateMode: false, workspaceOnly: false, trustTier: null, agentTypes: [] });
                 }}
@@ -341,7 +341,7 @@ export default function MarketplacePage() {
         )}
 
         {/* Trending carousel (hide when category selected) */}
-        {selectedCategories.length === 0 && trending.length > 0 && (
+        {!selectedCategory && trending.length > 0 && (
           <div className="mb-10">
             <HorizontalScroll label="Trending Now" sublabel="Most active this week">
               {trending.map(a => <FeaturedCard key={a.id} agent={a} />)}
@@ -364,16 +364,8 @@ export default function MarketplacePage() {
           <CategorySidebar
             totalCount={allAgentsTotal}
             categoryCounts={categoryCounts}
-            selected={selectedCategories}
-            onSelect={(id) => {
-              if (!id) { setSelectedCategories([]); setSelectedSub(null); return; }
-              setSelectedCategories(prev => {
-                if (prev.includes(id)) return prev.filter(c => c !== id);
-                if (prev.length >= 3) return [...prev.slice(1), id]; // max 3
-                return [...prev, id];
-              });
-              setSelectedSub(null);
-            }}
+            selected={selectedCategory}
+            onSelect={(id) => { setSelectedCategory(id); setSelectedSub(null); }}
             expanded={expandedCategory}
             onToggle={(id) => setExpandedCategory(expandedCategory === id ? null : id)}
             selectedSub={selectedSub}
@@ -494,15 +486,8 @@ export default function MarketplacePage() {
       <MobileFilterOverlay
         isOpen={mobileFilterOpen}
         onClose={() => setMobileFilterOpen(false)}
-        selected={selectedCategories}
-        onSelect={(id) => {
-          if (!id) { setSelectedCategories([]); return; }
-          setSelectedCategories(prev => {
-            if (prev.includes(id)) return prev.filter(c => c !== id);
-            if (prev.length >= 3) return [...prev.slice(1), id];
-            return [...prev, id];
-          });
-        }}
+        selected={selectedCategory}
+        onSelect={setSelectedCategory}
         filters={filters}
         onFilterChange={setFilters}
       />

@@ -40,8 +40,8 @@ export default function CategorySidebar({
             onClick={() => { onSelect(null); onToggle(null); }}
             className="w-full text-left px-3 py-2 rounded-lg text-sm transition-colors"
             style={{
-              background: (!selected || (Array.isArray(selected) && selected.length === 0)) ? 'rgba(52, 211, 153, 0.1)' : 'transparent',
-              color: (!selected || (Array.isArray(selected) && selected.length === 0)) ? 'var(--accent)' : 'var(--text-secondary)',
+              background: !selected ? 'rgba(52, 211, 153, 0.1)' : 'transparent',
+              color: !selected ? 'var(--accent)' : 'var(--text-secondary)',
             }}
           >
             All Agents
@@ -55,8 +55,8 @@ export default function CategorySidebar({
                 onClick={() => { onSelect(cat.id); onToggle(cat.id); }}
                 className="w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-2"
                 style={{
-                  background: (Array.isArray(selected) ? selected.includes(cat.id) : selected === cat.id) ? 'rgba(52, 211, 153, 0.1)' : 'transparent',
-                  color: (Array.isArray(selected) ? selected.includes(cat.id) : selected === cat.id) ? 'var(--accent)' : 'var(--text-secondary)',
+                  background: selected === cat.id ? 'rgba(52, 211, 153, 0.1)' : 'transparent',
+                  color: selected === cat.id ? 'var(--accent)' : 'var(--text-secondary)',
                 }}
               >
                 <span className="w-5 text-center text-xs">{cat.icon}</span>
