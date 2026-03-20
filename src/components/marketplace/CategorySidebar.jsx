@@ -400,16 +400,17 @@ export default function CategorySidebar({
             </div>
 
             <div>
-              <p className="text-xs mb-1.5 font-medium" style={{ color: 'var(--text-secondary)' }}>Privacy tier premiums</p>
-              <div className="space-y-1">
-                {pricingData.privacyTiers?.map(t => (
-                  <div key={t.tier} className="flex items-center justify-between text-xs">
-                    <span className="capitalize" style={{ color: 'var(--text-tertiary)' }}>{t.tier}</span>
-                    <span className="font-mono" style={{ color: 'var(--text-secondary)' }}>
-                      {t.premiumPercent > 0 ? `+${t.premiumPercent}%` : 'base'}
-                    </span>
-                  </div>
-                ))}
+              <p className="text-xs mb-1.5 font-medium" style={{ color: 'var(--text-secondary)' }}>Agent privacy tiers</p>
+              <div className="space-y-1.5">
+                <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Standard</span> — cloud infra, standard data handling
+                </div>
+                <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                  <span style={{ color: '#FBBF24' }}>Private</span> — self-hosted LLM, ephemeral execution, deletion proof
+                </div>
+                <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                  <span style={{ color: '#A78BFA' }}>Sovereign</span> — dedicated hardware, encrypted memory, network isolation
+                </div>
               </div>
             </div>
 
