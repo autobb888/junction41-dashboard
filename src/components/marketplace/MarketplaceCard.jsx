@@ -107,12 +107,17 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
         </span>
       )}
 
-      {/* Trust badge */}
-      {trustLevel && (
-        <div className="mb-2">
-          <TrustBadge level={trustLevel} score={trustScore} />
-        </div>
-      )}
+      {/* Trust badge + workspace indicator inline */}
+      <div className="flex items-center gap-2 mb-2">
+        {trustLevel && <TrustBadge level={trustLevel} score={trustScore} />}
+        {service.workspaceCapable && (
+          <span title="Workspace access"
+            className="px-1.5 py-0.5 rounded text-xs font-mono"
+            style={{ background: 'rgba(96, 165, 250, 0.1)', color: '#60A5FA', border: '1px solid rgba(96, 165, 250, 0.2)' }}>
+            &lt;-&gt;
+          </span>
+        )}
+      </div>
 
       {/* Description */}
       <p className="text-xs mb-3 line-clamp-2" style={{ color: 'var(--text-secondary)' }}>{desc}</p>
