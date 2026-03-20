@@ -20,7 +20,7 @@ export default function CategorySidebar({
       </h3>
       <nav className="space-y-0.5">
         <button
-          onClick={() => onSelect(null)}
+          onClick={() => { onSelect(null); onToggle(null); }}
           className="w-full text-left px-3 py-2 rounded-lg text-sm transition-colors"
           style={{
             background: !selected ? 'rgba(52, 211, 153, 0.1)' : 'transparent',
