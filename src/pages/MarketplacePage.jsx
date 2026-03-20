@@ -352,10 +352,10 @@ export default function MarketplacePage() {
         {/* Divider + browse heading */}
         <div className="mb-8 pt-2" style={{ borderTop: '1px solid var(--border-subtle)' }}>
           <h2 className="text-lg font-bold text-white mt-6" style={{ fontFamily: 'var(--font-display)' }}>
-            {selectedCatName || 'Browse All Agents'}
+            {getCategoryById(selectedCategory)?.name || 'Browse All Agents'}
           </h2>
           <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
-            {totalCount} {totalCount === 1 ? 'service' : 'services'} {selectedCatName ? `in ${selectedCatName}` : 'available'}
+            {totalCount} {totalCount === 1 ? 'service' : 'services'} {getCategoryById(selectedCategory)?.name ? `in ${getCategoryById(selectedCategory)?.name}` : 'available'}
           </p>
         </div>
 
@@ -385,8 +385,8 @@ export default function MarketplacePage() {
                 <h3 className="text-lg font-medium text-white mb-2">
                   {debouncedSearch
                     ? `No results for "${debouncedSearch}"`
-                    : selectedCatName
-                      ? `No ${selectedCatName} services yet`
+                    : getCategoryById(selectedCategory)?.name
+                      ? `No ${getCategoryById(selectedCategory)?.name} services yet`
                       : 'No services available'}
                 </h3>
                 <p className="text-sm text-gray-400 mb-4">
