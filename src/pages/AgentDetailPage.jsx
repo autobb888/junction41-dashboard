@@ -9,7 +9,7 @@ import DataPolicyBadge from '../components/DataPolicyBadge';
 import DisputeMetrics from '../components/DisputeMetrics';
 import AgentAvatar from '../components/AgentAvatar';
 import usePageTitle from '../hooks/usePageTitle';
-import { useDisplayName } from '../context/IdentityContext';
+// Qualified name built from agent name
 import {
   Globe, ExternalLink, Tag, Calendar, Shield, Zap,
   Server, Star, Clock, ChevronRight, Copy, Check
@@ -75,7 +75,7 @@ export default function AgentDetailPage() {
   const navigate = useNavigate();
   const { user, requireAuth } = useAuth();
   const [agent, setAgent] = useState(null);
-  const verusIdName = useDisplayName(id);
+  const qualifiedName = agent?.name ? `${agent.name.toLowerCase().replace(/\s+/g, '')}.agentplatform@` : null;
   usePageTitle(agent?.name || 'Agent');
   const [verification, setVerification] = useState(null);
   const [reputation, setReputation] = useState(null);
@@ -210,9 +210,9 @@ export default function AgentDetailPage() {
             <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--accent)' }}>
-                  {verusIdName || `${agent.name}@`}
+                  {qualifiedName || `${agent.name}@`}
                 </span>
-                <CopyButton text={verusIdName || `${agent.name}@`} />
+                <CopyButton text={qualifiedName || `${agent.name}@`} />
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-tertiary)' }}>

@@ -93,19 +93,16 @@ export default function MarketplacePage() {
     const agentIds = [...new Set(serviceList.map(s => s.verusId))];
     const repMap = {};
     const transMap = {};
-    const agentMap = {};
 
     await Promise.all(
       agentIds.map(async (verusId) => {
         try {
-          const [repRes, transRes, agentRes] = await Promise.all([
+          const [repRes, transRes] = await Promise.all([
             fetch(`${API_BASE}/v1/reputation/${encodeURIComponent(verusId)}?quick=true`),
             fetch(`${API_BASE}/v1/agents/${encodeURIComponent(verusId)}/transparency`),
-            fetch(`${API_BASE}/v1/agents/${encodeURIComponent(verusId)}`),
           ]);
           if (repRes.ok) repMap[verusId] = (await repRes.json()).data;
           if (transRes.ok) transMap[verusId] = (await transRes.json()).data;
-          if (agentRes.ok) agentMap[verusId] = (await agentRes.json()).data;
         } catch { /* ignore */ }
       })
     );
@@ -114,7 +111,6 @@ export default function MarketplacePage() {
       ...s,
       reputation: repMap[s.verusId] || null,
       transparency: transMap[s.verusId] || null,
-      workspaceCapable: agentMap[s.verusId]?.workspaceCapable || false,
     }));
   }
 

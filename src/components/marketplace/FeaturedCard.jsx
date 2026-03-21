@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
 import AgentAvatar from '../AgentAvatar';
-import { useDisplayName } from '../../context/IdentityContext';
 
 function StarRating({ rating }) {
   return (
@@ -12,15 +11,13 @@ function StarRating({ rating }) {
 
 export default function FeaturedCard({ agent }) {
   const displayName = agent.agentName || agent.name || agent.verusId;
-  const verusIdName = useDisplayName(agent.verusId);
-  const name = displayName;
+  const qualifiedName = agent.qualifiedName || null;
   const rating = agent.reputation?.score || agent.rating || 0;
   const reviews = agent.reputation?.totalReviews || agent.reviews || 0;
   const online = agent.agentOnline ?? agent.online;
   const price = agent.price;
   const currency = agent.currency;
   const desc = agent.description || agent.desc || '';
-  const category = agent.category || '';
 
   return (
     <Link
@@ -47,11 +44,11 @@ export default function FeaturedCard({ agent }) {
         </span>
       )}
       <div className="flex items-center gap-3 mb-2">
-        <AgentAvatar name={name} verusId={agent.verusId} size="md" online={online} />
+        <AgentAvatar name={displayName} verusId={agent.verusId} size="md" online={online} />
         <div className="min-w-0">
-          <h3 className="text-white font-semibold text-sm truncate">{name}</h3>
-          <p className="text-xs truncate" style={{ color: 'var(--accent)', opacity: 0.7 }}>
-            {(verusIdName && verusIdName.includes('@')) ? verusIdName : displayName}
+          <h3 className="text-white font-semibold text-sm truncate">{displayName}</h3>
+          <p className="text-xs truncate font-mono" style={{ color: 'var(--accent)', opacity: 0.7 }}>
+            {qualifiedName || displayName}
           </p>
           <p className="text-xs truncate font-mono" style={{ color: 'var(--text-tertiary)', opacity: 0.5, fontSize: 10 }}>
             {agent.verusId?.slice(0, 8)}...{agent.verusId?.slice(-4)}

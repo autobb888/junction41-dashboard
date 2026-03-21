@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import AgentAvatar from '../AgentAvatar';
 import TrustBadge from '../TrustBadge';
-import { useDisplayName } from '../../context/IdentityContext';
 
 function StarRating({ rating }) {
   return (
@@ -14,8 +13,7 @@ function StarRating({ rating }) {
 export default function MarketplaceCard({ service, variant = 'grid' }) {
   const navigate = useNavigate();
   const displayName = service.agentName || service.agent_name || service.name;
-  const verusIdName = useDisplayName(service.verusId);
-  const name = displayName;
+  const qualifiedName = service.qualifiedName || null;
   const rating = service.reputation?.score || 0;
   const reviews = service.reputation?.totalReviews || 0;
   const online = service.agentOnline ?? service.online;
@@ -39,18 +37,18 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
         onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(52, 211, 153, 0.25)'; }}
         onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(52, 211, 153, 0.08)'; }}
       >
-        <AgentAvatar name={name} verusId={service.verusId} size="md" online={online} />
+        <AgentAvatar name={displayName} verusId={service.verusId} size="md" online={online} />
         <div className="flex-1 min-w-0">
           <h3 className="text-white font-semibold text-sm">{service.name}</h3>
-          <p className="text-xs truncate" style={{ color: 'var(--accent)', opacity: 0.7 }}>
-            {(verusIdName && verusIdName.includes('@')) ? verusIdName : displayName}
+          <p className="text-xs truncate font-mono" style={{ color: 'var(--accent)', opacity: 0.7 }}>
+            {qualifiedName || displayName}
           </p>
         </div>
+        {service.workspaceCapable && (
+          <span title="Workspace access" className="text-xs px-1 rounded font-mono" style={{ background: 'rgba(96, 165, 250, 0.1)', color: '#60A5FA' }}>&lt;-&gt;</span>
+        )}
         <span className="text-xs px-2 py-1 rounded-full hidden sm:block"
           style={{ background: 'rgba(52, 211, 153, 0.08)', color: 'var(--text-tertiary)' }}>{category}</span>
-        {service.workspaceCapable && (
-          <span title="Workspace access" className="text-xs px-1 rounded" style={{ background: 'rgba(96, 165, 250, 0.1)', color: '#60A5FA' }}>&lt;-&gt;</span>
-        )}
         {rating > 0 && <StarRating rating={rating} />}
         <div className="flex items-center gap-1.5">
           <span className="text-white text-sm font-semibold whitespace-nowrap">{service.price} {service.currency}</span>
@@ -85,11 +83,11 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
     >
       {/* Header: avatar + name + rating */}
       <div className="flex items-start gap-3 mb-3">
-        <AgentAvatar name={name} verusId={service.verusId} size="md" online={online} />
+        <AgentAvatar name={displayName} verusId={service.verusId} size="md" online={online} />
         <div className="flex-1 min-w-0">
           <h3 className="text-white font-semibold text-sm truncate">{service.name}</h3>
-          <p className="text-xs truncate" style={{ color: 'var(--accent)', opacity: 0.7 }}>
-            {(verusIdName && verusIdName.includes('@')) ? verusIdName : displayName}
+          <p className="text-xs truncate font-mono" style={{ color: 'var(--accent)', opacity: 0.7 }}>
+            {qualifiedName || displayName}
           </p>
           <p className="text-xs truncate font-mono" style={{ color: 'var(--text-tertiary)', opacity: 0.5, fontSize: 10 }}>
             {service.verusId?.slice(0, 8)}...{service.verusId?.slice(-4)}
