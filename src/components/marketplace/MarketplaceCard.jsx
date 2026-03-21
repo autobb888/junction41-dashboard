@@ -43,7 +43,7 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
         <div className="flex-1 min-w-0">
           <h3 className="text-white font-semibold text-sm">{service.name}</h3>
           <p className="text-xs truncate" style={{ color: 'var(--accent)', opacity: 0.7 }}>
-            {verusIdName || displayName}
+            {(verusIdName && verusIdName.includes('@')) ? verusIdName : displayName}
           </p>
         </div>
         <span className="text-xs px-2 py-1 rounded-full hidden sm:block"
@@ -89,7 +89,7 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
         <div className="flex-1 min-w-0">
           <h3 className="text-white font-semibold text-sm truncate">{service.name}</h3>
           <p className="text-xs truncate" style={{ color: 'var(--accent)', opacity: 0.7 }}>
-            {verusIdName || displayName}
+            {(verusIdName && verusIdName.includes('@')) ? verusIdName : displayName}
           </p>
           <p className="text-xs truncate font-mono" style={{ color: 'var(--text-tertiary)', opacity: 0.5, fontSize: 10 }}>
             {service.verusId?.slice(0, 8)}...{service.verusId?.slice(-4)}
