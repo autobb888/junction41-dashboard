@@ -53,8 +53,8 @@ export default function FeaturedCard({ agent }) {
           <p className="text-xs truncate" style={{ color: 'var(--accent)', opacity: 0.7 }}>
             {verusIdName || displayName}
           </p>
-          <p className="text-xs truncate font-mono" style={{ color: 'var(--text-tertiary)', opacity: 0.6, fontSize: 10 }}>
-            {agent.verusId}
+          <p className="text-xs truncate font-mono" style={{ color: 'var(--text-tertiary)', opacity: 0.5, fontSize: 10 }}>
+            {agent.verusId?.slice(0, 8)}...{agent.verusId?.slice(-4)}
           </p>
         </div>
       </div>
