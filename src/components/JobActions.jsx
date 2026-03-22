@@ -168,12 +168,12 @@ function ExtensionPanel({ job, loading, setLoading, setError, onUpdate, onCancel
   const [extId, setExtId] = useState(null);
   const [txidInput, setTxidInput] = useState('');
 
-  const handleGetInvoice = async () => {
+  const handleRequestExtension = async () => {
     if (!extAmount || Number(extAmount) <= 0) return;
     setLoading(true);
     setError(null);
     try {
-      // Step 1: Create extension request
+      // Create extension request
       const extRes = await fetch(`${API_BASE}/v1/jobs/${job.id}/extensions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -184,11 +184,18 @@ function ExtensionPanel({ job, loading, setLoading, setError, onUpdate, onCancel
       if (!extRes.ok) throw new Error(extData.error?.message || 'Failed to request extension');
       setExtId(extData.data?.id);
 
-      // Step 2: Fetch invoice with sendcurrency params
-      const invRes = await fetch(`${API_BASE}/v1/jobs/${job.id}/extension-invoice?amount=${extAmount}`, { credentials: 'include' });
-      const invData = await invRes.json();
-      if (invRes.ok) setInvoice(invData.data);
-      else throw new Error(invData.error?.message || 'Failed to get invoice');
+      // Check if auto-approved (paused jobs) — if so, show payment immediately
+      const extStatus = extData.data?.status;
+      if (extStatus === 'approved' || job.status === 'paused') {
+        const invRes = await fetch(`${API_BASE}/v1/jobs/${job.id}/extension-invoice?amount=${extAmount}`, { credentials: 'include' });
+        const invData = await invRes.json();
+        if (invRes.ok) setInvoice(invData.data);
+        else throw new Error(invData.error?.message || 'Failed to get invoice');
+      } else {
+        // Pending — agent needs to approve. Close panel and notify user.
+        onCancel();
+        onUpdate?.();
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -253,8 +260,8 @@ function ExtensionPanel({ job, loading, setLoading, setError, onUpdate, onCancel
           />
         </div>
         <div className="flex gap-2">
-          <button onClick={handleGetInvoice} disabled={!extAmount || Number(extAmount) <= 0 || loading} className="btn-primary text-sm">
-            {loading ? 'Loading...' : 'Get Payment Details'}
+          <button onClick={handleRequestExtension} disabled={!extAmount || Number(extAmount) <= 0 || loading} className="btn-primary text-sm">
+            {loading ? 'Submitting...' : (job.status === 'paused' ? 'Get Payment Details' : 'Request Extension')}
           </button>
           <button onClick={onCancel} className="btn-secondary text-sm">Cancel</button>
         </div>
