@@ -262,7 +262,7 @@ export default function WorkspacePanel({ job }) {
           <div className="p-3 rounded-lg" style={{ background: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.3)' }}>
             <p className="text-yellow-400 text-sm font-medium">CLI disconnected — 5 min grace period</p>
             <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
-              Reconnect with: <code>j41-workspace --resume &lt;token&gt;</code>
+              Reconnect with: <code>j41-connect . --resume &lt;token&gt;</code>
             </p>
           </div>
         )}
