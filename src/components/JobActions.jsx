@@ -161,51 +161,144 @@ function PaymentQR({ jobId, type, amount, currency, onTxDetected }) {
   );
 }
 
-function ExtensionPanel({ job, loading, onSubmit, onCancel }) {
+function ExtensionPanel({ job, loading, setLoading, setError, onUpdate, onCancel }) {
   const [extAmount, setExtAmount] = useState('');
   const [extReason, setExtReason] = useState('');
+  const [invoice, setInvoice] = useState(null);
+  const [extId, setExtId] = useState(null);
+  const [txidInput, setTxidInput] = useState('');
 
+  const handleGetInvoice = async () => {
+    if (!extAmount || Number(extAmount) <= 0) return;
+    setLoading(true);
+    setError(null);
+    try {
+      // Step 1: Create extension request
+      const extRes = await fetch(`${API_BASE}/v1/jobs/${job.id}/extensions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ amount: Number(extAmount), reason: extReason || undefined }),
+      });
+      const extData = await extRes.json();
+      if (!extRes.ok) throw new Error(extData.error?.message || 'Failed to request extension');
+      setExtId(extData.data?.id);
+
+      // Step 2: Fetch invoice with sendcurrency params
+      const invRes = await fetch(`${API_BASE}/v1/jobs/${job.id}/extension-invoice?amount=${extAmount}`, { credentials: 'include' });
+      const invData = await invRes.json();
+      if (invRes.ok) setInvoice(invData.data);
+      else throw new Error(invData.error?.message || 'Failed to get invoice');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmitPayment = async () => {
+    if (!txidInput.trim()) return;
+    setLoading(true);
+    setError(null);
+    try {
+      // Find the extension to pay
+      let payExtId = extId;
+      if (!payExtId) {
+        const exts = await fetch(`${API_BASE}/v1/jobs/${job.id}/extensions`, { credentials: 'include' });
+        const extList = await exts.json();
+        const approved = extList.data?.find(e => e.status === 'approved');
+        payExtId = approved?.id;
+      }
+      if (!payExtId) { setError('No approved extension found'); return; }
+
+      const payRes = await fetch(`${API_BASE}/v1/jobs/${job.id}/extensions/${payExtId}/payment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ agentTxid: txidInput.trim(), feeTxid: txidInput.trim() }),
+      });
+      if (payRes.ok) { onCancel(); onUpdate?.(); }
+      else { const d = await payRes.json(); setError(d.error?.message || 'Payment failed'); }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!invoice) {
+    // Step 1: Enter amount
+    return (
+      <div className="bg-gray-900 rounded-lg p-4 space-y-3 border border-gray-700">
+        <h4 className="text-white font-medium text-sm">Extend Session</h4>
+        <p className="text-gray-400 text-xs">Add more funds to continue working with this agent.</p>
+        <div>
+          <label className="block text-xs text-gray-400 mb-1">Additional Amount ({job.currency})</label>
+          <input type="number" step="0.001" min="0.001" value={extAmount}
+            onChange={(e) => setExtAmount(e.target.value)}
+            className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-verus-blue focus:outline-none"
+            placeholder="Enter amount..."
+          />
+          {extAmount && Number(extAmount) > 0 && (
+            <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+              Total: {Number(extAmount).toFixed(4)} + {(Number(extAmount) * 0.05).toFixed(4)} fee = {(Number(extAmount) * 1.05).toFixed(4)} {job.currency}
+            </p>
+          )}
+        </div>
+        <div>
+          <label className="block text-xs text-gray-400 mb-1">Reason (optional)</label>
+          <textarea value={extReason} onChange={(e) => setExtReason(e.target.value)} rows={2} maxLength={500}
+            className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-verus-blue focus:outline-none"
+            placeholder="e.g. Job requires more tokens than originally scoped..."
+          />
+        </div>
+        <div className="flex gap-2">
+          <button onClick={handleGetInvoice} disabled={!extAmount || Number(extAmount) <= 0 || loading} className="btn-primary text-sm">
+            {loading ? 'Loading...' : 'Get Payment Details'}
+          </button>
+          <button onClick={onCancel} className="btn-secondary text-sm">Cancel</button>
+        </div>
+      </div>
+    );
+  }
+
+  // Step 2: Show sendcurrency command + txid input
   return (
     <div className="bg-gray-900 rounded-lg p-4 space-y-3 border border-gray-700">
-      <h4 className="text-white font-medium text-sm">Request Session Extension</h4>
-      <p className="text-gray-400 text-xs">Need more tokens/time? Request additional payment to extend the session. The other party must approve.</p>
+      <h4 className="text-white font-medium text-sm">Extension Payment</h4>
+      <div className="p-3 rounded-lg" style={{ background: 'rgba(34, 197, 94, 0.08)', border: '1px solid rgba(34, 197, 94, 0.2)' }}>
+        <p className="text-xs text-gray-400 mb-1">Total: <span className="text-white font-mono">{invoice.totalAmount} {invoice.currency}</span></p>
+        <p className="text-xs text-gray-500">Agent: {invoice.agentPayment?.amount} + Fee: {invoice.feePayment?.amount}</p>
+      </div>
       <div>
-        <label className="block text-xs text-gray-400 mb-1">Additional Amount ({job.currency})</label>
-        <input
-          type="number"
-          step="0.01"
-          min="0.001"
-          value={extAmount}
-          onChange={(e) => setExtAmount(e.target.value)}
-          className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-verus-blue focus:outline-none"
-          placeholder="e.g. 100"
+        <p className="text-xs text-gray-400 mb-1">Run this command in your wallet:</p>
+        <div className="bg-gray-950 p-2 rounded mb-2">
+          <code className="text-xs font-mono text-white break-all">{invoice.cliCommand}</code>
+        </div>
+        <SignCopyButtons command={invoice.cliCommand} />
+      </div>
+      <div>
+        <label className="block text-xs text-gray-400 mb-1">Transaction ID — paste after sending</label>
+        <input type="text" value={txidInput} onChange={(e) => setTxidInput(e.target.value)}
+          className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white font-mono text-sm focus:border-verus-blue focus:outline-none"
+          placeholder="Paste txid..."
         />
-        {extAmount && Number(extAmount) > 0 && (
-          <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
-            Total extension cost: {Number(extAmount).toFixed(4)} + {(Number(extAmount) * 0.05).toFixed(4)} fee = {(Number(extAmount) * 1.05).toFixed(4)} {job.currency}
-          </p>
+        {txidInput.trim().startsWith('opid-') && (
+          <div className="mt-2 p-2.5 rounded-lg" style={{ background: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.25)' }}>
+            <p className="text-xs text-amber-400 mb-1.5">That's an operation ID. Run this in your wallet to get the txid:</p>
+            <div className="flex items-center gap-2">
+              <code className="text-xs font-mono text-white flex-1 break-all">z_getoperationresult '["{txidInput.trim()}"]'</code>
+              <SignCopyButtons command={`z_getoperationresult '["${txidInput.trim()}"]'`} />
+            </div>
+            <p className="text-xs text-amber-400/70 mt-1">Copy the <code>txid</code> from the result and paste it above.</p>
+          </div>
         )}
       </div>
-      <div>
-        <label className="block text-xs text-gray-400 mb-1">Reason (optional)</label>
-        <textarea
-          value={extReason}
-          onChange={(e) => setExtReason(e.target.value)}
-          rows={2}
-          maxLength={500}
-          className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-verus-blue focus:outline-none"
-          placeholder="e.g. Job requires more tokens than originally scoped..."
-        />
-      </div>
       <div className="flex gap-2">
-        <button
-          onClick={() => onSubmit({ amount: Number(extAmount), reason: extReason || undefined })}
-          disabled={!extAmount || Number(extAmount) <= 0 || loading}
-          className="btn-primary text-sm"
-        >
-          {loading ? 'Submitting...' : 'Request Extension'}
+        <button onClick={handleSubmitPayment} disabled={!txidInput.trim() || loading} className="btn-primary text-sm">
+          {loading ? 'Verifying...' : 'Submit Extension Payment'}
         </button>
-        <button onClick={onCancel} className="btn-secondary text-sm">Cancel</button>
+        <button onClick={() => { setInvoice(null); setTxidInput(''); onCancel(); }} className="btn-secondary text-sm">Cancel</button>
       </div>
     </div>
   );
@@ -757,30 +850,11 @@ export default function JobActions({ job, onUpdate, autoOpenPayment, onAutoOpenC
         </div>
       )}
 
-      {/* Extension Request Panel */}
+      {/* Extension Request + Payment Panel */}
       {signPanel && signPanel.type === 'extension' && (
         <ExtensionPanel
-          job={job} loading={loading}
-          onSubmit={async (body) => {
-            setLoading(true);
-            setError(null);
-            try {
-              const res = await fetch(`${API_BASE}/v1/jobs/${job.id}/extensions`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify(body),
-              });
-              const data = await res.json();
-              if (!res.ok) throw new Error(data.error?.message || 'Failed to request extension');
-              setSignPanel(null);
-              if (onUpdate) onUpdate();
-            } catch (err) {
-              setError(err.message);
-            } finally {
-              setLoading(false);
-            }
-          }}
+          job={job} loading={loading} setLoading={setLoading} setError={setError}
+          onUpdate={onUpdate}
           onCancel={() => { setSignPanel(null); setSignatureInput(''); }}
         />
       )}
