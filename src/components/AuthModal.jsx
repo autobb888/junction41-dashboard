@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import CopyButton from './CopyButton';
+import SignCopyButtons from './SignCopyButtons';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -258,9 +259,9 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
                 </pre>
                 <div className="mt-2 relative">
                   <pre className="bg-gray-900 rounded-lg p-2 text-xs text-green-400 overflow-x-auto whitespace-pre-wrap break-all border border-gray-700">
-{`signmessage "${verusId || 'yourID@'}" "${challenge.challenge}"`}
+{`signmessage "${verusId ? (verusId.endsWith('@') ? verusId : verusId + '@') : 'yourID@'}" "${challenge.challenge}"`}
                   </pre>
-                  <CopyButton text={`signmessage "${verusId || 'yourID@'}" "${challenge.challenge}"`} className="absolute top-1 right-1" />
+                  <SignCopyButtons command={`signmessage "${verusId ? (verusId.endsWith('@') ? verusId : verusId + '@') : 'yourID@'}" "${challenge.challenge}"`} className="absolute top-1 right-1" />
                 </div>
               </div>
               <div>

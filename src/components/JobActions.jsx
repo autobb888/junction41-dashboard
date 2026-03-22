@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import QRCode from 'react-qr-code';
 import CopyButton from './CopyButton';
+import SignCopyButtons from './SignCopyButtons';
 import DisputeModal from './DisputeModal';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -117,8 +118,8 @@ function PaymentQR({ jobId, type, amount, currency, onTxDetected }) {
         </div>
         <div className="w-full">
           <div className="flex items-center justify-between mb-1">
-            <p className="text-xs text-gray-400">Verus CLI command:</p>
-            <CopyButton text={qrData.cliCommand} label="Copy" />
+            <p className="text-xs text-gray-400">Verus command:</p>
+            <SignCopyButtons command={qrData.cliCommand} />
           </div>
           <div className="bg-gray-950 rounded p-3 font-mono text-xs text-verus-blue break-all whitespace-pre-wrap select-all">
             {qrData.cliCommand}
@@ -235,8 +236,14 @@ function DeliveryPanel({ job, user, loading, onSubmit, onCancel }) {
         />
       </div>
       <p className="text-gray-400 text-xs">Run this command in Verus CLI or Desktop console, then paste the <strong>signature</strong> value below.</p>
-      <div className="bg-gray-950 rounded p-3 font-mono text-xs text-verus-blue break-all whitespace-pre-wrap select-all">
-        {cmd}
+      <div className="bg-gray-950 rounded p-3">
+        <div className="flex justify-between items-center mb-1">
+          <span className="text-xs text-gray-400">Sign command:</span>
+          <SignCopyButtons command={cmd} />
+        </div>
+        <div className="font-mono text-xs text-verus-blue break-all whitespace-pre-wrap select-all">
+          {cmd}
+        </div>
       </div>
       <div>
         <label className="block text-xs text-gray-400 mb-1">Paste Signature (base64 string starting with A...)</label>
@@ -279,6 +286,8 @@ export default function JobActions({ job, onUpdate, autoOpenPayment, onAutoOpenC
   const isSeller = job.sellerVerusId === user?.verusId;
   const [showDisputeModal, setShowDisputeModal] = useState(false);
   const [currentDispute, setCurrentDispute] = useState(null);
+  const [extensionAmount, setExtensionAmount] = useState('');
+  const [extensionInvoice, setExtensionInvoice] = useState(null);
 
   async function fetchDispute() {
     try {
@@ -493,6 +502,87 @@ export default function JobActions({ job, onUpdate, autoOpenPayment, onAutoOpenC
         )}
       </div>
 
+      {/* Paused Job — reactivate or extend (buyer only) */}
+      {job.status === 'paused' && isBuyer && (
+        <div className="p-4 rounded-lg mb-3" style={{ background: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.3)' }}>
+          <p className="text-amber-400 font-medium text-sm mb-2">Session Paused</p>
+          <p className="text-xs text-gray-400 mb-3">
+            Agent idle for {job.pausedAt ? Math.round((Date.now() - new Date(job.pausedAt.endsWith('Z') ? job.pausedAt : job.pausedAt + 'Z').getTime()) / 60000) : '?'} minutes.
+            Reactivate to continue or extend with additional payment.
+          </p>
+          <div className="flex gap-2 flex-wrap">
+            {(job.lifecycle?.reactivationFee || 0) > 0 ? (
+              <button
+                onClick={() => { setSignPanel({ action: 'reactivate', type: 'reactivate' }); setSignatureInput(''); }}
+                disabled={loading}
+                className="btn-primary text-sm"
+              >
+                Reactivate ({job.lifecycle.reactivationFee} {job.currency} + fee)
+              </button>
+            ) : (
+              <button
+                onClick={async () => {
+                  setLoading(true);
+                  try {
+                    const res = await fetch(`${API_BASE}/v1/jobs/${job.id}/reactivate`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      credentials: 'include',
+                      body: JSON.stringify({}),
+                    });
+                    if (res.ok) onUpdate?.();
+                    else {
+                      const data = await res.json();
+                      setError(data.error?.message || 'Reactivation failed');
+                    }
+                  } catch (err) { setError(err.message); }
+                  finally { setLoading(false); }
+                }}
+                disabled={loading}
+                className="btn-primary text-sm"
+              >
+                {loading ? 'Reactivating...' : 'Reactivate (Free)'}
+              </button>
+            )}
+            <button
+              onClick={() => { setSignPanel({ action: 'extend', type: 'extend-paused' }); setSignatureInput(''); }}
+              disabled={loading}
+              className="btn-secondary text-sm"
+            >
+              Extend Session
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Reconnect Agent — either party, active jobs (not paused) */}
+      {['in_progress', 'delivered', 'accepted', 'requested', 'disputed'].includes(job.status) && (
+        <button
+          onClick={async () => {
+            setLoading(true);
+            try {
+              const res = await fetch(`${API_BASE}/v1/jobs/${job.id}/reconnect`, {
+                method: 'POST',
+                credentials: 'include',
+              });
+              if (!res.ok) {
+                const data = await res.json();
+                setError(data.error?.message || 'Failed to reconnect');
+              }
+            } catch (err) {
+              setError(err.message);
+            } finally {
+              setLoading(false);
+            }
+          }}
+          disabled={loading}
+          className="text-xs px-3 py-1.5 rounded-lg transition-colors"
+          style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}
+        >
+          {loading ? 'Sending...' : 'Reconnect Agent'}
+        </button>
+      )}
+
       {/* Review window countdown */}
       {job.status === 'delivered' && job.reviewWindowExpiresAt && (
         <ReviewWindowCountdown expiresAt={job.reviewWindowExpiresAt} />
@@ -514,8 +604,14 @@ export default function JobActions({ job, onUpdate, autoOpenPayment, onAutoOpenC
         <div className="bg-gray-900 rounded-lg p-4 space-y-3 border border-gray-700">
           <h4 className="text-white font-medium text-sm">Sign to {signPanel.action}</h4>
           <p className="text-gray-400 text-xs">Run this command in Verus CLI or Desktop console, then paste the <strong>signature</strong> value below.</p>
-          <div className="bg-gray-950 rounded p-3 font-mono text-xs text-verus-blue break-all whitespace-pre-wrap select-all">
-            {signPanel.command}
+          <div className="bg-gray-950 rounded p-3">
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-xs text-gray-400">Sign command:</span>
+              <SignCopyButtons command={signPanel.command} />
+            </div>
+            <div className="font-mono text-xs text-verus-blue break-all whitespace-pre-wrap select-all">
+              {signPanel.command}
+            </div>
           </div>
           <div>
             <label className="block text-xs text-gray-400 mb-1">Paste Signature (base64 string starting with A...)</label>
@@ -575,12 +671,22 @@ export default function JobActions({ job, onUpdate, autoOpenPayment, onAutoOpenC
 
           <p className="text-gray-500 text-xs">After this, you'll also pay the 5% platform fee ({job.payment?.feeAmount?.toFixed(4)} {job.currency}) in a second transaction.</p>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Transaction ID (64-char hex) — auto-fills when payment detected</label>
+            <label className="block text-xs text-gray-400 mb-1">Transaction ID — auto-fills when payment detected</label>
             <input
               type="text" value={signatureInput} onChange={(e) => setSignatureInput(e.target.value)}
               className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white font-mono text-sm focus:border-verus-blue focus:outline-none"
-              placeholder="abc123def456..."
+              placeholder="Paste txid..."
             />
+            {signatureInput.trim().startsWith('opid-') && (
+              <div className="mt-2 p-2.5 rounded-lg" style={{ background: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.25)' }}>
+                <p className="text-xs text-amber-400 mb-1.5">That's an operation ID, not a transaction ID. Run this in your wallet to get the txid:</p>
+                <div className="flex items-center gap-2">
+                  <code className="text-xs font-mono text-white flex-1 break-all">z_getoperationresult '["{signatureInput.trim()}"]'</code>
+                  <SignCopyButtons command={`z_getoperationresult '["${signatureInput.trim()}"]'`} />
+                </div>
+                <p className="text-xs text-amber-400/70 mt-1">Copy the <code>txid</code> from the result and paste it above.</p>
+              </div>
+            )}
           </div>
           <div className="flex gap-2">
             <button
@@ -621,12 +727,22 @@ export default function JobActions({ job, onUpdate, autoOpenPayment, onAutoOpenC
 
           <p className="text-green-400 text-xs">✓ Agent payment already submitted. This is the final step — job starts after both payments.</p>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Transaction ID (64-char hex) — auto-fills when payment detected</label>
+            <label className="block text-xs text-gray-400 mb-1">Transaction ID — auto-fills when payment detected</label>
             <input
               type="text" value={signatureInput} onChange={(e) => setSignatureInput(e.target.value)}
               className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white font-mono text-sm focus:border-verus-blue focus:outline-none"
-              placeholder="abc123def456..."
+              placeholder="Paste txid..."
             />
+            {signatureInput.trim().startsWith('opid-') && (
+              <div className="mt-2 p-2.5 rounded-lg" style={{ background: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.25)' }}>
+                <p className="text-xs text-amber-400 mb-1.5">That's an operation ID, not a transaction ID. Run this in your wallet to get the txid:</p>
+                <div className="flex items-center gap-2">
+                  <code className="text-xs font-mono text-white flex-1 break-all">z_getoperationresult '["{signatureInput.trim()}"]'</code>
+                  <SignCopyButtons command={`z_getoperationresult '["${signatureInput.trim()}"]'`} />
+                </div>
+                <p className="text-xs text-amber-400/70 mt-1">Copy the <code>txid</code> from the result and paste it above.</p>
+              </div>
+            )}
           </div>
           <div className="flex gap-2">
             <button
@@ -696,12 +812,22 @@ export default function JobActions({ job, onUpdate, autoOpenPayment, onAutoOpenC
           />
 
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Transaction ID (64-char hex) — paste after sending</label>
+            <label className="block text-xs text-gray-400 mb-1">Transaction ID — paste after sending</label>
             <input
               type="text" value={signatureInput} onChange={(e) => setSignatureInput(e.target.value)}
               className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white font-mono text-sm focus:border-verus-blue focus:outline-none"
-              placeholder="abc123def456..."
+              placeholder="Paste txid..."
             />
+            {signatureInput.trim().startsWith('opid-') && (
+              <div className="mt-2 p-2.5 rounded-lg" style={{ background: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.25)' }}>
+                <p className="text-xs text-amber-400 mb-1.5">That's an operation ID, not a transaction ID. Run this in your wallet to get the txid:</p>
+                <div className="flex items-center gap-2">
+                  <code className="text-xs font-mono text-white flex-1 break-all">z_getoperationresult '["{signatureInput.trim()}"]'</code>
+                  <SignCopyButtons command={`z_getoperationresult '["${signatureInput.trim()}"]'`} />
+                </div>
+                <p className="text-xs text-amber-400/70 mt-1">Copy the <code>txid</code> from the result and paste it above.</p>
+              </div>
+            )}
           </div>
           <div className="flex gap-2">
             <button
@@ -713,6 +839,189 @@ export default function JobActions({ job, onUpdate, autoOpenPayment, onAutoOpenC
             </button>
             <button onClick={() => { setSignPanel(null); setSignatureInput(''); }} className="btn-secondary text-sm">Cancel</button>
           </div>
+        </div>
+      )}
+
+      {/* Reactivation Payment Panel */}
+      {signPanel && signPanel.type === 'reactivate' && (
+        <div className="bg-gray-900 rounded-lg p-4 space-y-3 border border-gray-700">
+          <h4 className="text-white font-medium text-sm">Reactivate Session</h4>
+          <p className="text-gray-400 text-xs">
+            Pay the reactivation fee to resume. Agent continues where they left off.
+          </p>
+
+          <PaymentQR
+            jobId={job.id}
+            type="combined"
+            amount={job.lifecycle?.reactivationFee || 0}
+            currency={job.currency}
+            onTxDetected={(txid) => setSignatureInput(txid)}
+          />
+
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">Transaction ID — paste after sending</label>
+            <input
+              type="text" value={signatureInput} onChange={(e) => setSignatureInput(e.target.value)}
+              className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white font-mono text-sm focus:border-verus-blue focus:outline-none"
+              placeholder="Paste txid..."
+            />
+            {signatureInput.trim().startsWith('opid-') && (
+              <div className="mt-2 p-2.5 rounded-lg" style={{ background: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.25)' }}>
+                <p className="text-xs text-amber-400 mb-1.5">That's an operation ID. Run this in your wallet to get the txid:</p>
+                <div className="flex items-center gap-2">
+                  <code className="text-xs font-mono text-white flex-1 break-all">z_getoperationresult '["{signatureInput.trim()}"]'</code>
+                  <SignCopyButtons command={`z_getoperationresult '["${signatureInput.trim()}"]'`} />
+                </div>
+                <p className="text-xs text-amber-400/70 mt-1">Copy the <code>txid</code> from the result and paste it above.</p>
+              </div>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={async () => {
+                setLoading(true);
+                try {
+                  const res = await fetch(`${API_BASE}/v1/jobs/${job.id}/reactivate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ txid: signatureInput.trim() }),
+                  });
+                  if (res.ok) { setSignPanel(null); setSignatureInput(''); onUpdate?.(); }
+                  else {
+                    const data = await res.json();
+                    setError(data.error?.message || 'Reactivation failed');
+                  }
+                } catch (err) { setError(err.message); }
+                finally { setLoading(false); }
+              }}
+              disabled={!signatureInput.trim() || loading}
+              className="btn-primary text-sm"
+            >
+              {loading ? 'Verifying...' : 'Submit Reactivation Payment'}
+            </button>
+            <button onClick={() => { setSignPanel(null); setSignatureInput(''); }} className="btn-secondary text-sm">Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* Extend Paused Session Panel */}
+      {signPanel && signPanel.type === 'extend-paused' && (
+        <div className="bg-gray-900 rounded-lg p-4 space-y-3 border border-gray-700">
+          <h4 className="text-white font-medium text-sm">Extend Session</h4>
+          <p className="text-gray-400 text-xs">
+            Add more funds to continue working. The agent resumes automatically after payment.
+          </p>
+
+          {!extensionInvoice ? (
+            <div className="space-y-2">
+              <label className="block text-xs text-gray-400">Amount ({job.currency})</label>
+              <input
+                type="number" step="0.001" min="0.001" value={extensionAmount}
+                onChange={(e) => setExtensionAmount(e.target.value)}
+                className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-verus-blue focus:outline-none"
+                placeholder="Enter amount..."
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={async () => {
+                    if (!extensionAmount || parseFloat(extensionAmount) <= 0) return;
+                    setLoading(true);
+                    try {
+                      // Create extension request (auto-approved for paused jobs)
+                      const extRes = await fetch(`${API_BASE}/v1/jobs/${job.id}/extensions`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ amount: parseFloat(extensionAmount) }),
+                      });
+                      const extData = await extRes.json();
+                      if (!extRes.ok) { setError(extData.error?.message || 'Failed'); return; }
+                      // Fetch invoice
+                      const invRes = await fetch(`${API_BASE}/v1/jobs/${job.id}/extension-invoice?amount=${extensionAmount}`, { credentials: 'include' });
+                      if (invRes.ok) {
+                        const invData = await invRes.json();
+                        setExtensionInvoice({ ...invData.data, extensionId: extData.data?.id });
+                      }
+                    } catch (err) { setError(err.message); }
+                    finally { setLoading(false); }
+                  }}
+                  disabled={!extensionAmount || parseFloat(extensionAmount) <= 0 || loading}
+                  className="btn-primary text-sm"
+                >
+                  {loading ? 'Loading...' : 'Get Payment Details'}
+                </button>
+                <button onClick={() => { setSignPanel(null); setExtensionAmount(''); setExtensionInvoice(null); }} className="btn-secondary text-sm">Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="p-3 rounded-lg" style={{ background: 'rgba(34, 197, 94, 0.08)', border: '1px solid rgba(34, 197, 94, 0.2)' }}>
+                <p className="text-xs text-gray-400 mb-1">Total: <span className="text-white font-mono">{extensionInvoice.totalAmount} {extensionInvoice.currency}</span></p>
+                <p className="text-xs text-gray-500">Agent: {extensionInvoice.agentPayment?.amount} + Fee: {extensionInvoice.feePayment?.amount}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 mb-1">Run this command in your wallet:</p>
+                <div className="flex items-center gap-2 mb-2">
+                  <code className="text-xs font-mono text-white flex-1 break-all bg-gray-950 p-2 rounded">{extensionInvoice.cliCommand}</code>
+                </div>
+                <SignCopyButtons command={extensionInvoice.cliCommand} />
+              </div>
+
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Transaction ID — paste after sending</label>
+                <input
+                  type="text" value={signatureInput} onChange={(e) => setSignatureInput(e.target.value)}
+                  className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white font-mono text-sm focus:border-verus-blue focus:outline-none"
+                  placeholder="Paste txid..."
+                />
+                {signatureInput.trim().startsWith('opid-') && (
+                  <div className="mt-2 p-2.5 rounded-lg" style={{ background: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.25)' }}>
+                    <p className="text-xs text-amber-400 mb-1.5">That's an operation ID. Run this in your wallet to get the txid:</p>
+                    <div className="flex items-center gap-2">
+                      <code className="text-xs font-mono text-white flex-1 break-all">z_getoperationresult '["{signatureInput.trim()}"]'</code>
+                      <SignCopyButtons command={`z_getoperationresult '["${signatureInput.trim()}"]'`} />
+                    </div>
+                    <p className="text-xs text-amber-400/70 mt-1">Copy the <code>txid</code> from the result and paste it above.</p>
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={async () => {
+                    if (!signatureInput.trim()) return;
+                    setLoading(true);
+                    try {
+                      // Submit extension payment — use stored extensionId or fallback to latest approved
+                      let extId = extensionInvoice?.extensionId;
+                      if (!extId) {
+                        const exts = await fetch(`${API_BASE}/v1/jobs/${job.id}/extensions`, { credentials: 'include' });
+                        const extList = await exts.json();
+                        const latestExt = extList.data?.find(e => e.status === 'approved');
+                        extId = latestExt?.id;
+                      }
+                      if (extId) {
+                        const payRes = await fetch(`${API_BASE}/v1/jobs/${job.id}/extensions/${extId}/payment`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          credentials: 'include',
+                          body: JSON.stringify({ agentTxid: signatureInput.trim(), feeTxid: signatureInput.trim() }),
+                        });
+                        if (payRes.ok) { setSignPanel(null); setSignatureInput(''); setExtensionAmount(''); setExtensionInvoice(null); onUpdate?.(); }
+                        else { const d = await payRes.json(); setError(d.error?.message || 'Payment failed'); }
+                      } else { setError('No approved extension found'); }
+                    } catch (err) { setError(err.message); }
+                    finally { setLoading(false); }
+                  }}
+                  disabled={!signatureInput.trim() || loading}
+                  className="btn-primary text-sm"
+                >
+                  {loading ? 'Verifying...' : 'Submit Extension Payment'}
+                </button>
+                <button onClick={() => { setSignPanel(null); setSignatureInput(''); setExtensionAmount(''); setExtensionInvoice(null); }} className="btn-secondary text-sm">Cancel</button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

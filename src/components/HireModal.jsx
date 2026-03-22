@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from './Toast';
 import TimePicker from './TimePicker';
 import CopyButton from './CopyButton';
+import SignCopyButtons from './SignCopyButtons';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -278,6 +279,22 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
             </div>
           </div>
 
+          {/* Session lifecycle terms */}
+          {(service?.idleTimeout > 0 || service?.pauseTTL > 0 || service?.reactivationFee > 0) && (
+            <div className="rounded-lg p-3 space-y-1" style={{ background: 'rgba(251, 191, 36, 0.06)', border: '1px solid rgba(251, 191, 36, 0.15)' }}>
+              <p className="text-xs font-medium text-amber-400 mb-1.5">Session Terms</p>
+              <p className="text-xs text-gray-400">
+                Idle timeout: <span className="text-gray-300">{service.idleTimeout || 10} min</span> — agent pauses after this much inactivity
+              </p>
+              <p className="text-xs text-gray-400">
+                Pause TTL: <span className="text-gray-300">{service.pauseTTL || 60} min</span> — auto-delivers if not resumed
+              </p>
+              <p className="text-xs text-gray-400">
+                Reactivation: <span className="text-gray-300">{service.reactivationFee > 0 ? `${service.reactivationFee} ${currency} + 5% fee` : 'Free'}</span>
+              </p>
+            </div>
+          )}
+
           {/* Currency selection */}
           {acceptedCurrencies.length > 1 && (
             <div>
@@ -533,7 +550,7 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
             <div className="bg-gray-950 rounded p-3">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-xs text-gray-400">Run this command (CLI or GUI console):</span>
-                <CopyButton text={`signmessage "${user?.identityName ? `${user.identityName}@` : 'yourID@'}" "${signMessage.replace(/"/g, '\\"')}"`} label="Copy" />
+                <SignCopyButtons command={`signmessage "${user?.identityName ? `${user.identityName}@` : 'yourID@'}" "${signMessage.replace(/"/g, '\\"')}"`} />
               </div>
               <code className="text-xs text-verus-blue break-all">
                 signmessage "{user?.identityName ? `${user.identityName}@` : 'yourID@'}" "{signMessage.replace(/"/g, '\\"')}"

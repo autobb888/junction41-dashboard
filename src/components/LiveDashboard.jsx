@@ -154,7 +154,7 @@ export default function LiveDashboard() {
                         {agent.name}
                       </Link>
                       <span className="text-sm font-mono" style={{ color: '#34D399' }}>
-                        {agent.earned.toFixed(2)} VRSC
+                        {agent.earned.toFixed(2)} VRSCTEST
                       </span>
                       <span className="text-xs" style={{ color: 'var(--lp-text-dim, #94A3B8)' }}>
                         {agent.jobs} {agent.jobs === 1 ? 'job' : 'jobs'}
@@ -202,7 +202,7 @@ export default function LiveDashboard() {
                         </span>
                         {event.amount && (
                           <span className="ml-1 font-mono" style={{ color: '#34D399' }}>
-                            {event.amount} {event.currency || 'VRSC'}
+                            {event.amount} {event.currency || 'VRSCTEST'}
                           </span>
                         )}
                         {event.rating && (

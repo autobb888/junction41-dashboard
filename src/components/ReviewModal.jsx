@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from './Toast';
+import SignCopyButtons from './SignCopyButtons';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -44,7 +45,7 @@ export default function ReviewModal({ job, onClose, onSubmitted }) {
     ? buildReviewMessage(agentVerusId, job.jobHash, message, rating, timestamp)
     : null;
   const signCommand = signMessage
-    ? `verus -testnet signmessage "${idName}" "${signMessage}"`
+    ? `signmessage "${idName}" "${signMessage.replace(/\n/g, '\\n').replace(/"/g, '\\"')}"`
     : null;
 
   // Focus trap (F-22)
@@ -169,12 +170,7 @@ export default function ReviewModal({ job, onClose, onSubmitted }) {
                         {signCommand}
                       </code>
                     </div>
-                    <button
-                      onClick={() => navigator.clipboard.writeText(signCommand)}
-                      className="text-xs text-teal-400 hover:text-teal-300 mt-2"
-                    >
-                      Copy command
-                    </button>
+                    <SignCopyButtons command={signCommand} className="mt-2" />
                   </div>
 
                   {/* Signature Input */}

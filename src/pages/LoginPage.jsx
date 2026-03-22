@@ -232,7 +232,9 @@ export default function LoginPage() {
 
               <div className="border-t border-gray-700 pt-4">
                 <p className="text-sm text-gray-400 mb-4">
-                  Use Verus CLI: <code className="bg-gray-900 px-2 py-1 rounded text-xs">verus signmessage "yourID@" "message"</code>
+                  GUI: <code className="bg-gray-900 px-2 py-1 rounded text-xs">run signmessage "yourID@" "message"</code>
+                  &nbsp;|&nbsp;
+                  CLI: <code className="bg-gray-900 px-2 py-1 rounded text-xs">./verus -testnet signmessage "yourID@" "message"</code>
                 </p>
               </div>
 

@@ -251,18 +251,18 @@ export default function AdminDashboard() {
           <SectionHeader icon={DollarSign} title="Financial" color={COLORS.amber} />
           <div className="space-y-4">
             <div>
-              <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>VRSC Gifted</p>
-              <p className="text-xl font-bold text-white">{(fin.total_spent || 0).toFixed(4)} <span className="text-sm text-gray-400">VRSC</span></p>
+              <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>VRSCTEST Gifted</p>
+              <p className="text-xl font-bold text-white">{(fin.total_spent || 0).toFixed(4)} <span className="text-sm text-gray-400">VRSCTEST</span></p>
               <p className="text-xs text-gray-500">{fin.total_funded || 0} identities funded</p>
             </div>
             <div>
               <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Recouped</p>
-              <p className="text-xl font-bold" style={{ color: COLORS.green }}>{((fin.recouped_count || 0) * 0.0033).toFixed(4)} <span className="text-sm text-gray-400">VRSC</span></p>
+              <p className="text-xl font-bold" style={{ color: COLORS.green }}>{((fin.recouped_count || 0) * 0.0033).toFixed(4)} <span className="text-sm text-gray-400">VRSCTEST</span></p>
               <p className="text-xs text-gray-500">{fin.recouped_count || 0} agents recouped on first job</p>
             </div>
             <div className="border-t pt-3" style={{ borderColor: 'var(--border-subtle)' }}>
               <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Net Cost</p>
-              <p className="text-xl font-bold" style={{ color: COLORS.amber }}>{(fin.netCost || 0).toFixed(4)} <span className="text-sm text-gray-400">VRSC</span></p>
+              <p className="text-xl font-bold" style={{ color: COLORS.amber }}>{(fin.netCost || 0).toFixed(4)} <span className="text-sm text-gray-400">VRSCTEST</span></p>
             </div>
             <div>
               <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Recoup Rate</p>

@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import ResolvedId from '../components/ResolvedId';
 import JobStepper from '../components/JobStepper';
 import CopyButton from '../components/CopyButton';
+import SignCopyButtons from '../components/SignCopyButtons';
 import { SkeletonList, EmptyState } from '../components/Skeleton';
 import usePageTitle from '../hooks/usePageTitle';
 
@@ -74,7 +75,8 @@ function DeletionAttestationSection({ jobId, jobHash, user }) {
         <div className="space-y-2">
           <pre className="text-xs p-2 bg-gray-900 rounded overflow-x-auto text-gray-300 whitespace-pre-wrap">{msg}</pre>
           <p className="text-xs text-gray-400">
-            Run in CLI or GUI console: <code className="text-xs bg-gray-800 px-1 rounded">signmessage "{user?.identityName}@" "{msg}"</code>
+            Sign command: <code className="text-xs bg-gray-800 px-1 rounded">signmessage "{user?.identityName}@" "{msg}"</code>
+            <SignCopyButtons command={`signmessage "${user?.identityName}@" "${msg}"`} className="ml-2" />
           </p>
           <input value={sig} onChange={e => setSig(e.target.value)} placeholder="Paste signature..."
             className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-1.5 text-sm text-white" />
@@ -147,7 +149,7 @@ function DeliveryPanel({ job, user, loading, onSubmit, onCancel }) {
           <div className="bg-gray-950 rounded p-3">
             <div className="flex justify-between items-center mb-1">
               <span className="text-xs text-gray-400">Sign command:</span>
-              <CopyButton text={cmd} label="Copy" />
+              <SignCopyButtons command={cmd} />
             </div>
             <code className="text-xs text-verus-blue break-all">{cmd}</code>
           </div>
@@ -554,7 +556,7 @@ function JobCard({ job, currentUser, onUpdate }) {
               <div className="bg-gray-950 rounded p-3">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-xs text-gray-400">Sign command:</span>
-                  <CopyButton text={signPanel.command} label="Copy" />
+                  <SignCopyButtons command={signPanel.command} />
                 </div>
                 <div className="font-mono text-xs text-verus-blue break-all whitespace-pre-wrap">
                   {signPanel.command}
@@ -609,14 +611,23 @@ function JobCard({ job, currentUser, onUpdate }) {
                 <p className="text-verus-blue font-mono text-sm mt-1 break-all">{job.payment?.address || job.sellerVerusId}</p>
               </div>
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Transaction ID (64-char hex)</label>
+                <label className="block text-xs text-gray-400 mb-1">Transaction ID</label>
                 <input
                   type="text"
                   value={signatureInput}
                   onChange={(e) => setSignatureInput(e.target.value)}
                   className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white font-mono text-sm focus:border-verus-blue focus:outline-none"
-                  placeholder="abc123def456..."
+                  placeholder="Paste txid..."
                 />
+                {signatureInput.trim().startsWith('opid-') && (
+                  <div className="mt-2 p-2.5 rounded-lg" style={{ background: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.25)' }}>
+                    <p className="text-xs text-amber-400 mb-1.5">That's an operation ID. Run this in your wallet to get the txid:</p>
+                    <div className="flex items-center gap-2">
+                      <code className="text-xs font-mono text-white flex-1 break-all">z_getoperationresult '["{signatureInput.trim()}"]'</code>
+                    </div>
+                    <p className="text-xs text-amber-400/70 mt-1">Copy the <code>txid</code> from the result and paste it above.</p>
+                  </div>
+                )}
               </div>
               <div className="flex gap-2">
                 <button

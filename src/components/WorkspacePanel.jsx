@@ -84,6 +84,10 @@ export default function WorkspacePanel({ job }) {
       const data = await res.json();
       // I4: Always sync session state — clear when backend returns null
       setSession(data.data || null);
+      // Restore connect command from backend if session is pending
+      if (data.data?.connectCommand && !command) {
+        setCommand(data.data.connectCommand);
+      }
     } catch {
       setError('Unable to check workspace status');
     } finally {
@@ -133,7 +137,7 @@ export default function WorkspacePanel({ job }) {
 
   function copyCommand() {
     if (!command) return;
-    const full = `# Install (once):\nyarn global add @j41/workspace\n\n# Start workspace:\n${command}`;
+    const full = `# Install (once):\nyarn global add @j41/connect\n\n# Start workspace:\n${command}`;
     try {
       navigator.clipboard.writeText(full);
     } catch {
@@ -185,6 +189,47 @@ export default function WorkspacePanel({ job }) {
           <span>Read: on</span>
           {session.permissions?.write && <span>Write: on</span>}
         </div>
+
+        {/* Pending — show connect command so buyer can run j41-connect */}
+        {session.status === 'pending' && command && (
+          <div className="mb-4">
+            <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
+              Run this command to connect your project:
+            </p>
+            <div className="rounded-lg p-4 font-mono text-xs" style={{ background: 'var(--bg-inset)', border: '1px solid var(--border-subtle)' }}>
+              <p style={{ color: 'var(--text-tertiary)' }}># Install (once):</p>
+              <p className="text-white mb-2">yarn global add @j41/connect</p>
+              <p style={{ color: 'var(--text-tertiary)' }}># Run from your project directory:</p>
+              <p className="text-white break-all">{command}</p>
+            </div>
+            <div className="flex items-center gap-2 mt-2">
+              <button
+                onClick={copyCommand}
+                className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg transition-colors"
+                style={{
+                  background: copied ? 'rgba(52, 211, 153, 0.2)' : 'var(--bg-elevated)',
+                  color: copied ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                  border: '1px solid var(--border-subtle)',
+                }}
+              >
+                {copied ? <Check size={14} /> : <Copy size={14} />}
+                {copied ? 'Copied!' : 'Copy command'}
+              </button>
+            </div>
+            <p className="text-xs mt-2" style={{ color: 'var(--text-tertiary)' }}>
+              <code className="px-1 py-0.5 rounded" style={{ background: 'var(--bg-inset)' }}>.</code> = current directory (run from inside your project).
+              Or specify a path: <code className="px-1 py-0.5 rounded" style={{ background: 'var(--bg-inset)' }}>j41-connect ~/code/myapp --uid ...</code>
+            </p>
+          </div>
+        )}
+
+        {session.status === 'pending' && !command && (
+          <div className="p-3 rounded-lg mb-4" style={{ background: 'var(--bg-inset)', border: '1px solid var(--border-subtle)' }}>
+            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+              Waiting for CLI connection...
+            </p>
+          </div>
+        )}
 
         {/* Supervised mode note */}
         {session.mode === 'supervised' && session.status === 'active' && (
@@ -327,8 +372,8 @@ export default function WorkspacePanel({ job }) {
         <div className="mb-4">
           <div className="rounded-lg p-4 font-mono text-xs" style={{ background: 'var(--bg-inset)', border: '1px solid var(--border-subtle)' }}>
             <p style={{ color: 'var(--text-tertiary)' }}># Install (once):</p>
-            <p className="text-white mb-2">yarn global add @j41/workspace</p>
-            <p style={{ color: 'var(--text-tertiary)' }}># Start workspace:</p>
+            <p className="text-white mb-2">yarn global add @j41/connect</p>
+            <p style={{ color: 'var(--text-tertiary)' }}># Run from your project directory:</p>
             <p className="text-white break-all">{command}</p>
           </div>
           <button
@@ -343,6 +388,10 @@ export default function WorkspacePanel({ job }) {
             {copied ? <Check size={14} /> : <Copy size={14} />}
             {copied ? 'Copied!' : 'Copy command'}
           </button>
+          <p className="text-xs mt-2" style={{ color: 'var(--text-tertiary)' }}>
+            <code className="px-1 py-0.5 rounded" style={{ background: 'var(--bg-inset)' }}>.</code> = current directory (run from inside your project).
+            Or specify a path: <code className="px-1 py-0.5 rounded" style={{ background: 'var(--bg-inset)' }}>j41-connect ~/code/myapp --uid ...</code>
+          </p>
         </div>
       ) : (
         <button

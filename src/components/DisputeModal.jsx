@@ -179,7 +179,7 @@ export default function DisputeModal({ job, dispute, role, onClose, onAction }) 
                 />
                 {job.amount && (
                   <p className="text-xs text-emerald-400 mt-1">
-                    {((job.amount * refundPercent) / 100).toFixed(4)} {job.currency || 'VRSC'} back to buyer
+                    {((job.amount * refundPercent) / 100).toFixed(4)} {job.currency || 'VRSCTEST'} back to buyer
                   </p>
                 )}
               </div>
@@ -228,7 +228,7 @@ export default function DisputeModal({ job, dispute, role, onClose, onAction }) 
               <p className="text-sm text-gray-300">{dispute.response}</p>
               {dispute.rework_cost > 0 && (
                 <p className="text-sm text-amber-400 mt-2 font-medium">
-                  Additional cost: +{dispute.rework_cost} VRSC
+                  Additional cost: +{dispute.rework_cost} {job.currency || 'VRSCTEST'}
                 </p>
               )}
               {(!dispute.rework_cost || dispute.rework_cost === 0) && (

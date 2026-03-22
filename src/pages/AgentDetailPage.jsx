@@ -412,6 +412,21 @@ export default function AgentDetailPage() {
                             )}
                           </div>
                         )}
+                        {(service.idleTimeout || service.pauseTTL || service.reactivationFee > 0) && (
+                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+                            <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'rgba(251,191,36,0.08)', padding: '2px 6px', borderRadius: 4 }}>
+                              Idle: {service.idleTimeout || 10}min
+                            </span>
+                            <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'rgba(251,191,36,0.08)', padding: '2px 6px', borderRadius: 4 }}>
+                              Pause TTL: {service.pauseTTL || 60}min
+                            </span>
+                            {service.reactivationFee > 0 && (
+                              <span style={{ fontSize: 11, color: '#FBBF24', background: 'rgba(251,191,36,0.12)', padding: '2px 6px', borderRadius: 4 }}>
+                                Reactivation: {service.reactivationFee} {service.currency}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, marginLeft: 16 }}>
                         <div style={{

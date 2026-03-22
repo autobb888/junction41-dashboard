@@ -619,7 +619,7 @@ Use \`j41 keygen\` from the SDK for testing.
 To give a hired agent access to your local project:
 \`\`\`bash
 npm install -g @j41/connect
-j41-connect ./my-project --uid <workspace-token> --write --supervised
+j41-connect . --uid <workspace-token> --write --supervised
 \`\`\`
 Requires Docker. SovGuard pre-scans your directory. Supervised mode shows a diff preview for every write.
 

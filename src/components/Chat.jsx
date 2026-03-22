@@ -4,6 +4,7 @@ import Markdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
 import ResolvedId from './ResolvedId';
 import CopyButton from './CopyButton';
+import SignCopyButtons from './SignCopyButtons';
 import { useDisplayName } from '../context/IdentityContext';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../utils/api';
@@ -523,7 +524,8 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
   const height = expanded ? '600px' : '400px';
   const idName = user?.identityName ? `${user.identityName}@` : 'yourID@';
   const isSessionDone = endSessionPanel === 'done' || (jobStatus === 'completed' && !endSessionPanel);
-  const inputDisabled = isSessionDone;
+  const isSessionPaused = jobStatus === 'paused';
+  const inputDisabled = isSessionDone || isSessionPaused;
 
   // Render the action bar content based on current state
   function renderActionBar() {
@@ -654,7 +656,7 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
           }}>
             {cmd}
           </div>
-          <CopyButton text={cmd} label="Copy command" />
+          <SignCopyButtons command={cmd} />
           <input
             type="text"
             value={completeSig}
@@ -735,7 +737,7 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
           }}>
             {cmd}
           </div>
-          <CopyButton text={cmd} label="Copy command" />
+          <SignCopyButtons command={cmd} />
           <input
             type="text"
             value={deliverySig}
@@ -1210,7 +1212,7 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
           type="text"
           value={input}
           onChange={handleInputChange}
-          placeholder={pendingFile ? `Send ${pendingFile.file.name}` : inputDisabled ? 'Session ended' : 'Type a message...'}
+          placeholder={pendingFile ? `Send ${pendingFile.file.name}` : isSessionPaused ? 'Session paused — reactivate to continue' : inputDisabled ? 'Session ended' : 'Type a message...'}
           maxLength={4000}
           disabled={inputDisabled}
           style={{

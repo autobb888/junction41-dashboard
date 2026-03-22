@@ -46,6 +46,7 @@ export default function MarketplacePage() {
     workspaceOnly: false,
     trustTier: null,
     agentTypes: [],
+    freeReactivation: false,
   });
 
   const [services, setServices] = useState([]);
@@ -242,12 +243,14 @@ export default function MarketplacePage() {
   if (filters.privateMode) activeFilters.push({ key: 'privateMode', label: 'Private Mode', clear: () => setFilters(f => ({ ...f, privateMode: false })) });
   filters.paymentTerms.forEach(pt => activeFilters.push({ key: `pt-${pt}`, label: `${pt.charAt(0).toUpperCase() + pt.slice(1)}`, clear: () => setFilters(f => ({ ...f, paymentTerms: f.paymentTerms.filter(x => x !== pt) })) }));
   if (filters.workspaceOnly) activeFilters.push({ key: 'workspace', label: '<-> Workspace', clear: () => setFilters(f => ({ ...f, workspaceOnly: false })) });
+  if (filters.freeReactivation) activeFilters.push({ key: 'freeReactivation', label: 'Free Reactivation', clear: () => setFilters(f => ({ ...f, freeReactivation: false })) });
   if (filters.trustTier) activeFilters.push({ key: 'trust', label: `Trust: ${filters.trustTier}`, clear: () => setFilters(f => ({ ...f, trustTier: null })) });
   (filters.agentTypes || []).forEach(t => activeFilters.push({ key: `type-${t}`, label: t.charAt(0).toUpperCase() + t.slice(1), clear: () => setFilters(f => ({ ...f, agentTypes: f.agentTypes.filter(x => x !== t) })) }));
 
   // Client-side filtering for workspace, trust tier, agent type
   let filteredServices = services;
   if (filters.workspaceOnly) filteredServices = filteredServices.filter(s => s.workspaceCapable);
+  if (filters.freeReactivation) filteredServices = filteredServices.filter(s => !s.reactivationFee || s.reactivationFee === 0);
   if (filters.trustTier) filteredServices = filteredServices.filter(s => (s.trustTier || s.transparency?.trustTier) === filters.trustTier);
   if (filters.agentTypes?.length > 0) filteredServices = filteredServices.filter(s => filters.agentTypes.includes(s.agentType?.toLowerCase()));
 
@@ -327,7 +330,7 @@ export default function MarketplacePage() {
                 onClick={() => {
                   setSelectedCategory(null);
                   setSelectedSub(null);
-                  setFilters({ minPrice: '', maxPrice: '', minRating: null, onlineOnly: false, protocols: [], sovguard: false, paymentTerms: [], privateMode: false, workspaceOnly: false, trustTier: null, agentTypes: [] });
+                  setFilters({ minPrice: '', maxPrice: '', minRating: null, onlineOnly: false, protocols: [], sovguard: false, paymentTerms: [], privateMode: false, workspaceOnly: false, trustTier: null, agentTypes: [], freeReactivation: false });
                 }}
               >
                 Clear all

@@ -292,6 +292,19 @@ export default function CategorySidebar({
               </label>
             </div>
 
+            {/* Free Reactivation */}
+            <div className="mb-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={filters.freeReactivation || false}
+                  onChange={e => onFilterChange({ ...filters, freeReactivation: e.target.checked })}
+                  className="rounded border-gray-600 bg-gray-800 text-emerald-500"
+                />
+                <span className="text-xs" style={{ color: '#FBBF24' }}>Free reactivation</span>
+              </label>
+            </div>
+
             {/* Payment Terms */}
             <div className="mb-4">
               <label className="text-xs mb-2 block" style={{ color: 'var(--text-secondary)' }}>Payment Terms</label>

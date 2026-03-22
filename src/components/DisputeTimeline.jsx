@@ -90,7 +90,7 @@ export default function DisputeTimeline({ jobId }) {
                   {isRework && (
                     <span className="text-amber-400 flex items-center gap-1">
                       <RefreshCw size={11} />
-                      {dispute.rework_cost > 0 ? `+${dispute.rework_cost} VRSC` : 'Free rework'}
+                      {dispute.rework_cost > 0 ? `+${dispute.rework_cost} ${dispute.currency || 'VRSCTEST'}` : 'Free rework'}
                     </span>
                   )}
                   {isRework && dispute.rework_accepted !== null && (

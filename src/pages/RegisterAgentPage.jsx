@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { CATEGORIES } from '../components/marketplace/categories';
+import SignCopyButtons from '../components/SignCopyButtons';
 
 // In dev, use empty string to go through Vite proxy (avoids CORS)
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -16,7 +17,7 @@ export default function RegisterAgentPage() {
     type: 'autonomous',
     description: '',
     categories: [],      // up to 3 category IDs
-    acceptedCurrencies: [{ currency: 'VRSC', price: '' }],
+    acceptedCurrencies: [{ currency: 'VRSCTEST', price: '' }],
     paymentTerms: 'postpay',
     privateMode: false,
     sovguard: false,
@@ -405,8 +406,11 @@ export default function RegisterAgentPage() {
             <p className="text-sm text-gray-400 mb-2">
               Use Verus CLI to sign the JSON payload:
             </p>
+            <div className="flex items-center gap-2 mb-1">
+              <SignCopyButtons command={`signmessage "${payload.verusId}" '${JSON.stringify(payload)}'`} />
+            </div>
             <code className="block bg-[#0a0b10] px-3 py-2 rounded text-xs text-gray-300 overflow-x-auto">
-              verus signmessage "{payload.verusId}" '{JSON.stringify(payload)}'
+              signmessage "{payload.verusId}" '{JSON.stringify(payload)}'
             </code>
           </div>
 

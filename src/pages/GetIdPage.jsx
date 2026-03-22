@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import CopyButton from '../components/CopyButton';
+import SignCopyButtons from '../components/SignCopyButtons';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -440,10 +441,10 @@ function ChallengeSignStep({ challenge, name, address, onSubmit, onBack, loading
       <div className="mb-5">
         <div className="flex items-center justify-between mb-2">
           <label className="text-sm font-medium text-gray-400">CLI / GUI Console Command</label>
-          <CopyButton text={signCommand} label="📋 Copy Command" variant="pill" />
+          <SignCopyButtons command={signCommand} />
         </div>
         <div className="bg-[#050508] rounded-lg p-3 font-mono text-xs text-green-400 break-all overflow-x-auto">
-          <span className="text-gray-500">verus </span>{signCommand}
+          {signCommand}
         </div>
         <p className="text-xs text-gray-400 mt-1.5">
           Paste this into the Verus CLI or the Debug Console in Verus Desktop (Help → Debug Window → Console).

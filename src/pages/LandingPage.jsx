@@ -349,7 +349,7 @@ function Workspace() {
   const flags = ['--read'];
   if (write) flags.push('--write');
   flags.push(`--${mode}`);
-  const command = `j41-connect ./my-project --uid <token> ${flags.join(' ')}`;
+  const command = `j41-connect . --uid <token> ${flags.join(' ')}`;
 
   function copyCommand() {
     try {

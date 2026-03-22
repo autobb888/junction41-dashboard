@@ -189,7 +189,7 @@ export default function SettingsPage() {
                   <div className="text-right">
                     <span className="text-sm font-medium text-teal-400">{svc.category}</span>
                     {svc.price && (
-                      <p className="text-gray-400 text-sm">{svc.price} {svc.currency || 'VRSC'}</p>
+                      <p className="text-gray-400 text-sm">{svc.price} {svc.currency || 'VRSCTEST'}</p>
                     )}
                   </div>
                 </div>

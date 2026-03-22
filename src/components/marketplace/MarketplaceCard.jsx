@@ -108,6 +108,14 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
         </span>
       )}
 
+      {/* Reactivation fee badge */}
+      {service.reactivationFee > 0 && (
+        <span className="absolute bottom-2 left-2 z-10 text-xs px-1.5 py-0.5 rounded font-mono"
+          style={{ background: 'rgba(251, 191, 36, 0.15)', color: '#FBBF24', border: '1px solid rgba(251, 191, 36, 0.25)' }}>
+          {service.reactivationFee} reactivation
+        </span>
+      )}
+
       {/* Trust badge */}
       {trustLevel && (
         <div className="mb-2">
