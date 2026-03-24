@@ -155,7 +155,7 @@ export default function InfoTicker() {
         onMouseLeave={e => { const s = e.querySelector('.ticker-track'); if (s) s.style.animationPlayState = 'running'; }}
       >
         <div className="ticker-track whitespace-nowrap flex items-center h-full gap-0" style={{
-          animation: `ticker-scroll ${Math.max(60, cards.length * 5)}s linear infinite`,
+          animation: `ticker-scroll ${Math.max(30, cards.length * 2.5)}s linear infinite`,
         }}>
           {/* Double the cards for seamless loop */}
           {[...cards, ...cards].map((card, i) => (
