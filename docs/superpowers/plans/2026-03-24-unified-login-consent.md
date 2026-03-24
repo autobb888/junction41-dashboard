@@ -195,7 +195,7 @@ fastify.get('/auth/consent/challenge', async (request: FastifyRequest, reply: Fa
     const qrDataUrl = await QRCode.toDataURL(deeplink, { width: 400, margin: 2 });
 
     // === Build copiable verify/sign commands ===
-    const verifyCommand = `verus ${VERUS_CLI_FLAG}verifymessage "${PLATFORM_SIGNING_ID}" "${signResult.signature}" "${challengeHash}"`;
+    const verifyCommand = `verus ${VERUS_CLI_FLAG}verifysignature '${JSON.stringify({ address: PLATFORM_SIGNING_ID, datahash: challengeHash, signature: signResult.signature })}'`;
     const signCommand = `verus ${VERUS_CLI_FLAG}signmessage "YOUR_ID@" "${challengeHash}"`;
 
     // === Store in new table ===
@@ -325,14 +325,10 @@ fastify.post('/auth/consent/verify', async (request: FastifyRequest, reply: Fast
     }
 
     if (!verified) {
-      // Reset challenge so user can retry
-      await db.updateTable('login_consent_challenges')
-        .set({ status: 'pending' })
-        .where('id', '=', body.challengeId)
-        .execute();
-
+      // Challenge stays consumed (no reset) — prevents replay/probing attacks.
+      // User must request a fresh challenge.
       return reply.code(401).send({
-        error: { code: 'INVALID_SIGNATURE', message: 'Signature verification failed' }
+        error: { code: 'INVALID_SIGNATURE', message: 'Signature verification failed. Please request a new challenge.' }
       });
     }
 
@@ -375,7 +371,7 @@ fastify.post('/auth/consent/verify', async (request: FastifyRequest, reply: Fast
     // Mark agent online if applicable
     try {
       await db.updateTable('agents')
-        .set({ status: 'online' })
+        .set({ online: true, last_seen_at: sql`NOW()` })
         .where('verus_id', '=', identityAddress)
         .execute();
     } catch {}
@@ -389,6 +385,7 @@ fastify.post('/auth/consent/verify', async (request: FastifyRequest, reply: Fast
         success: true,
         identityAddress,
         identityName,
+        sessionToken: sessionId,
         expiresAt: new Date(sessionExpiry).toISOString(),
       },
     };
@@ -465,27 +462,18 @@ fastify.post('/auth/consent/callback', async (request: FastifyRequest, reply: Fa
       fastify.log.warn({ signingId }, 'Could not resolve identity in consent callback');
     }
 
-    // Find and update the challenge in login_consent_challenges
+    // Atomic claim — prevents race condition with concurrent callbacks
     const db = getDb();
-    const row = await db.selectFrom('login_consent_challenges')
-      .select(['id', 'expires_at', 'status'])
+    const claimResult = await db.updateTable('login_consent_challenges')
+      .set({ status: 'signed', verus_id: verusId, identity_name: resolvedName })
       .where('id', '=', challengeId)
       .where('status', '=', 'pending')
+      .where('expires_at', '>', Date.now())
       .executeTakeFirst();
 
-    if (!row) {
-      return reply.code(400).send({ error: { code: 'NOT_FOUND', message: 'Challenge not found or already used' } });
+    if (Number(claimResult.numUpdatedRows) === 0) {
+      return reply.code(400).send({ error: { code: 'NOT_FOUND', message: 'Challenge not found, expired, or already used' } });
     }
-
-    if (row.expires_at < Date.now()) {
-      await db.updateTable('login_consent_challenges').set({ status: 'expired' }).where('id', '=', row.id).execute();
-      return reply.code(400).send({ error: { code: 'EXPIRED', message: 'Challenge expired' } });
-    }
-
-    await db.updateTable('login_consent_challenges')
-      .set({ status: 'signed', verus_id: verusId, identity_name: resolvedName })
-      .where('id', '=', row.id)
-      .execute();
 
     fastify.log.info({ signingId, verusId }, 'Login consent callback verified');
     return { data: { success: true } };
@@ -927,6 +915,7 @@ export interface LoginConsentResult {
   success: boolean;
   identityAddress: string;
   identityName: string;
+  sessionToken: string;
   expiresAt: string;
 }
 

@@ -30,7 +30,7 @@ One unified login protocol across all surfaces: **SDK, CLI/GUI, browser, and mob
                      |                                          |
                      |          2. VERIFY agentplatform@ signature
                      |             SDK: programmatic (primitives + RPC/known keys)
-                     |             CLI: `verus verifymessage "agentplatform@" sig hash`
+                     |             CLI: `verus verifysignature '{"address":"agentplatform@","datahash":"<hash>","signature":"<sig>"}'`
                      |             Browser: shows verify command to copy
                      |                                          |
                      |          3. SIGN the challengeHash
@@ -94,7 +94,7 @@ Creates a `LoginConsentRequest` signed by agentplatform@. No auth required. Rate
   "systemId": "iJhCezBExJHvtyH3fGhNnt2NhU4Ztkf2yq",
   "signingId": "agentplatform@ i-address",
   "requestSignature": "<base64 agentplatform@ signature over request>",
-  "verifyCommand": "verus -testnet verifymessage \"agentplatform@\" \"<sig>\" \"<challengeHash>\"",
+  "verifyCommand": "verus -testnet verifysignature '{\"address\":\"agentplatform@\",\"datahash\":\"<challengeHash>\",\"signature\":\"<sig>\"}'",
   "signCommand": "verus -testnet signmessage \"YOUR_ID@\" \"<challengeHash>\"",
   "qrDataUrl": "data:image/png;base64,...",
   "deeplink": "vrsc://x-callback-url/...",
@@ -117,13 +117,14 @@ Verifies a signed response and creates a session. Rate limited 30/min per IP.
 
 **Server logic:**
 1. Look up `login_consent_challenges` row by `challengeId` — must be status `pending` and not expired
-2. Atomically set status to `completed` (prevents replay)
+2. Atomically set status to `completed` (prevents replay). **No reset on failure** — failed verification consumes the challenge; user must request a new one.
 3. Retrieve stored `challengeHash`
 4. Verify: `verifymessage(verusId@, challengeHash, signature)` via daemon RPC
 5. Fallback: `bitcoinjs-message.verify(challengeHash, address, sig, prefix)` with identity's primary addresses
 6. Resolve identity: `getIdentity(verusId@)` → i-address + friendly name
 7. Create session in `sessions` table
 8. Set `verus_session` cookie (HttpOnly, Secure, SameSite=Lax, signed)
+9. Return session token in response body (for SDK consumers who can't use cookies)
 
 **Response:**
 ```json
@@ -131,9 +132,12 @@ Verifies a signed response and creates a session. Rate limited 30/min per IP.
   "success": true,
   "verusId": "iXYZ...",
   "identityName": "myidentity",
+  "sessionToken": "64-char-hex-session-id",
   "expiresAt": "2026-03-24T13:00:00Z"
 }
 ```
+
+Note: `sessionToken` is returned in the body for SDK consumers. Browser consumers use the cookie (set automatically).
 
 ### POST /auth/consent/callback (mobile webhook)
 
@@ -268,9 +272,9 @@ Replace current two-tab layout (QR / Manual) with unified consent flow:
 **Section 1: Verify & Sign (CLI / Desktop GUI)**
 ```
 Step 1: Verify this request is from agentplatform@
-┌─────────────────────────────────────────────────────┐
-│ verus -testnet verifymessage "agentplatform@" ...   │ [Copy]
-└─────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│ verus -testnet verifysignature '{"address":"agentplatform@",...}'   │ [Copy]
+└──────────────────────────────────────────────────────────────────────┘
 
 Step 2: Sign the login challenge
 ┌─────────────────────────────────────────────────────┐
@@ -323,7 +327,7 @@ Same UX, just different endpoint paths.
 |----------|-----|
 | **Server authenticity** | LoginConsentRequest signed by agentplatform@ — client verifies before signing |
 | **Client authenticity** | signmessage verified by daemon against identity's on-chain keys |
-| **Replay prevention** | Challenge atomically claimed on use; 5-minute expiry |
+| **Replay prevention** | Challenge atomically claimed on use; 5-minute expiry; no reset on failure |
 | **Nonce freshness** | Random 20-byte challenge_id per request |
 | **Block height binding** | Server signature includes block height; daemon checks identity keys at that height |
 | **Session security** | HttpOnly + Secure + Signed cookies; 1-hour TTL with activity extension |
