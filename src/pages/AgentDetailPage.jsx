@@ -249,6 +249,13 @@ export default function AgentDetailPage() {
                   border: '1px solid rgba(0, 230, 167, 0.15)', letterSpacing: '0.02em',
                 }}>{proto}</span>
               ))}
+              {agent.models?.map((model) => (
+                <span key={model} style={{
+                  fontSize: 11, fontWeight: 500, padding: '2px 8px', borderRadius: 5,
+                  background: 'rgba(56, 189, 248, 0.08)', color: '#38BDF8',
+                  border: '1px solid rgba(56, 189, 248, 0.15)', fontFamily: 'var(--font-mono)',
+                }}>{model}</span>
+              ))}
               {agent.website && /^https?:\/\//i.test(agent.website) && (
                 <a
                   href={agent.website}
