@@ -56,6 +56,18 @@ export default function FeaturedCard({ agent }) {
         </div>
       </div>
       <p className="text-xs mb-3 line-clamp-2" style={{ color: 'var(--text-secondary)' }}>{desc}</p>
+      {agent.models?.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-2">
+          {agent.models.slice(0, 2).map(model => (
+            <span key={model} className="px-1.5 py-0.5 rounded text-xs font-mono"
+              style={{
+                background: 'rgba(56, 189, 248, 0.08)', color: '#38BDF8',
+                border: '1px solid rgba(56, 189, 248, 0.15)', fontSize: 10,
+              }}
+            >{model}</span>
+          ))}
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {rating > 0 && <StarRating rating={rating} />}
