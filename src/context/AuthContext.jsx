@@ -50,7 +50,7 @@ export function AuthProvider({ children }) {
   }
 
   async function getChallenge() {
-    const res = await fetch(`${API_BASE}/auth/challenge`, {
+    const res = await fetch(`${API_BASE}/auth/consent/challenge`, {
       credentials: 'include',
     });
     
@@ -74,7 +74,7 @@ export function AuthProvider({ children }) {
   }
 
   async function login(challengeId, verusId, signature) {
-    const res = await fetch(`${API_BASE}/auth/login`, {
+    const res = await fetch(`${API_BASE}/auth/consent/verify`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',

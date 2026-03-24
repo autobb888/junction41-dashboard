@@ -1,68 +1,35 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
+import CopyButton from '../components/CopyButton';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
 export default function LoginPage() {
-  const { getChallenge, login } = useAuth();
-  const [mode, setMode] = useState('choose'); // choose, qr, manual
-  const [step, setStep] = useState('start'); // start, challenge, signing
+  const { login } = useAuth();
   const [challenge, setChallenge] = useState(null);
-  const [qrChallenge, setQrChallenge] = useState(null);
   const [verusId, setVerusId] = useState('');
   const [signature, setSignature] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [tab, setTab] = useState('cli');
   const pollIntervalRef = useRef(null);
 
-  // Cleanup polling on unmount
   useEffect(() => {
+    fetchChallenge();
     return () => {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-      }
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     };
   }, []);
 
-  // QR Code Login Flow
-  async function startQRLogin() {
+  async function fetchChallenge() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`${API_BASE}/auth/qr/challenge`, {
-        credentials: 'include',
-      });
+      const res = await fetch(`${API_BASE}/auth/consent/challenge`, { credentials: 'include' });
       const data = await res.json();
-      
-      if (!res.ok) {
-        throw new Error(data.error?.message || 'Failed to get QR challenge');
-      }
-      
-      setQrChallenge(data.data);
-      setMode('qr');
-      
-      // Start polling for completion
-      pollIntervalRef.current = setInterval(async () => {
-        try {
-          const statusRes = await fetch(`${API_BASE}/auth/qr/status/${data.data.challengeId}`, {
-            credentials: 'include',
-          });
-          const statusData = await statusRes.json();
-          
-          if (statusData.data?.status === 'completed') {
-            clearInterval(pollIntervalRef.current);
-            // Redirect will happen via AuthContext detecting session
-            window.location.reload();
-          } else if (statusData.data?.status === 'expired') {
-            clearInterval(pollIntervalRef.current);
-            setError('QR code expired. Please try again.');
-            setMode('choose');
-          }
-        } catch (err) {
-          console.error('Poll error:', err);
-        }
-      }, 2000);
-      
+      if (!res.ok) throw new Error(data.error?.message || 'Failed to get challenge');
+      setChallenge(data.data);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -70,235 +37,201 @@ export default function LoginPage() {
     }
   }
 
-  // Manual CLI Login Flow
-  async function handleGetChallenge() {
-    setLoading(true);
-    setError('');
-    try {
-      const data = await getChallenge();
-      setChallenge(data);
-      setStep('challenge');
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+  // QR polling
+  useEffect(() => {
+    if (tab === 'qr' && challenge?.challengeId) {
+      pollIntervalRef.current = setInterval(async () => {
+        try {
+          const res = await fetch(`${API_BASE}/auth/consent/status/${challenge.challengeId}`, { credentials: 'include' });
+          const data = await res.json();
+          if (data.data?.status === 'completed') {
+            clearInterval(pollIntervalRef.current);
+            window.location.reload();
+          } else if (data.data?.status === 'expired') {
+            clearInterval(pollIntervalRef.current);
+            setError('Challenge expired. Refreshing...');
+            fetchChallenge();
+          }
+        } catch {}
+      }, 2000);
+      return () => { if (pollIntervalRef.current) clearInterval(pollIntervalRef.current); };
     }
-  }
+  }, [tab, challenge?.challengeId]);
 
   async function handleLogin(e) {
     e.preventDefault();
-    setLoading(true);
+    setSubmitting(true);
     setError('');
     try {
       await login(challenge.challengeId, verusId, signature);
-      // Redirect happens automatically via ProtectedRoute
     } catch (err) {
       setError(err.message);
+      // Challenge is consumed on failure — fetch a new one
+      fetchChallenge();
+      setSignature('');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   }
 
-  function resetToChoose() {
-    if (pollIntervalRef.current) {
-      clearInterval(pollIntervalRef.current);
-    }
-    setMode('choose');
-    setStep('start');
-    setQrChallenge(null);
-    setChallenge(null);
-    setError('');
-  }
+  const userIdForCommand = verusId
+    ? (verusId.endsWith('@') ? verusId : verusId + '@')
+    : 'YOUR_ID@';
+
+  const signCmd = challenge
+    ? `verus ${challenge.signCommand?.includes('-testnet') ? '-testnet ' : ''}signmessage "${userIdForCommand}" "${challenge.challengeHash}"`
+    : '';
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-900 px-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
+      <div className="w-full max-w-lg">
         <div className="text-center mb-8">
           <span className="text-4xl">⚡</span>
           <h1 className="text-2xl font-bold text-white mt-4">Junction41</h1>
           <p className="text-gray-400 mt-2">Sign in with your VerusID</p>
         </div>
 
-        <div className="bg-gray-800 rounded-xl p-6 shadow-xl border border-gray-700">
-          
-          {/* Choose Login Method */}
-          {mode === 'choose' && (
-            <div className="space-y-4">
-              <p className="text-gray-300 text-center mb-6">
-                Choose how you want to sign in:
+        <div className="bg-gray-800 rounded-xl shadow-xl border border-gray-700 overflow-hidden">
+          {/* Consent header */}
+          {challenge && (
+            <div className="px-6 py-4 border-b border-gray-700" style={{ background: 'rgba(255,255,255,0.02)' }}>
+              <p className="text-sm text-gray-300">
+                <span className="text-verus-blue font-semibold">agentplatform@</span> is requesting you login to Junction41
               </p>
-              
+              <p className="text-xs text-gray-500 mt-1">Permission: View your VerusID identity</p>
+            </div>
+          )}
+
+          {/* Tabs */}
+          {challenge && (
+            <div className="flex border-b border-gray-700">
               <button
-                onClick={startQRLogin}
-                disabled={loading}
-                className="w-full py-4 px-4 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-3"
+                onClick={() => setTab('cli')}
+                className={`flex-1 py-3 text-sm font-medium transition-colors ${tab === 'cli' ? 'text-verus-blue border-b-2 border-verus-blue' : 'text-gray-400 hover:text-gray-300'}`}
               >
-                <span className="text-2xl">📱</span>
-                <div className="text-left">
-                  <div className="font-semibold">Verus Mobile</div>
-                  <div className="text-sm text-gray-500">Scan QR with Verus Mobile</div>
-                </div>
+                CLI / Desktop Wallet
               </button>
-              
               <button
-                onClick={() => { setMode('manual'); handleGetChallenge(); }}
-                disabled={loading}
-                className="w-full py-4 px-4 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-3"
+                onClick={() => setTab('qr')}
+                className={`flex-1 py-3 text-sm font-medium transition-colors ${tab === 'qr' ? 'text-verus-blue border-b-2 border-verus-blue' : 'text-gray-400 hover:text-gray-300'}`}
               >
-                <span className="text-2xl">💻</span>
-                <div className="text-left">
-                  <div className="font-semibold">CLI / Manual</div>
-                  <div className="text-sm text-gray-400">Sign with Verus CLI</div>
-                </div>
+                Verus Mobile
               </button>
             </div>
           )}
 
-          {/* QR Code Login */}
-          {mode === 'qr' && qrChallenge && (
-            <div className="text-center">
-              {/* Desktop: show QR code */}
-              <div className="hidden md:block">
-                <p className="text-gray-300 mb-4">
-                  Scan with Verus Mobile to sign in:
-                </p>
-                
-                <div className="bg-white p-4 rounded-lg inline-block mb-4">
-                  <img 
-                    src={qrChallenge.qrDataUrl} 
-                    alt="Login QR Code" 
-                    className="w-64 h-64"
-                  />
+          <div className="p-6">
+            {loading && (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-verus-blue"></div>
+              </div>
+            )}
+
+            {/* CLI Tab */}
+            {!loading && challenge && tab === 'cli' && (
+              <form onSubmit={handleLogin} className="space-y-4">
+                {/* Step 1: Verify */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+                    Step 1: Verify this request is from agentplatform@
+                  </label>
+                  <div className="relative">
+                    <pre className="bg-gray-900 rounded-lg p-3 text-xs text-green-400 overflow-x-auto whitespace-pre-wrap break-all border border-gray-700 pr-16">
+                      {challenge.verifyCommand}
+                    </pre>
+                    <CopyButton text={challenge.verifyCommand} className="absolute top-2 right-2" />
+                  </div>
                 </div>
-              </div>
 
-              {/* Mobile: show deeplink button */}
-              <div className="md:hidden">
-                <p className="text-gray-300 mb-4">
-                  Tap to sign in with Verus Mobile:
-                </p>
-                
-                <a
-                  href={qrChallenge.deeplink}
-                  className="inline-flex items-center gap-3 px-6 py-4 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition-colors mb-4"
-                >
-                  <span className="text-2xl">📱</span>
-                  Open Verus Mobile
-                </a>
-              </div>
+                {/* Step 2: Sign */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+                    Step 2: Sign the login challenge
+                  </label>
+                  <div className="relative">
+                    <pre className="bg-gray-900 rounded-lg p-3 text-xs text-green-400 overflow-x-auto whitespace-pre-wrap break-all border border-gray-700 pr-16">
+                      {signCmd}
+                    </pre>
+                    <CopyButton text={signCmd} className="absolute top-2 right-2" />
+                  </div>
+                </div>
 
-              {/* Also show deeplink on desktop as fallback */}
-              <div className="hidden md:block mb-2">
-                <a
-                  href={qrChallenge.deeplink}
-                  className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
-                >
-                  Or tap here if on mobile →
-                </a>
-              </div>
-              
-              <p className="text-xs text-gray-500 mb-4">
-                Expires: {new Date(qrChallenge.expiresAt).toLocaleTimeString()}
-              </p>
-              
-              <div className="animate-pulse text-gray-400 mb-4">
-                Waiting for signature...
-              </div>
-              
-              <button
-                onClick={resetToChoose}
-                className="text-sm text-gray-400 hover:text-white transition-colors"
-              >
-                ← Back to login options
-              </button>
-            </div>
-          )}
+                {/* Step 3: Submit */}
+                <div className="border-t border-gray-700 pt-4">
+                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+                    Step 3: Submit
+                  </label>
+                  <div className="space-y-3">
+                    <input
+                      type="text"
+                      value={verusId}
+                      onChange={(e) => setVerusId(e.target.value)}
+                      placeholder="Your VerusID (e.g. yourname@)"
+                      className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-verus-blue"
+                      required
+                    />
+                    <textarea
+                      value={signature}
+                      onChange={(e) => setSignature(e.target.value)}
+                      placeholder="Paste signature here..."
+                      rows={2}
+                      className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-verus-blue font-mono text-sm"
+                      required
+                    />
+                    <button
+                      type="submit"
+                      disabled={submitting || !verusId || !signature}
+                      className="w-full py-3 bg-verus-blue hover:bg-blue-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      {submitting ? 'Verifying...' : 'Sign In'}
+                    </button>
+                  </div>
+                </div>
 
-          {/* Manual CLI Login */}
-          {mode === 'manual' && step === 'challenge' && challenge && (
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Sign this message with your Verus wallet:
-                </label>
-                <pre className="bg-gray-900 rounded-lg p-4 text-xs text-gray-300 overflow-x-auto whitespace-pre-wrap break-all border border-gray-700">
-                  {challenge.challenge}
-                </pre>
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="text-xs text-gray-500 text-center">
                   Expires: {new Date(challenge.expiresAt).toLocaleTimeString()}
                 </p>
-              </div>
+              </form>
+            )}
 
-              <div className="border-t border-gray-700 pt-4">
-                <p className="text-sm text-gray-400 mb-4">
-                  GUI: <code className="bg-gray-900 px-2 py-1 rounded text-xs">run signmessage "yourID@" "message"</code>
-                  &nbsp;|&nbsp;
-                  CLI: <code className="bg-gray-900 px-2 py-1 rounded text-xs">./verus -testnet signmessage "yourID@" "message"</code>
+            {/* QR / Mobile Tab */}
+            {!loading && challenge && tab === 'qr' && (
+              <div className="text-center">
+                <div className="hidden md:block">
+                  <p className="text-gray-300 mb-4">Scan with Verus Mobile:</p>
+                  <div className="bg-white p-4 rounded-lg inline-block mb-4">
+                    <img src={challenge.qrDataUrl} alt="Login QR" className="w-64 h-64" />
+                  </div>
+                </div>
+                <div className="md:hidden">
+                  <p className="text-gray-300 mb-4">Tap to open Verus Mobile:</p>
+                  <a
+                    href={challenge.deeplink}
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition-colors mb-4"
+                  >
+                    Open Verus Mobile
+                  </a>
+                </div>
+                <p className="text-xs text-gray-500 mb-4">
+                  Expires: {new Date(challenge.expiresAt).toLocaleTimeString()}
                 </p>
+                <div className="animate-pulse text-gray-400 text-sm">
+                  Waiting for signature...
+                </div>
               </div>
+            )}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Your VerusID
-                </label>
-                <input
-                  type="text"
-                  value={verusId}
-                  onChange={(e) => setVerusId(e.target.value)}
-                  placeholder="yourname@"
-                  className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-verus-blue"
-                  required
-                />
+            {error && (
+              <div className="mt-4 p-3 bg-red-900/30 border border-red-800 rounded-lg text-red-400 text-sm">
+                {error}
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Signature
-                </label>
-                <textarea
-                  value={signature}
-                  onChange={(e) => setSignature(e.target.value)}
-                  placeholder="Paste the signature here..."
-                  rows={3}
-                  className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-verus-blue font-mono text-sm"
-                  required
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading || !verusId || !signature}
-                className="w-full py-3 px-4 bg-verus-blue hover:bg-blue-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
-              >
-                {loading ? 'Verifying...' : 'Sign In'}
-              </button>
-
-              <button
-                type="button"
-                onClick={resetToChoose}
-                className="w-full py-2 text-sm text-gray-400 hover:text-white transition-colors"
-              >
-                ← Back to login options
-              </button>
-            </form>
-          )}
-
-          {error && (
-            <div className="mt-4 p-3 bg-red-900/30 border border-red-800 rounded-lg text-red-400 text-sm">
-              {error}
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         <p className="text-center text-gray-500 text-sm mt-6">
           Don't have a VerusID?{' '}
-          <a
-            href="https://verus.io/wallet"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-verus-blue hover:underline"
-          >
+          <a href="https://verus.io/wallet" target="_blank" rel="noopener noreferrer" className="text-verus-blue hover:underline">
             Get one here
           </a>
         </p>
