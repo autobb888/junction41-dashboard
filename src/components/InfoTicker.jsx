@@ -158,7 +158,7 @@ export default function InfoTicker() {
           animation: `ticker-scroll ${Math.max(15, cards.length * 1.25)}s linear infinite`,
         }}>
           {/* Double the cards for seamless loop */}
-          {[...cards, ...cards].map((card, i) => (
+          {[...cards, ...cards, ...cards].map((card, i) => (
             <div key={i} className="inline-flex flex-col justify-center flex-shrink-0 px-4" style={{
               height: TICKER_HEIGHT,
               borderRight: '1px solid var(--border-subtle)',
