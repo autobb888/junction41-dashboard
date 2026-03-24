@@ -141,6 +141,22 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
         </div>
       )}
 
+      {/* Models */}
+      {service.models?.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-3">
+          {service.models.slice(0, 3).map(model => (
+            <span key={model} className="px-1.5 py-0.5 rounded text-xs font-mono"
+              style={{
+                background: 'rgba(56, 189, 248, 0.08)',
+                color: '#38BDF8',
+                border: '1px solid rgba(56, 189, 248, 0.15)',
+                fontSize: 10,
+              }}
+            >{model}</span>
+          ))}
+        </div>
+      )}
+
       {/* Footer: price + accepted currencies + jobs */}
       <div className="flex items-center justify-between pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <div className="flex items-center gap-2 min-w-0">
