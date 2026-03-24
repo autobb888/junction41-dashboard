@@ -55,15 +55,14 @@ export function AuthProvider({ children }) {
     });
     
     if (!res.ok) {
-      const text = await res.text();
+      let errorMsg = `Server error: ${res.status}`;
       try {
-        const data = JSON.parse(text);
-        throw new Error(data.error?.message || 'Failed to get challenge');
-      } catch {
-        throw new Error(`Server error: ${res.status}`);
-      }
+        const errData = await res.json();
+        if (errData.error?.message) errorMsg = errData.error.message;
+      } catch {}
+      throw new Error(errorMsg);
     }
-    
+
     const data = await res.json();
     
     if (!data.data) {

@@ -37,7 +37,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
             } else if (data.data?.status === 'expired') {
               if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
               setError('Challenge expired.');
-              fetchChallenge();
+              doFetchChallenge();
             }
           } catch {}
         })();
@@ -56,7 +56,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
       setSignature('');
       setError('');
       setSubmitting(false);
-      fetchChallenge();
+      doFetchChallenge();
     } else {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     }
@@ -91,9 +91,31 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
     return () => { document.removeEventListener('keydown', handleKeyDown); clearTimeout(timer); };
   }, [isOpen, handleKeyDown]);
 
+  // QR polling — MUST be before conditional return to keep hook count stable
+  useEffect(() => {
+    if (!isOpen) return;
+    if (tab === 'qr' && challenge?.challengeId) {
+      pollIntervalRef.current = setInterval(async () => {
+        try {
+          const res = await fetch(`${API_BASE}/auth/consent/status/${challenge.challengeId}`, { credentials: 'include' });
+          const data = await res.json();
+          if (data.data?.status === 'completed') {
+            clearInterval(pollIntervalRef.current);
+            onSuccess?.();
+          } else if (data.data?.status === 'expired') {
+            clearInterval(pollIntervalRef.current);
+            setError('Challenge expired.');
+            doFetchChallenge();
+          }
+        } catch {}
+      }, 2000);
+      return () => { if (pollIntervalRef.current) clearInterval(pollIntervalRef.current); };
+    }
+  }, [tab, challenge?.challengeId, isOpen]);
+
   if (!isOpen) return null;
 
-  async function fetchChallenge() {
+  async function doFetchChallenge() {
     setLoading(true);
     setError('');
     try {
@@ -108,27 +130,6 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
     }
   }
 
-  // QR polling
-  useEffect(() => {
-    if (tab === 'qr' && challenge?.challengeId && isOpen) {
-      pollIntervalRef.current = setInterval(async () => {
-        try {
-          const res = await fetch(`${API_BASE}/auth/consent/status/${challenge.challengeId}`, { credentials: 'include' });
-          const data = await res.json();
-          if (data.data?.status === 'completed') {
-            clearInterval(pollIntervalRef.current);
-            onSuccess?.();
-          } else if (data.data?.status === 'expired') {
-            clearInterval(pollIntervalRef.current);
-            setError('Challenge expired.');
-            fetchChallenge();
-          }
-        } catch {}
-      }, 2000);
-      return () => { if (pollIntervalRef.current) clearInterval(pollIntervalRef.current); };
-    }
-  }, [tab, challenge?.challengeId, isOpen]);
-
   async function handleLogin(e) {
     e.preventDefault();
     setSubmitting(true);
@@ -138,7 +139,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
       onSuccess?.();
     } catch (err) {
       setError(err.message);
-      fetchChallenge();
+      doFetchChallenge();
       setSignature('');
     } finally {
       setSubmitting(false);
