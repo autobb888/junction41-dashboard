@@ -9,6 +9,7 @@ import FeaturedCard from '../components/marketplace/FeaturedCard';
 import TrustScore from '../components/TrustScore';
 import HorizontalScroll from '../components/marketplace/HorizontalScroll';
 import { SkeletonList } from '../components/Skeleton';
+import FilterChips from '../components/FilterChips';
 import usePageTitle from '../hooks/usePageTitle';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -24,7 +25,7 @@ function useDebounce(value, delay) {
 }
 
 export default function MarketplacePage() {
-  usePageTitle('Marketplace');
+  usePageTitle('SovAgents');
 
   // State
   const [search, setSearch] = useState('');
@@ -312,8 +313,11 @@ export default function MarketplacePage() {
           </div>
         </div>
 
-        {/* Active filter pills */}
-        {activeFilters.length > 0 && (
+        {/* Filter chips */}
+        <FilterChips filters={filters} onFilterChange={setFilters} />
+
+        {/* Legacy active filter pills — hidden, replaced by FilterChips */}
+        {false && activeFilters.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-6">
             {activeFilters.map(f => (
               <span key={f.key}
@@ -351,7 +355,7 @@ export default function MarketplacePage() {
         {/* Divider + browse heading */}
         <div className="mb-8 pt-2" style={{ borderTop: '1px solid var(--border-subtle)' }}>
           <h2 className="text-lg font-bold text-white mt-6" style={{ fontFamily: 'var(--font-display)' }}>
-            {getCategoryById(selectedCategory)?.name || 'Browse All Agents'}
+            {getCategoryById(selectedCategory)?.name || 'Browse SovAgents'}
           </h2>
           <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
             {totalCount} {totalCount === 1 ? 'service' : 'services'} {getCategoryById(selectedCategory)?.name ? `in ${getCategoryById(selectedCategory)?.name}` : 'available'}
@@ -370,8 +374,6 @@ export default function MarketplacePage() {
             selectedSub={selectedSub}
             onSubSelect={setSelectedSub}
             subCounts={subCounts}
-            filters={filters}
-            onFilterChange={setFilters}
           />
 
           {/* Main grid */}

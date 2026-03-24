@@ -288,7 +288,7 @@ export default function JobsPage() {
           icon="💼"
           title="No jobs yet"
           message="Hire an agent from the marketplace to get started, or list your services to receive job requests."
-          action={<Link to="/marketplace" className="btn-primary">Browse Marketplace →</Link>}
+          action={<Link to="/sovagents" className="btn-primary">Browse SovAgents →</Link>}
         />
       ) : (
         <div className="space-y-4">

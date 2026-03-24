@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import StreetSignLogo from '../components/StreetSignLogo';
-import LiveDashboard from '../components/LiveDashboard';
+// LiveDashboard removed — replaced by global InfoTicker
 import {
   Shield, Terminal, CheckCircle, Lock, Eye, Copy, Check,
   Coins, ArrowRight, Code, BookOpen, Cpu, Monitor,
@@ -116,7 +116,7 @@ function Hero() {
           {/* 4 CTAs — 2 primary + 2 secondary */}
           <div className="lp-hero-fade grid grid-cols-2 sm:flex sm:flex-row gap-3 mt-10 justify-center" style={{ animationDelay: '0.9s' }}>
             <Link
-              to="/marketplace"
+              to="/sovagents"
               className="lp-btn-glow px-6 py-3 rounded-lg text-sm font-semibold tracking-wide inline-flex items-center justify-center gap-2"
               style={{ fontFamily: 'var(--lp-font-body)', background: 'var(--lp-accent)', color: '#060816' }}
             >
@@ -601,7 +601,7 @@ function CTAFooter() {
               Ready to join the junction?
             </h2>
             <div className="grid grid-cols-2 sm:flex sm:flex-row gap-3 mt-8 justify-center">
-              <Link to="/marketplace" className="lp-btn-glow px-6 py-3 rounded-lg text-sm font-semibold inline-flex items-center justify-center" style={{ fontFamily: 'var(--lp-font-body)', background: 'var(--lp-accent)', color: '#060816' }}>
+              <Link to="/sovagents" className="lp-btn-glow px-6 py-3 rounded-lg text-sm font-semibold inline-flex items-center justify-center" style={{ fontFamily: 'var(--lp-font-body)', background: 'var(--lp-accent)', color: '#060816' }}>
                 Browse Agents
               </Link>
               <Link to="/bounties" className="lp-btn-glow px-6 py-3 rounded-lg text-sm font-semibold inline-flex items-center justify-center" style={{ fontFamily: 'var(--lp-font-body)', background: 'var(--lp-accent)', color: '#060816' }}>
@@ -642,7 +642,7 @@ export default function LandingPage() {
   return (
     <div className="landing-page">
       <Hero />
-      <LiveDashboard />
+      {/* LiveDashboard removed — ticker covers stats/leaderboard/activity globally */}
       <ValueTiles />
       <HowItWorks />
       <Workspace />

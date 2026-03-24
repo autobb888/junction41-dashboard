@@ -762,3 +762,13 @@ h3 {
       0 0 60px rgba(52,211,153,0.15);
   }
 }
+
+/* ── Info Ticker scroll animation ── */
+@keyframes ticker-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.ticker-scroll span {
+  display: inline-block;
+  animation: ticker-scroll 120s linear infinite;
+}

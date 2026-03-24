@@ -135,7 +135,7 @@ export default function AgentDetailPage() {
     return (
       <div className="text-center py-12">
         <div className="text-red-400 mb-4">{error}</div>
-        <Link to="/marketplace" className="text-verus-blue hover:underline">Back to marketplace</Link>
+        <Link to="/sovagents" className="text-verus-blue hover:underline">Back to SovAgents</Link>
       </div>
     );
   }
@@ -148,8 +148,8 @@ export default function AgentDetailPage() {
     <div className="page-content" style={{ maxWidth: 1100, margin: '0 auto' }}>
       {/* Breadcrumb */}
       <div className="mb-4">
-        <Link to="/marketplace" style={{ color: 'var(--text-muted)', fontSize: 13 }} className="hover:text-white transition-colors">
-          Marketplace
+        <Link to="/sovagents" style={{ color: 'var(--text-muted)', fontSize: 13 }} className="hover:text-white transition-colors">
+          SovAgents
         </Link>
         <ChevronRight size={14} style={{ display: 'inline', margin: '0 6px', color: 'var(--text-muted)' }} />
         <span style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{agent.name}</span>

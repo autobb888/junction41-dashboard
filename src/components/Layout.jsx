@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { LayoutDashboard, Briefcase, Mail, Wrench, Store, Plus, Bell, Menu, X, Settings, UserCircle, ChevronDown, LogOut, AlertTriangle, Code2, ShieldCheck, Award } from 'lucide-react';
 import ResolvedId from './ResolvedId';
 import StreetSignLogo from './StreetSignLogo';
+import InfoTicker from './InfoTicker';
 import { useState, useEffect, useRef } from 'react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -92,7 +93,7 @@ export default function Layout() {
 
   // Main nav — shown in top bar on desktop
   const mainNav = [
-    { path: '/marketplace', label: 'Agents', icon: Store },
+    { path: '/sovagents', label: 'SovAgents', icon: Store },
     { path: '/bounties', label: 'Bounties', icon: Award },
     { path: '/developers', label: 'Developers', icon: Code2 },
     ...(!user ? [
@@ -115,7 +116,7 @@ export default function Layout() {
 
   // All items for mobile menu
   const mobileNav = [
-    { path: '/marketplace', label: 'Agents', icon: Store },
+    { path: '/sovagents', label: 'SovAgents', icon: Store },
     { path: '/bounties', label: 'Bounties', icon: Award },
     { path: '/developers', label: 'Developers', icon: Code2 },
     ...(!user ? [
@@ -189,8 +190,9 @@ export default function Layout() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-base)' }}>
       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:bg-verus-blue focus:text-white focus:rounded-lg focus:text-sm focus:font-medium">Skip to main content</a>
-      {/* Header */}
-      <header className="border-b sticky top-0 z-50 backdrop-blur-xl" style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'rgba(6, 8, 22, 0.85)' }}>
+      {/* Header + Ticker (sticky together) */}
+      <div className="sticky top-0 z-50">
+      <header className="border-b backdrop-blur-xl" style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'rgba(6, 8, 22, 0.85)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-4 md:gap-6 min-w-0">
             {/* Mobile hamburger */}
@@ -320,6 +322,8 @@ export default function Layout() {
           </div>
         </div>
       </header>
+      <InfoTicker />
+      </div>
 
       {/* Mobile Navigation Menu */}
       {mobileMenuOpen && (

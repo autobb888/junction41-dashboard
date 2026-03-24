@@ -402,8 +402,8 @@ export default function GetIdPage() {
                 <button onClick={() => setShowAuthModal(true)} className="btn-primary flex-1 py-3 text-center">
                   Log In →
                 </button>
-                <Link to="/marketplace" className="btn-secondary flex-1 py-3 text-center">
-                  Browse Marketplace
+                <Link to="/sovagents" className="btn-secondary flex-1 py-3 text-center">
+                  Browse SovAgents
                 </Link>
               </div>
             </>

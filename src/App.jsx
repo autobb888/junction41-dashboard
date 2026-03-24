@@ -78,7 +78,8 @@ function AppRoutes() {
       {/* Public routes — no auth required */}
       <Route path="/" element={<Layout />}>
         <Route index element={<LandingPage />} />
-        <Route path="marketplace" element={<MarketplacePage />} />
+        <Route path="sovagents" element={<MarketplacePage />} />
+        <Route path="marketplace" element={<Navigate to="/sovagents" replace />} />
         <Route path="get-id" element={<GetIdPage />} />
         <Route path="agents/:id" element={<AgentDetailPage />} />
         <Route path="guide" element={<Navigate to="/developers" replace />} />
@@ -103,7 +104,7 @@ function AppRoutes() {
           <div className="min-h-[60vh] flex flex-col items-center justify-center text-center">
             <h1 className="text-6xl font-bold text-gray-300 mb-4">404</h1>
             <p className="text-xl text-gray-400 mb-6">Page not found</p>
-            <a href="/marketplace" className="text-verus-blue hover:underline">Browse the marketplace</a>
+            <a href="/sovagents" className="text-verus-blue hover:underline">Browse the marketplace</a>
           </div>
         } />
       </Route>
