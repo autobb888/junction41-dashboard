@@ -89,81 +89,95 @@ export default function InfoTicker() {
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
-  // Build ticker text
-  const segments = [];
-  segments.push({ label: 'MODELS', items: LLM_MODELS.map(m => `${m.name}: $${m.input}/$${m.output}`) });
-  segments.push({ label: 'IMAGE GEN', items: IMAGE_MODELS.map(m => `${m.name}: $${m.cost}`) });
+  // Build 3-line-tall cards that scroll together as one belt
+  const cards = [];
+
+  // LLM model cards (per 1K tokens)
+  LLM_MODELS.forEach(m => cards.push({
+    line1: m.name,
+    line2: `In: $${m.input}/1K`,
+    line3: `Out: $${m.output}/1K`,
+    color: 'var(--text-primary)',
+  }));
+
+  // Image gen cards
+  IMAGE_MODELS.forEach(m => cards.push({
+    line1: m.name,
+    line2: `$${m.cost}/img`,
+    line3: '',
+    color: 'var(--text-primary)',
+  }));
+
+  // Leaderboard cards
   if (stats?.leaderboard?.length) {
     const medals = ['🥇', '🥈', '🥉'];
-    segments.push({
-      label: 'TOP EARNERS',
-      items: stats.leaderboard.map((e, i) => `${medals[i] || ''} ${e.name}: ${Number(e.earned).toFixed(1)}V (${e.jobs} jobs)`),
-    });
+    stats.leaderboard.forEach((e, i) => cards.push({
+      line1: `${medals[i] || `#${i+1}`} ${e.name}`,
+      line2: `${Number(e.earned).toFixed(1)} V`,
+      line3: `${e.jobs} jobs`,
+      color: i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : 'var(--text-primary)',
+      label: null,
+    }));
   }
+
+  // Activity cards
   if (stats?.activity?.length) {
-    segments.push({
-      label: 'LIVE',
-      items: stats.activity.slice(0, 10).map(e => {
-        let text = `${e.agentName || 'agent'} ${e.detail || e.type}`;
-        if (e.amount) text += ` +${e.amount} ${e.currency || ''}`;
-        if (e.rating) text += ` ★${e.rating}`;
-        return text;
-      }),
+    stats.activity.slice(0, 8).forEach(e => {
+      let line2 = e.detail || e.type;
+      let line3 = '';
+      if (e.amount) line3 = `+${e.amount} ${e.currency || ''}`;
+      if (e.rating) line3 = `★${e.rating}`;
+      cards.push({
+        line1: e.agentName || 'Agent',
+        line2,
+        line3,
+        color: 'var(--text-accent)',
+        label: null,
+      });
     });
   }
 
-  // Build 3 rows of content
-  const row1Text = `  MODELS  ·  ${LLM_MODELS.map(m => `${m.name}: $${m.input}/$${m.output}`).join('  ·  ')}`;
-  const row2Items = [`IMAGE GEN  ·  ${IMAGE_MODELS.map(m => `${m.name}: $${m.cost}`).join('  ·  ')}`];
-  if (stats?.leaderboard?.length) {
-    const medals = ['🥇', '🥈', '🥉'];
-    row2Items.push(`TOP EARNERS  ·  ${stats.leaderboard.map((e, i) => `${medals[i] || ''} ${e.name}: ${Number(e.earned).toFixed(1)}V (${e.jobs} jobs)`).join('  ·  ')}`);
-  }
-  const row2Text = `  ${row2Items.join('    ')}`;
-  let row3Text = '  LIVE  ·  Waiting for activity...';
-  if (stats?.activity?.length) {
-    row3Text = `  LIVE  ·  ${stats.activity.slice(0, 10).map(e => {
-      let text = `${e.agentName || 'agent'} ${e.detail || e.type}`;
-      if (e.amount) text += ` +${e.amount} ${e.currency || ''}`;
-      if (e.rating) text += ` ★${e.rating}`;
-      return text;
-    }).join('  ·  ')}`;
-  }
-
-  const TICKER_HEIGHT = 78; // 3 rows × 26px each
+  const TICKER_HEIGHT = 66; // 3 lines × 18px + padding
 
   return (
     <div ref={panelRef} className="relative" style={{ zIndex: 40 }}>
-      {/* ── 3-Row Scrolling Ticker Bar ── */}
+      {/* ── Card-based Scrolling Ticker Bar ── */}
       <button
         onClick={() => setOpen(!open)}
-        className="w-full overflow-hidden block"
+        className="w-full overflow-hidden block ticker-belt"
         style={{
           height: TICKER_HEIGHT,
           background: 'var(--bg-surface)',
           borderBottom: '1px solid var(--border-subtle)',
           cursor: 'pointer',
         }}
-        onMouseEnter={e => e.querySelectorAll('.ticker-row').forEach(r => r.style.animationPlayState = 'paused')}
-        onMouseLeave={e => e.querySelectorAll('.ticker-row').forEach(r => r.style.animationPlayState = 'running')}
+        onMouseEnter={e => { const s = e.querySelector('.ticker-track'); if (s) s.style.animationPlayState = 'paused'; }}
+        onMouseLeave={e => { const s = e.querySelector('.ticker-track'); if (s) s.style.animationPlayState = 'running'; }}
       >
-        {[
-          { text: row1Text, speed: '100s' },
-          { text: row2Text, speed: '90s' },
-          { text: row3Text, speed: '80s' },
-        ].map((row, i) => (
-          <div key={i} className="whitespace-nowrap overflow-hidden" style={{
-            height: 26, lineHeight: '26px',
-            borderBottom: i < 2 ? '1px solid var(--border-subtle)' : 'none',
-          }}>
-            <span className="ticker-row inline-block" style={{
-              fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-primary)',
-              animation: `ticker-scroll ${row.speed} linear infinite`,
+        <div className="ticker-track whitespace-nowrap flex items-center h-full gap-0" style={{
+          animation: `ticker-scroll ${Math.max(60, cards.length * 5)}s linear infinite`,
+        }}>
+          {/* Double the cards for seamless loop */}
+          {[...cards, ...cards].map((card, i) => (
+            <div key={i} className="inline-flex flex-col justify-center flex-shrink-0 px-4" style={{
+              height: TICKER_HEIGHT,
+              borderRight: '1px solid var(--border-subtle)',
+              minWidth: 130,
             }}>
-              {row.text + '    ' + row.text}
-            </span>
-          </div>
-        ))}
+              <span className="text-xs font-medium truncate" style={{ color: card.color, fontFamily: 'var(--font-mono)', lineHeight: '18px' }}>
+                {card.line1}
+              </span>
+              <span className="text-xs truncate" style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', lineHeight: '18px' }}>
+                {card.line2}
+              </span>
+              {card.line3 && (
+                <span className="text-xs truncate" style={{ color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)', lineHeight: '18px' }}>
+                  {card.line3}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
         <div className="absolute right-0 top-0 flex items-center px-3"
           style={{ height: TICKER_HEIGHT, background: 'linear-gradient(to right, transparent, var(--bg-surface) 50%)', color: 'var(--text-tertiary)' }}>
           {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -176,7 +190,7 @@ export default function InfoTicker() {
           className="absolute top-full left-0 w-full overflow-auto"
           onClick={(e) => { if (e.target.tagName !== 'A') setOpen(false); }}
           style={{
-            maxHeight: 'calc(100vh - 134px)',
+            maxHeight: 'calc(100vh - 122px)',
             background: 'var(--bg-elevated)',
             borderBottom: '1px solid var(--border-default)',
             backdropFilter: 'blur(12px)',

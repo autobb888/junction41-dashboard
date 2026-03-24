@@ -16,7 +16,7 @@ export default function CategorySidebar({
   const [categoriesOpen, setCategoriesOpen] = useState(true);
 
   return (
-    <div className="w-[240px] flex-shrink-0 sticky top-[134px] self-start hidden lg:block">
+    <div className="w-[240px] flex-shrink-0 sticky top-[122px] self-start hidden lg:block">
       {/* Categories — collapsible */}
       <button
         onClick={() => setCategoriesOpen(!categoriesOpen)}
