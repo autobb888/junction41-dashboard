@@ -1,8 +1,22 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import CopyButton from '../components/CopyButton';
+import SignCopyButtons from '../components/SignCopyButtons';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
+const RECENT_IDS_KEY = 'j41_recent_ids';
+const MAX_RECENT_IDS = 5;
+
+function getRecentIds() {
+  try { return JSON.parse(localStorage.getItem(RECENT_IDS_KEY) || '[]'); } catch { return []; }
+}
+
+function saveRecentId(id) {
+  if (!id) return;
+  const normalized = id.endsWith('@') ? id : id + '@';
+  const ids = getRecentIds().filter(i => i !== normalized);
+  ids.unshift(normalized);
+  localStorage.setItem(RECENT_IDS_KEY, JSON.stringify(ids.slice(0, MAX_RECENT_IDS)));
+}
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -13,7 +27,10 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [tab, setTab] = useState('cli');
+  const [showIdDropdown, setShowIdDropdown] = useState(false);
   const pollIntervalRef = useRef(null);
+  const idInputRef = useRef(null);
+  const recentIds = getRecentIds();
 
   useEffect(() => {
     fetchChallenge();
@@ -64,9 +81,9 @@ export default function LoginPage() {
     setError('');
     try {
       await login(challenge.challengeId, verusId, signature);
+      saveRecentId(verusId);
     } catch (err) {
       setError(err.message);
-      // Challenge is consumed on failure — fetch a new one
       fetchChallenge();
       setSignature('');
     } finally {
@@ -78,9 +95,17 @@ export default function LoginPage() {
     ? (verusId.endsWith('@') ? verusId : verusId + '@')
     : 'YOUR_ID@';
 
-  const signCmd = challenge
-    ? `verus ${challenge.signCommand?.includes('-testnet') ? '-testnet ' : ''}signmessage "${userIdForCommand}" "${challenge.challengeHash}"`
+  // Raw commands for SignCopyButtons (without verus -testnet prefix)
+  const verifyRawCmd = challenge
+    ? `verifysignature '${JSON.stringify({ address: 'agentplatform@', datahash: challenge.challengeHash, signature: challenge.requestSignature })}'`
     : '';
+  const signRawCmd = challenge
+    ? `signmessage "${userIdForCommand}" "${challenge.challengeHash}"`
+    : '';
+
+  const filteredIds = recentIds.filter(id =>
+    !verusId || id.toLowerCase().includes(verusId.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-900 px-4">
@@ -132,28 +157,28 @@ export default function LoginPage() {
               <form onSubmit={handleLogin} className="space-y-4">
                 {/* Step 1: Verify */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
-                    Step 1: Verify this request is from agentplatform@
-                  </label>
-                  <div className="relative">
-                    <pre className="bg-gray-900 rounded-lg p-3 text-xs text-green-400 overflow-x-auto whitespace-pre-wrap break-all border border-gray-700 pr-16">
-                      {challenge.verifyCommand}
-                    </pre>
-                    <CopyButton text={challenge.verifyCommand} className="absolute top-2 right-2" />
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                      Step 1: Verify this request is from agentplatform@
+                    </label>
+                    <SignCopyButtons command={verifyRawCmd} />
                   </div>
+                  <pre className="bg-gray-900 rounded-lg p-3 text-xs text-green-400 overflow-x-auto whitespace-pre-wrap break-all border border-gray-700">
+                    {verifyRawCmd}
+                  </pre>
                 </div>
 
                 {/* Step 2: Sign */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
-                    Step 2: Sign the login challenge
-                  </label>
-                  <div className="relative">
-                    <pre className="bg-gray-900 rounded-lg p-3 text-xs text-green-400 overflow-x-auto whitespace-pre-wrap break-all border border-gray-700 pr-16">
-                      {signCmd}
-                    </pre>
-                    <CopyButton text={signCmd} className="absolute top-2 right-2" />
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                      Step 2: Sign the login challenge
+                    </label>
+                    <SignCopyButtons command={signRawCmd} />
                   </div>
+                  <pre className="bg-gray-900 rounded-lg p-3 text-xs text-green-400 overflow-x-auto whitespace-pre-wrap break-all border border-gray-700">
+                    {signRawCmd}
+                  </pre>
                 </div>
 
                 {/* Step 3: Submit */}
@@ -162,14 +187,34 @@ export default function LoginPage() {
                     Step 3: Submit
                   </label>
                   <div className="space-y-3">
-                    <input
-                      type="text"
-                      value={verusId}
-                      onChange={(e) => setVerusId(e.target.value)}
-                      placeholder="Your VerusID (e.g. yourname@)"
-                      className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-verus-blue"
-                      required
-                    />
+                    <div className="relative">
+                      <input
+                        ref={idInputRef}
+                        type="text"
+                        value={verusId}
+                        onChange={(e) => { setVerusId(e.target.value); setShowIdDropdown(true); }}
+                        onFocus={() => setShowIdDropdown(true)}
+                        onBlur={() => setTimeout(() => setShowIdDropdown(false), 150)}
+                        placeholder="Your VerusID (e.g. yourname@)"
+                        className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-verus-blue"
+                        autoComplete="off"
+                        required
+                      />
+                      {showIdDropdown && filteredIds.length > 0 && (
+                        <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-gray-900 border border-gray-600 rounded-lg shadow-xl overflow-hidden">
+                          {filteredIds.map(id => (
+                            <button
+                              key={id}
+                              type="button"
+                              className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                              onMouseDown={(e) => { e.preventDefault(); setVerusId(id); setShowIdDropdown(false); }}
+                            >
+                              {id}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     <textarea
                       value={signature}
                       onChange={(e) => setSignature(e.target.value)}
