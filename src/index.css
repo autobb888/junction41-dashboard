@@ -768,7 +768,3 @@ h3 {
   0% { transform: translateX(0); }
   100% { transform: translateX(-50%); }
 }
-.ticker-scroll span {
-  display: inline-block;
-  animation: ticker-scroll 120s linear infinite;
-}

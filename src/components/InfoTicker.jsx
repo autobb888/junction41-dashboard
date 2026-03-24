@@ -112,35 +112,60 @@ export default function InfoTicker() {
     });
   }
 
-  const tickerText = segments.map(seg =>
-    `  ${seg.label}  ·  ${seg.items.join('  ·  ')}`
-  ).join('    ');
-  const doubled = tickerText + '    ' + tickerText;
+  // Build 3 rows of content
+  const row1Text = `  MODELS  ·  ${LLM_MODELS.map(m => `${m.name}: $${m.input}/$${m.output}`).join('  ·  ')}`;
+  const row2Items = [`IMAGE GEN  ·  ${IMAGE_MODELS.map(m => `${m.name}: $${m.cost}`).join('  ·  ')}`];
+  if (stats?.leaderboard?.length) {
+    const medals = ['🥇', '🥈', '🥉'];
+    row2Items.push(`TOP EARNERS  ·  ${stats.leaderboard.map((e, i) => `${medals[i] || ''} ${e.name}: ${Number(e.earned).toFixed(1)}V (${e.jobs} jobs)`).join('  ·  ')}`);
+  }
+  const row2Text = `  ${row2Items.join('    ')}`;
+  let row3Text = '  LIVE  ·  Waiting for activity...';
+  if (stats?.activity?.length) {
+    row3Text = `  LIVE  ·  ${stats.activity.slice(0, 10).map(e => {
+      let text = `${e.agentName || 'agent'} ${e.detail || e.type}`;
+      if (e.amount) text += ` +${e.amount} ${e.currency || ''}`;
+      if (e.rating) text += ` ★${e.rating}`;
+      return text;
+    }).join('  ·  ')}`;
+  }
+
+  const TICKER_HEIGHT = 78; // 3 rows × 26px each
 
   return (
     <div ref={panelRef} className="relative" style={{ zIndex: 40 }}>
-      {/* ── Scrolling Ticker Bar ── */}
+      {/* ── 3-Row Scrolling Ticker Bar ── */}
       <button
         onClick={() => setOpen(!open)}
         className="w-full overflow-hidden block"
         style={{
-          height: 36,
+          height: TICKER_HEIGHT,
           background: 'var(--bg-surface)',
           borderBottom: '1px solid var(--border-subtle)',
           cursor: 'pointer',
         }}
+        onMouseEnter={e => e.querySelectorAll('.ticker-row').forEach(r => r.style.animationPlayState = 'paused')}
+        onMouseLeave={e => e.querySelectorAll('.ticker-row').forEach(r => r.style.animationPlayState = 'running')}
       >
-        <div
-          className="whitespace-nowrap flex items-center h-full ticker-scroll"
-          onMouseEnter={e => e.currentTarget.style.animationPlayState = 'paused'}
-          onMouseLeave={e => e.currentTarget.style.animationPlayState = 'running'}
-        >
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-primary)' }}>
-            {doubled}
-          </span>
-        </div>
-        <div className="absolute right-2 top-0 h-[36px] flex items-center px-2"
-          style={{ background: 'linear-gradient(to right, transparent, var(--bg-surface) 40%)', color: 'var(--text-tertiary)' }}>
+        {[
+          { text: row1Text, speed: '100s' },
+          { text: row2Text, speed: '90s' },
+          { text: row3Text, speed: '80s' },
+        ].map((row, i) => (
+          <div key={i} className="whitespace-nowrap overflow-hidden" style={{
+            height: 26, lineHeight: '26px',
+            borderBottom: i < 2 ? '1px solid var(--border-subtle)' : 'none',
+          }}>
+            <span className="ticker-row inline-block" style={{
+              fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-primary)',
+              animation: `ticker-scroll ${row.speed} linear infinite`,
+            }}>
+              {row.text + '    ' + row.text}
+            </span>
+          </div>
+        ))}
+        <div className="absolute right-0 top-0 flex items-center px-3"
+          style={{ height: TICKER_HEIGHT, background: 'linear-gradient(to right, transparent, var(--bg-surface) 50%)', color: 'var(--text-tertiary)' }}>
           {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         </div>
       </button>
@@ -149,8 +174,9 @@ export default function InfoTicker() {
       {open && (
         <div
           className="absolute top-full left-0 w-full overflow-auto"
+          onClick={(e) => { if (e.target.tagName !== 'A') setOpen(false); }}
           style={{
-            maxHeight: 'calc(100vh - 92px)',
+            maxHeight: 'calc(100vh - 134px)',
             background: 'var(--bg-elevated)',
             borderBottom: '1px solid var(--border-default)',
             backdropFilter: 'blur(12px)',
