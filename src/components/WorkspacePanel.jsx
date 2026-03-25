@@ -53,11 +53,14 @@ export default function WorkspacePanel({ job }) {
 
         socket.on('workspace:update', (data) => {
           const { status, counts } = data;
-          setSession((prev) => prev ? {
-            ...prev,
-            status,
-            counts: counts || prev.counts,
-          } : prev);
+          setSession((prev) => {
+            if (!prev) return prev;
+            // If status changed (reconnect, pause, resume), re-fetch full session
+            if (prev.status !== status) {
+              fetchSession();
+            }
+            return { ...prev, status, counts: counts || prev.counts };
+          });
         });
       } catch {
         // Socket.IO connection failed — status will refresh on next poll
