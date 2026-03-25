@@ -305,6 +305,34 @@ h3 {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+/* Terminal chat content — monospace markdown */
+.terminal-chat-content p { margin: 0 0 4px 0; }
+.terminal-chat-content p:last-child { margin-bottom: 0; }
+.terminal-chat-content code {
+  background: #1a1a2e;
+  padding: 1px 5px;
+  border-radius: 2px;
+  font-size: 12px;
+  color: #e5e7eb;
+}
+.terminal-chat-content pre {
+  background: #0f0f14;
+  border: 1px solid #1a1a2e;
+  border-radius: 3px;
+  padding: 8px 10px;
+  overflow-x: auto;
+  margin: 4px 0;
+  font-size: 12px;
+}
+.terminal-chat-content pre code {
+  background: none;
+  padding: 0;
+}
+
 .page-content {
   animation: fadeIn 0.3s ease-out;
 }

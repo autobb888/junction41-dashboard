@@ -987,43 +987,52 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
   }
 
   return (
-    <div className="card" style={{ display: 'flex', flexDirection: 'column', height, transition: 'height 0.2s' }}>
-      {/* Header */}
+    <div style={{
+      display: 'flex', flexDirection: 'column', height, transition: 'height 0.2s',
+      background: '#0a0a0a', border: '1px solid #1a1a2e', borderRadius: 6,
+      fontFamily: '"JetBrains Mono", "Fira Code", "SF Mono", "Cascadia Code", ui-monospace, monospace',
+    }}>
+      {/* Header — terminal title bar */}
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '12px 16px', borderBottom: '1px solid var(--border-primary)',
+        padding: '8px 14px', borderBottom: '1px solid #1a1a2e',
+        background: '#0f0f14',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: 'var(--text-primary)' }}>
-            Chat
-          </h3>
           <span style={{
-            width: 8, height: 8, borderRadius: '50%',
-            background: !connected ? '#ef4444' : peerOnline ? '#22c55e' : '#f59e0b',
-            display: 'inline-block',
+            width: 7, height: 7, borderRadius: '50%',
+            background: !connected ? '#ef4444' : peerOnline ? '#34d399' : '#f59e0b',
+            display: 'inline-block', boxShadow: connected ? `0 0 6px ${peerOnline ? '#34d39966' : '#f59e0b66'}` : 'none',
           }} title={!connected ? 'Disconnected' : peerOnline ? 'Peer online' : 'Peer offline'} />
+          <span style={{ fontSize: 12, color: '#6b7280', fontWeight: 500, letterSpacing: '0.03em' }}>
+            session
+          </span>
         </div>
         <button
           onClick={() => setExpanded(!expanded)}
           style={{
-            background: 'none', border: 'none', color: 'var(--text-muted)',
-            cursor: 'pointer', fontSize: 14,
+            background: 'none', border: 'none', color: '#4b5563',
+            cursor: 'pointer', fontSize: 11, fontFamily: 'inherit',
+            letterSpacing: '0.05em',
           }}
         >
-          {expanded ? '\u2193 Collapse' : '\u2191 Expand'}
+          {expanded ? '[-] collapse' : '[+] expand'}
         </button>
       </div>
 
-      {/* Messages */}
+      {/* Messages — terminal log */}
       <div role="log" aria-live="polite" aria-label="Chat messages" style={{
-        flex: 1, overflowY: 'auto', padding: '12px 16px',
-        display: 'flex', flexDirection: 'column', gap: 8,
+        flex: 1, overflowY: 'auto', padding: '10px 14px',
+        display: 'flex', flexDirection: 'column', gap: 2,
       }}>
         {messages.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '48px 16px' }}>
-            <span style={{ fontSize: 32, display: 'block', marginBottom: 12 }}>💬</span>
-            <p style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: 15, marginBottom: 4 }}>No messages yet</p>
-            <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>Start the conversation — say hello!</p>
+          <div style={{ padding: '40px 16px', textAlign: 'center' }}>
+            <p style={{ color: '#374151', fontSize: 12, fontFamily: 'inherit', marginBottom: 4 }}>
+              -- no messages --
+            </p>
+            <p style={{ color: '#1f2937', fontSize: 11, fontFamily: 'inherit' }}>
+              waiting for input...
+            </p>
           </div>
         ) : (
           messages.map((msg) => {
@@ -1033,42 +1042,51 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
               <div
                 key={msg.id}
                 style={{
-                  padding: '8px 12px',
-                  borderRadius: 8,
-                  maxWidth: '80%',
-                  alignSelf: isMe ? 'flex-end' : 'flex-start',
-                  background: isMe ? 'rgba(52, 211, 153, 0.15)' : 'var(--bg-tertiary)',
-                  border: isFlagged ? '1px solid #eab308' : '1px solid transparent',
-                  opacity: msg.pending ? 0.6 : 1,
+                  padding: '6px 0',
+                  borderLeft: isFlagged ? '2px solid #eab308' : '2px solid transparent',
+                  paddingLeft: 10,
+                  opacity: msg.pending ? 0.45 : 1,
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                  <ResolvedId address={msg.senderVerusId} size="sm" showAddress={false} />
+                {/* Role prefix + metadata line */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                  <span style={{
+                    fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
+                    color: isMe ? '#34d399' : '#818cf8',
+                  }}>
+                    {isMe ? 'you' : 'agent'}
+                  </span>
+                  <span style={{ color: '#2a2a3a', fontSize: 11 }}>&rsaquo;</span>
+                  <span style={{ fontSize: 10, color: '#374151', fontFamily: 'inherit' }}>
+                    <ResolvedId address={msg.senderVerusId} size="sm" showAddress={false} />
+                  </span>
                   {msg.signed && (
-                    <span style={{ fontSize: 10, color: '#22c55e' }}>{'\u2713'} signed</span>
+                    <span style={{ fontSize: 9, color: '#34d399', fontFamily: 'inherit', letterSpacing: '0.05em' }}>verified</span>
                   )}
                   <SafetyScanBadge score={msg.safetyScore} warning={isFlagged} />
                   {isFlagged && (
-                    <span style={{ fontSize: 10, color: '#eab308' }}>Flagged</span>
+                    <span style={{ fontSize: 9, color: '#eab308', fontFamily: 'inherit' }}>flagged</span>
+                  )}
+                  <span style={{ marginLeft: 'auto', fontSize: 10, color: '#1f2937', fontFamily: 'inherit' }}>
+                    {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                  </span>
+                  {isMe && (
+                    <span style={{ fontSize: 10, color: '#374151' }}>
+                      {Object.keys(readReceipts).length > 0 ? '\u2713\u2713' : '\u2713'}
+                    </span>
                   )}
                 </div>
-                <div style={{ margin: 0, color: 'var(--text-primary)', fontSize: 14, wordBreak: 'break-word' }} className="chat-markdown">
+                {/* Message content */}
+                <div style={{
+                  margin: 0, color: '#d1d5db', fontSize: 13, wordBreak: 'break-word',
+                  lineHeight: 1.55, paddingLeft: 2,
+                }} className="chat-markdown terminal-chat-content">
                   {msg.content?.startsWith('\uD83D\uDCCE Uploaded file:') && msg.fileId ? (
                     <FileAttachment fileInfo={{ id: msg.fileId, filename: msg.fileName, mimeType: msg.fileMimeType, sizeBytes: msg.fileSizeBytes }} jobId={jobId} />
                   ) : msg.content?.startsWith('\uD83D\uDCCE Uploaded file:') ? (
                     <FileMessage content={msg.content} jobId={jobId} messageId={msg.id} />
                   ) : (
                     <Markdown rehypePlugins={[rehypeSanitize]}>{msg.content}</Markdown>
-                  )}
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                    {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString() : ''}
-                  </span>
-                  {isMe && (
-                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                      {Object.keys(readReceipts).length > 0 ? '\u2713\u2713' : '\u2713'}
-                    </span>
                   )}
                 </div>
               </div>
@@ -1084,34 +1102,37 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
       {/* Session expiry warning */}
       {sessionWarning && (
         <div style={{
-          padding: '6px 16px', fontSize: 12, color: '#f59e0b',
-          background: 'rgba(245, 158, 11, 0.1)',
-          borderTop: '1px solid rgba(245, 158, 11, 0.3)',
+          padding: '4px 14px', fontSize: 11, color: '#f59e0b',
+          background: '#0f0f14', borderTop: '1px solid #1a1a2e',
+          fontFamily: 'inherit',
         }}>
-          {sessionWarning}
+          ! {sessionWarning}
         </div>
       )}
 
       {/* Typing indicator */}
       {typingUser && (
-        <div style={{ padding: '4px 16px', fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' }}>
-          <TypingName verusId={typingUser} /> is typing...
+        <div style={{
+          padding: '3px 14px', fontSize: 11, color: '#374151',
+          fontFamily: 'inherit',
+        }}>
+          <TypingName verusId={typingUser} /> typing<span style={{ animation: 'blink 1s step-end infinite' }}>_</span>
         </div>
       )}
 
       {/* Action error */}
       {actionError && (
         <div style={{
-          padding: '6px 16px', fontSize: 12, color: '#ef4444',
-          background: 'rgba(239, 68, 68, 0.1)',
-          borderTop: '1px solid rgba(239, 68, 68, 0.3)',
+          padding: '4px 14px', fontSize: 11, color: '#ef4444',
+          background: 'rgba(239, 68, 68, 0.06)', borderTop: '1px solid #1a1a2e',
+          fontFamily: 'inherit', display: 'flex', alignItems: 'center',
         }}>
-          {actionError}
+          <span style={{ marginRight: 4 }}>err:</span> {actionError}
           <button
             onClick={() => setActionError(null)}
-            style={{ marginLeft: 8, background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 12 }}
+            style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#4b5563', cursor: 'pointer', fontSize: 11, fontFamily: 'inherit' }}
           >
-            Dismiss
+            [x]
           </button>
         </div>
       )}
@@ -1122,40 +1143,39 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
       {/* Reconnection banner */}
       {!connected && !inputDisabled && (
         <div style={{
-          padding: '6px 16px', textAlign: 'center', fontSize: 13,
-          backgroundColor: 'rgba(234, 179, 8, 0.15)', color: '#fbbf24',
-          borderTop: '1px solid rgba(234, 179, 8, 0.3)',
+          padding: '4px 14px', textAlign: 'center', fontSize: 11,
+          background: '#0f0f14', color: '#f59e0b',
+          borderTop: '1px solid #1a1a2e', fontFamily: 'inherit',
         }}>
-          Reconnecting to chat...
+          reconnecting...
         </div>
       )}
 
       {/* Pending file preview */}
       {pendingFile && (
         <div style={{
-          display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px',
-          borderTop: '1px solid var(--border-primary)',
-          background: 'var(--bg-tertiary)',
+          display: 'flex', alignItems: 'center', gap: 8, padding: '6px 14px',
+          borderTop: '1px solid #1a1a2e', background: '#0f0f14',
         }}>
           {pendingFile.preview ? (
             <img src={pendingFile.preview} alt="preview" style={{
-              width: 48, height: 48, objectFit: 'cover', borderRadius: 6,
-              border: '1px solid var(--border-default)',
+              width: 36, height: 36, objectFit: 'cover', borderRadius: 3,
+              border: '1px solid #1a1a2e',
             }} />
           ) : (
             <div style={{
-              width: 48, height: 48, borderRadius: 6, display: 'flex',
-              alignItems: 'center', justifyContent: 'center', fontSize: 20,
-              background: 'var(--bg-base)', border: '1px solid var(--border-default)',
+              width: 36, height: 36, borderRadius: 3, display: 'flex',
+              alignItems: 'center', justifyContent: 'center', fontSize: 14,
+              background: '#0a0a0a', border: '1px solid #1a1a2e', color: '#4b5563',
             }}>
-              {'\uD83D\uDCC4'}
+              f
             </div>
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: 13, color: 'var(--text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <p style={{ fontSize: 12, color: '#9ca3af', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'inherit' }}>
               {pendingFile.file.name}
             </p>
-            <p style={{ fontSize: 11, color: 'var(--text-tertiary)', margin: 0 }}>
+            <p style={{ fontSize: 10, color: '#374151', margin: 0, fontFamily: 'inherit' }}>
               {(pendingFile.file.size / 1024).toFixed(1)} KB
             </p>
           </div>
@@ -1164,25 +1184,24 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
             onClick={clearPendingFile}
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
-              color: 'var(--text-tertiary)', fontSize: 18, padding: '4px 8px',
-              borderRadius: 4, lineHeight: 1,
+              color: '#4b5563', fontSize: 11, fontFamily: 'inherit',
             }}
             onMouseEnter={e => e.target.style.color = '#ef4444'}
-            onMouseLeave={e => e.target.style.color = 'var(--text-tertiary)'}
+            onMouseLeave={e => e.target.style.color = '#4b5563'}
             title="Remove attachment"
           >
-            {'\u2715'}
+            [x]
           </button>
         </div>
       )}
 
-      {/* Input */}
+      {/* Input — terminal prompt */}
       <form
         onSubmit={handleSend}
         style={{
-          display: 'flex', gap: 8, padding: '12px 16px',
-          borderTop: pendingFile ? 'none' : '1px solid var(--border-primary)',
-          alignItems: 'center',
+          display: 'flex', gap: 0, padding: '0',
+          borderTop: '1px solid #1a1a2e',
+          alignItems: 'center', background: '#0f0f14',
         }}
       >
         <input
@@ -1199,36 +1218,41 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
           title="Attach file"
           style={{
             background: 'none', border: 'none', cursor: inputDisabled ? 'default' : 'pointer',
-            padding: '6px 8px', borderRadius: 6, color: 'var(--text-secondary)',
-            opacity: inputDisabled || uploading ? 0.4 : 0.7,
-            fontSize: 18, lineHeight: 1, flexShrink: 0,
+            padding: '8px 6px 8px 14px', color: '#4b5563',
+            opacity: inputDisabled || uploading ? 0.3 : 0.7,
+            fontSize: 14, lineHeight: 1, flexShrink: 0, fontFamily: 'inherit',
           }}
-          onMouseEnter={e => { if (!inputDisabled) e.target.style.opacity = 1; e.target.style.color = 'var(--accent)'; }}
-          onMouseLeave={e => { e.target.style.opacity = inputDisabled ? 0.4 : 0.7; e.target.style.color = 'var(--text-secondary)'; }}
+          onMouseEnter={e => { if (!inputDisabled) { e.target.style.opacity = 1; e.target.style.color = '#34d399'; } }}
+          onMouseLeave={e => { e.target.style.opacity = inputDisabled ? 0.3 : 0.7; e.target.style.color = '#4b5563'; }}
         >
-          {uploading ? '\u23F3' : '\uD83D\uDCCE'}
+          {uploading ? '...' : '+'}
         </button>
+        <span style={{ color: '#34d399', fontSize: 13, fontFamily: 'inherit', padding: '0 4px 0 2px', opacity: inputDisabled ? 0.3 : 1 }}>&rsaquo;</span>
         <input
           type="text"
           value={input}
           onChange={handleInputChange}
-          placeholder={pendingFile ? `Send ${pendingFile.file.name}` : isSessionPaused ? 'Session paused — reactivate to continue' : inputDisabled ? 'Session ended' : 'Type a message...'}
+          placeholder={pendingFile ? `send ${pendingFile.file.name}` : isSessionPaused ? 'session paused' : inputDisabled ? 'session ended' : ''}
           maxLength={4000}
           disabled={inputDisabled}
           style={{
-            flex: 1, background: 'var(--bg-tertiary)', border: '1px solid var(--border-primary)',
-            borderRadius: 8, padding: '8px 12px', color: 'var(--text-primary)',
-            outline: 'none', fontSize: 14,
-            opacity: inputDisabled ? 0.5 : 1,
+            flex: 1, background: 'transparent', border: 'none',
+            padding: '10px 4px', color: '#d1d5db',
+            outline: 'none', fontSize: 13, fontFamily: 'inherit',
+            opacity: inputDisabled ? 0.3 : 1,
           }}
         />
         <button
           type="submit"
           disabled={(!input.trim() && !pendingFile) || !connected || inputDisabled || uploading}
-          className="btn-primary"
-          style={{ padding: '8px 16px' }}
+          style={{
+            background: 'none', border: 'none', padding: '8px 14px',
+            color: (!input.trim() && !pendingFile) || !connected || inputDisabled ? '#1f2937' : '#34d399',
+            cursor: 'pointer', fontSize: 11, fontFamily: 'inherit',
+            fontWeight: 500, letterSpacing: '0.05em',
+          }}
         >
-          {uploading ? 'Sending...' : 'Send'}
+          {uploading ? 'sending' : 'send'}
         </button>
       </form>
     </div>
