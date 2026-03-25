@@ -257,10 +257,26 @@ export default function WorkspacePanel({ job }) {
           </div>
         )}
 
+        {/* Blocked operations */}
+        {session.recentBlocked?.length > 0 && (
+          <div className="mb-4">
+            <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#f87171' }}>Blocked Operations</p>
+            <div className="space-y-1 max-h-32 overflow-y-auto">
+              {session.recentBlocked.map((op) => (
+                <div key={op.id} className="flex items-start gap-2 text-xs p-2 rounded" style={{ background: 'rgba(248, 113, 113, 0.08)', border: '1px solid rgba(248, 113, 113, 0.2)' }}>
+                  <span style={{ color: '#f87171' }}>{op.operation}</span>
+                  <span className="truncate flex-1 font-mono" style={{ color: 'var(--text-secondary)' }}>{op.path}</span>
+                  {op.reason && <span className="shrink-0" style={{ color: 'var(--text-tertiary)' }}>{op.reason}</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Disconnected — show reconnect info */}
         {session.status === 'disconnected' && (
           <div className="p-3 rounded-lg" style={{ background: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.3)' }}>
-            <p className="text-yellow-400 text-sm font-medium">CLI disconnected — 5 min grace period</p>
+            <p className="text-yellow-400 text-sm font-medium">CLI disconnected — 30 min reconnect window</p>
             <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
               Reconnect with: <code>j41-connect . --resume &lt;token&gt;</code>
             </p>
