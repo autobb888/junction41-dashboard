@@ -234,13 +234,60 @@ export default function WorkspacePanel({ job }) {
           </div>
         )}
 
-        {/* Supervised mode note */}
+        {/* Supervised mode — pending approvals */}
         {session.mode === 'supervised' && session.status === 'active' && (
-          <div className="p-3 rounded-lg mb-4" style={{ background: 'var(--bg-inset)', border: '1px solid var(--border-subtle)' }}>
-            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-              Supervised mode — approve/reject operations in your CLI terminal
-            </p>
-          </div>
+          <>
+            {session.pendingApprovals?.length > 0 ? (
+              <div className="mb-4">
+                <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#fbbf24' }}>
+                  Pending Approvals ({session.pendingApprovals.length})
+                </p>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {session.pendingApprovals.map((op) => (
+                    <div key={op.id} className="flex items-center gap-2 p-2 rounded text-xs" style={{ background: 'rgba(251, 191, 36, 0.08)', border: '1px solid rgba(251, 191, 36, 0.2)' }}>
+                      <span className="shrink-0 font-medium" style={{ color: '#fbbf24' }}>{op.operation}</span>
+                      <span className="truncate flex-1 font-mono" style={{ color: 'var(--text-secondary)' }}>{op.path}</span>
+                      {op.sizeBytes != null && (
+                        <span className="shrink-0" style={{ color: 'var(--text-tertiary)' }}>
+                          {op.sizeBytes > 1024 ? `${(op.sizeBytes / 1024).toFixed(1)}KB` : `${op.sizeBytes}B`}
+                        </span>
+                      )}
+                      <button
+                        onClick={async () => {
+                          try {
+                            await apiFetch(`/v1/workspace/${job.id}/approve/${op.id}`, { method: 'POST' });
+                            fetchSession();
+                          } catch {}
+                        }}
+                        className="shrink-0 px-2 py-1 rounded text-xs font-medium transition-colors"
+                        style={{ background: 'rgba(74, 222, 128, 0.15)', color: '#4ade80', border: '1px solid rgba(74, 222, 128, 0.3)' }}
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            await apiFetch(`/v1/workspace/${job.id}/reject/${op.id}`, { method: 'POST' });
+                            fetchSession();
+                          } catch {}
+                        }}
+                        className="shrink-0 px-2 py-1 rounded text-xs font-medium transition-colors"
+                        style={{ background: 'rgba(248, 113, 113, 0.15)', color: '#f87171', border: '1px solid rgba(248, 113, 113, 0.3)' }}
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="p-3 rounded-lg mb-4" style={{ background: 'var(--bg-inset)', border: '1px solid var(--border-subtle)' }}>
+                <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                  Supervised mode — no pending approvals
+                </p>
+              </div>
+            )}
+          </>
         )}
 
         {/* Operation Counts */}
