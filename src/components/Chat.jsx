@@ -1076,6 +1076,24 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
                     </span>
                   )}
                 </div>
+                {/* SovGuard detail line */}
+                {isFlagged && msg.safetyDetail && (
+                  <div style={{
+                    fontSize: 11, fontFamily: 'inherit', padding: '3px 6px', marginBottom: 3,
+                    background: 'rgba(234, 179, 8, 0.08)', borderRadius: 2,
+                    color: '#eab308', display: 'flex', alignItems: 'center', gap: 6,
+                  }}>
+                    <span style={{ flexShrink: 0 }}>!</span>
+                    <span>
+                      {msg.safetyDetail.classification && msg.safetyDetail.classification.replace(/_/g, ' ')}
+                      {msg.safetyDetail.flags?.length > 0 && (
+                        <span style={{ color: '#a16207', marginLeft: 6 }}>
+                          ({msg.safetyDetail.flags.map(f => typeof f === 'string' ? f.split(':')[0] : f.type).join(', ')})
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                )}
                 {/* Message content */}
                 <div style={{
                   margin: 0, color: '#d1d5db', fontSize: 13, wordBreak: 'break-word',
