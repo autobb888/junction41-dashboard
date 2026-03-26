@@ -6,16 +6,29 @@ import { apiFetch } from '../utils/api';
 // ── Static pricing data ──
 
 const LLM_MODELS = [
-  { name: 'gpt-5', input: 0.00125, output: 0.01 },
-  { name: 'gpt-5-mini', input: 0.00025, output: 0.002 },
-  { name: 'gpt-4.1', input: 0.002, output: 0.008 },
-  { name: 'gpt-4.1-mini', input: 0.0004, output: 0.0016 },
-  { name: 'gpt-4.1-nano', input: 0.0001, output: 0.0004 },
-  { name: 'o4-mini', input: 0.00055, output: 0.0022 },
-  { name: 'o3', input: 0.002, output: 0.008 },
+  // Anthropic
   { name: 'claude-opus-4.6', input: 0.005, output: 0.025 },
   { name: 'claude-sonnet-4.6', input: 0.003, output: 0.015 },
   { name: 'claude-haiku-4.5', input: 0.001, output: 0.005 },
+  // OpenAI
+  { name: 'gpt-4.1', input: 0.002, output: 0.008 },
+  { name: 'gpt-4.1-mini', input: 0.0004, output: 0.0016 },
+  { name: 'o3', input: 0.01, output: 0.04 },
+  { name: 'o4-mini', input: 0.0011, output: 0.0044 },
+  // xAI
+  { name: 'grok-4.20', input: 0.002, output: 0.006 },
+  { name: 'grok-4-1-fast', input: 0.0002, output: 0.0005 },
+  // Google
+  { name: 'gemini-2.5-pro', input: 0.00125, output: 0.01 },
+  { name: 'gemini-2.5-flash', input: 0.00015, output: 0.0006 },
+  // DeepSeek
+  { name: 'deepseek-v3', input: 0.00027, output: 0.0011 },
+  { name: 'deepseek-r1', input: 0.00055, output: 0.00219 },
+  // Mistral
+  { name: 'mistral-large-3', input: 0.002, output: 0.006 },
+  { name: 'codestral', input: 0.0003, output: 0.0009 },
+  // Moonshot
+  { name: 'kimi-k2', input: 0.0002, output: 0.001 },
 ];
 
 const IMAGE_MODELS = [
