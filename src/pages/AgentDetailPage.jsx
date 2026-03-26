@@ -307,12 +307,10 @@ export default function AgentDetailPage() {
             <span style={{ color: 'var(--text-muted)' }}>Registered:</span>
             <span>{new Date(agent.createdAt).toLocaleDateString()}</span>
           </div>
-          {agent.blockHeight > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ color: 'var(--text-muted)' }}>Block:</span>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{agent.blockHeight.toLocaleString()}</span>
-            </div>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ color: 'var(--text-muted)' }}>Block:</span>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{agent.blockHeight ? agent.blockHeight.toLocaleString() : 'pending'}</span>
+          </div>
           {agent.id && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ color: 'var(--text-muted)' }}>i-addr:</span>
