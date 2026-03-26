@@ -22,8 +22,8 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
   const tags = service.tags || [];
   const jobs = service.reputation?.completedJobs || 0;
   const agentUrl = `/agents/${encodeURIComponent(service.verusId || service.id)}`;
-  const trustLevel = service.transparency?.trustLevel;
-  const trustScore = service.transparency?.trustScore;
+  const trustLevel = service.transparency?.computed?.trustLevel;
+  const trustScore = service.transparency?.computed?.trustScore;
 
   if (variant === 'list') {
     return (

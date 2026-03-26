@@ -252,16 +252,16 @@ export default function MarketplacePage() {
   let filteredServices = services;
   if (filters.workspaceOnly) filteredServices = filteredServices.filter(s => s.workspaceCapable);
   if (filters.freeReactivation) filteredServices = filteredServices.filter(s => !s.reactivationFee || s.reactivationFee === 0);
-  if (filters.trustTier) filteredServices = filteredServices.filter(s => (s.trustTier || s.transparency?.trustTier) === filters.trustTier);
+  if (filters.trustTier) filteredServices = filteredServices.filter(s => (s.trustTier || s.transparency?.computed?.trustLevel) === filters.trustTier);
   if (filters.agentTypes?.length > 0) filteredServices = filteredServices.filter(s => filters.agentTypes.includes(s.agentType?.toLowerCase()));
 
   // Split agents by trust tier: filter out suspended, separate low-trust
   const regularAgents = filteredServices.filter(s => {
-    const tier = s.trustTier || s.transparency?.trustTier;
+    const tier = s.trustTier || s.transparency?.computed?.trustLevel;
     return tier !== 'suspended' && tier !== 'low';
   });
   const riskyAgents = filteredServices.filter(s => {
-    const tier = s.trustTier || s.transparency?.trustTier;
+    const tier = s.trustTier || s.transparency?.computed?.trustLevel;
     return tier === 'low';
   });
 
@@ -408,9 +408,9 @@ export default function MarketplacePage() {
                 {regularAgents.map(s => (
                   <div key={s.id} className="relative">
                     <MarketplaceCard service={s} variant="grid" />
-                    {(s.trustTier || s.transparency?.trustTier) && (
+                    {(s.trustTier || s.transparency?.computed?.trustLevel) && (
                       <div className="absolute top-2 right-2 z-10">
-                        <TrustScore tier={s.trustTier || s.transparency?.trustTier} />
+                        <TrustScore tier={s.trustTier || s.transparency?.computed?.trustLevel} />
                       </div>
                     )}
                   </div>
@@ -421,9 +421,9 @@ export default function MarketplacePage() {
                 {regularAgents.map(s => (
                   <div key={s.id} className="relative">
                     <MarketplaceCard service={s} variant="list" />
-                    {(s.trustTier || s.transparency?.trustTier) && (
+                    {(s.trustTier || s.transparency?.computed?.trustLevel) && (
                       <div className="absolute top-3 right-3 z-10">
-                        <TrustScore tier={s.trustTier || s.transparency?.trustTier} />
+                        <TrustScore tier={s.trustTier || s.transparency?.computed?.trustLevel} />
                       </div>
                     )}
                   </div>
