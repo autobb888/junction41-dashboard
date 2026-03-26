@@ -154,6 +154,11 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
               }}
             >{model}</span>
           ))}
+          {service.markup && service.markup > 1 && (
+            <span className="px-1.5 py-0.5 rounded text-xs font-mono"
+              style={{ background: 'rgba(251,191,36,0.08)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.15)', fontSize: 10 }}
+            >{service.markup}x</span>
+          )}
         </div>
       )}
 
