@@ -21,6 +21,8 @@ Either party can request additional budget during an active session. The agent c
 
 The agent is the authority on pricing. `agent.markup` is a declared policy, not a hard calculation input. Per-job quotes come from the agent directly.
 
+**Prerequisite:** Register `agentplatform::agent.markup` on-chain via `getvdxfid` → `registernamecommitment` → `registeridentity` before indexer can parse it. This will be VDXF key #20.
+
 ### Budget Request Flow
 
 ```
@@ -79,25 +81,41 @@ Buyer-initiated (reverse): Buyer clicks [+ budget] in input bar, enters amount, 
   "reason": "Need more for debugging"
 }
 ```
-Backend: `tokens × model_rate × agent.markup = amount`
+Backend fallback: `tokens × model_output_rate_per_1k × agent.markup = amount`
+(Uses output rate since most cost is output-dominated. Model name must match backend pricing table exactly.)
+
+**v1 recommendation:** Require agents to always provide a calculated `amount`. Token-only fallback deferred to v2 to avoid model name / rate mismatches.
 
 ### API Endpoints
 
 **POST /v1/jobs/:id/budget-request**
-- Auth: either buyer or agent (session required)
-- Body: `{ amount?, tokens?, model?, currency?, reason?, breakdown? }`
-- Creates `budget_requests` row, emits WebSocket event to other party
+- Auth: buyer or agent (session required + must be a party to this job)
+- Job must be `in_progress` or `paused` — rejected otherwise
+- Only ONE pending request per job at a time (enforced by unique partial index)
+- Body: `{ amount, currency?, reason?, breakdown? }` — `amount` required in v1
+- Max amount: 1,000,000 VRSCTEST (server-side validation)
+- Rate limit: 10 req/min per IP
+- Creates `budget_requests` row, emits WebSocket event + `createNotification()` to other party
 - Returns: `{ id, amount, status: 'pending' }`
 
 **POST /v1/jobs/:id/budget-request/:reqId/approve**
 - Auth: the OTHER party (not the requester)
-- Creates a `job_extensions` row, links via `extension_id`
-- If amount is 0 or free → auto-completes, no payment
-- Returns extension invoice (combined sendcurrency params)
+- Job must still be `in_progress` or `paused` — rejected if completed/cancelled
+- Atomic claim: `UPDATE ... WHERE status = 'pending'` (prevents double-approve)
+- Creates a `job_extensions` row (amount >= 0.001), links via `extension_id`
+- If amount is 0 → auto-completes, no payment, no extension row
+- Returns extension invoice via existing `extension-invoice` endpoint logic (combined sendcurrency params)
 
 **POST /v1/jobs/:id/budget-request/:reqId/decline**
 - Auth: the OTHER party
-- Sets status to `declined`, notifies requester via WebSocket
+- Sets status to `declined`, notifies requester via WebSocket + notification
+
+### Constraints
+
+- **One pending request per job** — `CREATE UNIQUE INDEX idx_budget_req_pending ON budget_requests (job_id) WHERE status = 'pending'`
+- **Status tracking** — `budget_requests` uses only `pending|approved|declined`. Payment status lives on the linked `job_extensions` row (source of truth for payment). No `paid` status on budget_requests — avoids dual-status bookkeeping.
+- **Expiration** — pending requests auto-decline after 24 hours (worker task)
+- **Buyer-initiated** — uses existing `POST /v1/jobs/:id/extensions` directly. No budget_request row created. Agent notified via `budget_added` WebSocket event.
 
 ### WebSocket Events
 
@@ -163,13 +181,14 @@ CREATE TABLE budget_requests (
   currency TEXT NOT NULL DEFAULT 'VRSCTEST',
   reason TEXT,
   breakdown TEXT,
-  status TEXT NOT NULL DEFAULT 'pending',  -- pending|approved|declined|paid
+  status TEXT NOT NULL DEFAULT 'pending',  -- pending|approved|declined
   extension_id TEXT,                  -- links to job_extensions on approval
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_budget_req_job ON budget_requests (job_id);
+CREATE UNIQUE INDEX idx_budget_req_pending ON budget_requests (job_id) WHERE status = 'pending';
 ```
 
 **Agents table migration:**
@@ -199,7 +218,7 @@ agent.on('budgetAdded', (data: { amount, currency }) => { ... })
 Parse `agent.markup` from VDXF contentmultimap, store in `agents.markup`:
 ```typescript
 const markupJson = (data as any).markup;
-const markup = markupJson ? Math.max(1, Math.min(100, parseFloat(markupJson) || 1)) : null;
+const markup = markupJson ? Math.max(1, Math.min(50, parseFloat(markupJson) || 1)) : null;
 ```
 
 ### Files Summary
