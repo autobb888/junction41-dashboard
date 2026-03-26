@@ -10,6 +10,8 @@
 
 **Spec:** `docs/superpowers/specs/2026-03-26-j41-connect-terminal-chat-design.md`
 
+**Audit fixes applied:** safechat_enabled field name, message storage order, signature verification, buyerVerusId resolution, chat history via Socket.IO, paused-job gate, circuit breaker room key, separate chat rate limiter, engine parameter passing, recalcTrustScore on hold, backward-compatible abort.
+
 ---
 
 ## File Structure
@@ -23,8 +25,8 @@
 - Create: `src/chat.ts` — chat display, history fetch, model theming
 - Modify: `src/types.ts` — add ChatMessage interface, extend operation union
 - Modify: `src/relay-client.ts` — add chat send/receive methods, agent metadata
-- Modify: `src/supervisor.ts` — `/command` prefix, route default input to chat
-- Modify: `src/cli.ts` — wire chat into main loop, fetch history
+- Modify: `src/supervisor.ts` — `/command` prefix, route default input to chat (bare `abort` still works)
+- Modify: `src/cli.ts` — wire chat into main loop, fetch history via Socket.IO
 - Modify: `src/feed.ts` — add chat message formatting
 
 ---
@@ -67,6 +69,7 @@ export interface ChatPipelineOptions {
   jobId: string;
   senderVerusId: string;
   content: string;
+  /** Whether the signature has been RPC-verified by the caller (default false) */
   signed?: boolean;
   signature?: string;
   /** SovGuard inbound scan engine (optional — skips if null) */
@@ -75,8 +78,11 @@ export interface ChatPipelineOptions {
   outputScanEngine?: OutputScanEngine | null;
   /** Whether SovGuard is enabled for this job */
   safechatEnabled?: boolean;
-  /** Job details needed for output scanning */
-  job?: { buyer_verus_id: string; seller_verus_id: string; payment_address?: string };
+  /** Job details needed for output scanning + paused-job gate */
+  job?: { buyer_verus_id: string; seller_verus_id: string; payment_address?: string; status?: string };
+  /** Circuit breaker room key — caller provides to ensure dashboard + CLI share the same tracker.
+   *  Convention: `job:${jobId}` (matches ws-server.ts). */
+  circuitBreakerRoom?: string;
 }
 
 export interface SovGuardEngine {
@@ -238,6 +244,15 @@ const FLAG_TITLES: Record<string, string> = {
 };
 
 // ── Main Pipeline ──────────────────────────────────────────
+//
+// IMPORTANT: Message is stored AFTER output scan, not before.
+// This prevents double-storage when a message is held (hold-queue
+// stores its own copy, and releaseAndDeliver re-inserts into job_messages).
+//
+// IMPORTANT: Signature verification (RPC verifyMessage) is NOT done here.
+// The caller (ws-server.ts) must verify signatures before calling this
+// function and pass the verified boolean as `signed`. The workspace relay
+// path skips signatures entirely (CLI doesn't sign messages).
 
 export async function processChatMessage(
   opts: ChatPipelineOptions
@@ -253,19 +268,24 @@ export async function processChatMessage(
     return { blocked: true, reason: 'Message too long (max 4000 chars)' };
   }
 
+  // 2. Paused-job gate (FIX #6: block chat on paused jobs — payment lapsed)
+  if (job?.status === 'paused') {
+    return { blocked: true, reason: 'Session paused — reactivate or extend to continue chatting.' };
+  }
+
   let safetyScore: number | null = null;
   let safetyWarning = false;
   let safetyDetail: { classification: string; flags: string[] } | null = null;
   let outputWarning = false;
 
-  // 2. Circuit breaker
-  const cbRoom = `chat:${jobId}`;
+  // 3. Circuit breaker (FIX #7: caller provides room key so dashboard + CLI share tracker)
+  const cbRoom = opts.circuitBreakerRoom || `job:${jobId}`;
   const cbResult = checkCircuitBreaker(cbRoom, senderVerusId);
   if (!cbResult.allowed) {
     return { blocked: true, reason: 'Chat paused: unusual activity detected' };
   }
 
-  // 3. SovGuard inbound scan
+  // 4. SovGuard inbound scan
   if (sovguardEngine && safechatEnabled) {
     try {
       const result = await sovguardEngine.scan(sanitized);
@@ -295,19 +315,7 @@ export async function processChatMessage(
     }
   }
 
-  // 4. Store message
-  const messageId = await jobMessageQueries.insert({
-    job_id: jobId,
-    sender_verus_id: senderVerusId,
-    content: sanitized,
-    signed: !!signed,
-    signature: signature || null,
-    safety_score: safetyScore,
-  });
-
-  const createdAt = new Date().toISOString();
-
-  // 5. Output scan (agent → buyer messages only)
+  // 5. Output scan BEFORE storage (FIX #2: prevent double-storage on hold)
   if (outputScanEngine && safechatEnabled && job) {
     const isSeller = senderVerusId === job.seller_verus_id;
     if (isSeller) {
@@ -323,7 +331,7 @@ export async function processChatMessage(
         });
 
         if (outResult.score >= 0.6) {
-          // Hold message
+          // Hold message (hold-queue stores its own copy — do NOT insert into job_messages)
           const { holdMessage } = await import('./hold-queue.js');
           await holdMessage({
             jobId,
@@ -349,14 +357,20 @@ export async function processChatMessage(
             });
           }
 
+          // FIX #10: Recalc trust score on hold
+          try {
+            const { recalcTrustScore } = await import('../trust/worker.js');
+            recalcTrustScore(senderVerusId).catch(() => {});
+          } catch {}
+
           return {
-            id: messageId,
+            id: '',  // No message ID — not stored in job_messages
             content: sanitized,
             safetyScore: outResult.score,
             safetyWarning: true,
             safetyDetail: { classification: outResult.classification, flags: outResult.flags.map(f => f.type).slice(0, 3) },
             held: true,
-            createdAt,
+            createdAt: new Date().toISOString(),
           };
         }
 
@@ -369,6 +383,19 @@ export async function processChatMessage(
       }
     }
   }
+
+  // 6. Store message (only reached if NOT held)
+  // FIX #3: `signed` is a pre-verified boolean from the caller — pipeline does NOT do RPC verification
+  const messageId = await jobMessageQueries.insert({
+    job_id: jobId,
+    sender_verus_id: senderVerusId,
+    content: sanitized,
+    signed: !!signed,
+    signature: signature || null,
+    safety_score: safetyScore,
+  });
+
+  const createdAt = new Date().toISOString();
 
   return {
     id: messageId,
@@ -417,13 +444,27 @@ Replace the message handler body (the section after rate limiting and input vali
 const chatJob = await jobQueries.getById(jobId);
 if (!chatJob) { socket.emit('error', { message: 'Job not found' }); return; }
 if (chatJob.status === 'paused') { socket.emit('error', { message: 'Job is paused' }); return; }
-const safechatEnabled = chatJob.sovguard_enabled !== false;
+// FIX #1: correct field name is safechat_enabled, not sovguard_enabled
+const safechatEnabled = chatJob?.safechat_enabled === true;
+
+// FIX #3: Verify signature via RPC BEFORE calling pipeline
+let verified = false;
+if (signature) {
+  try {
+    const { getRpcClient } = await import('../indexer/rpc-client.js');
+    const rpc = getRpcClient();
+    const verifyResult = await rpc.verifyMessage(socket.verusId, signature, content);
+    verified = !!verifyResult;
+  } catch {
+    verified = false;
+  }
+}
 
 const result = await processChatMessage({
   jobId,
   senderVerusId: socket.verusId,
   content,
-  signed: !!signature,
+  signed: verified,  // FIX #3: pass RPC-verified boolean, not !!signature
   signature,
   sovguardEngine: sovguardEngine || null,
   outputScanEngine: outputScanEngine || null,
@@ -432,7 +473,9 @@ const result = await processChatMessage({
     buyer_verus_id: chatJob.buyer_verus_id,
     seller_verus_id: chatJob.seller_verus_id,
     payment_address: chatJob.payment_address,
+    status: chatJob.status,  // FIX #6: pass job status for paused-job gate
   },
+  circuitBreakerRoom: `job:${jobId}`,  // FIX #7: explicit room key
 });
 
 if ('blocked' in result) {
@@ -441,7 +484,7 @@ if ('blocked' in result) {
 }
 
 if (result.held) {
-  // Message held — notify agent generically, alert buyer
+  // Message held — notify agent generically
   socket.emit('message_held', { jobId, message: 'Message held for review' });
   return;
 }
@@ -452,7 +495,7 @@ const payload = {
   jobId,
   senderVerusId: socket.verusId,
   content: result.content,
-  signed: !!signature,
+  signed: result.id ? verified : false,
   signature: signature || null,
   safetyScore: result.safetyScore,
   safetyWarning: result.safetyWarning,
@@ -474,7 +517,7 @@ Remove from ws-server.ts:
 - The `roomTrackerCleanup` interval (lines 741-757) — now in chat-pipeline.ts
 - The inline sanitization regex (lines 470-474) — now `sanitizeMessage()` in chat-pipeline.ts
 
-Note: If the `checkCircuitBreaker` or `sanitizeMessage` are used elsewhere in ws-server.ts (e.g., for system messages), keep the import and use the shared version.
+Note: If `checkCircuitBreaker` or `sanitizeMessage` are used elsewhere in ws-server.ts (e.g., for system messages), keep the import and use the shared version.
 
 - [ ] **Step 3: Verify build + existing chat still works**
 
@@ -496,15 +539,59 @@ git commit -m "refactor: ws-server uses shared chat-pipeline"
 **Files:**
 - Modify: `/home/bigbox/code/junction41/src/chat/workspace-relay.ts`
 
-- [ ] **Step 1: Add imports**
+- [ ] **Step 1: Add imports and module-level engine variables**
 
 At the top of workspace-relay.ts:
 ```typescript
 import { processChatMessage, type SovGuardEngine, type OutputScanEngine } from './chat-pipeline.js';
 import { jobQueries } from '../db/index.js';
+
+// FIX #9: SovGuard engines passed via initWorkspaceRelay(), not globalThis
+let sovguardEngine: SovGuardEngine | null = null;
+let outputScanEngine: OutputScanEngine | null = null;
 ```
 
-- [ ] **Step 2: Add agent metadata to buyer connect response**
+Modify `initWorkspaceRelay()` to accept engine parameters:
+```typescript
+export function initWorkspaceRelay(
+  io: Server,
+  engines?: { sovguard?: SovGuardEngine | null; outputScan?: OutputScanEngine | null }
+) {
+  sovguardEngine = engines?.sovguard || null;
+  outputScanEngine = engines?.outputScan || null;
+  // ... rest of existing init code
+}
+```
+
+Then in `src/api/server.ts` where `initWorkspaceRelay` is called, pass the engines:
+```typescript
+initWorkspaceRelay(io, {
+  sovguard: sovguardEngine,
+  outputScan: outputScanEngine,
+});
+```
+
+- [ ] **Step 2: Add dedicated chat rate limiter**
+
+```typescript
+// FIX #8: Separate rate limiter for chat (30 msg/min), not shared with MCP ops
+const chatRates = new Map<string, { count: number; start: number }>();
+
+function checkChatRate(sessionId: string): boolean {
+  const now = Date.now();
+  let entry = chatRates.get(sessionId);
+  if (!entry || now - entry.start > 60_000) {
+    entry = { count: 0, start: now };
+    chatRates.set(sessionId, entry);
+  }
+  entry.count++;
+  return entry.count <= 30;  // 30 messages per minute
+}
+```
+
+Add cleanup for `chatRates` in the disconnect handler where `sessionRates` is already cleaned up.
+
+- [ ] **Step 3: Add agent metadata to buyer connect response**
 
 In `handleBuyerConnect()`, after the session is fetched (around line 209), add an agent data lookup:
 
@@ -546,7 +633,7 @@ ns.to(`ws:${session.id}`).emit('workspace:status_changed', {
 });
 ```
 
-- [ ] **Step 3: Add chat:message handler for buyer**
+- [ ] **Step 4: Add chat:message handler for buyer**
 
 Inside `registerBuyerHandlers()` (after the mcp:result handler around line 436), add:
 
@@ -558,9 +645,9 @@ socket.on('chat:message', async (data: any) => {
     return;
   }
 
-  // Rate limit (reuse existing checkOpRate)
-  if (!checkOpRate(socket.wsSessionId)) {
-    socket.emit('ws:error', { code: 'RATE_LIMITED', message: 'Rate limit exceeded' });
+  // FIX #8: Use dedicated chat rate limiter (30/min), not checkOpRate (300/min)
+  if (!checkChatRate(socket.wsSessionId)) {
+    socket.emit('ws:error', { code: 'RATE_LIMITED', message: 'Chat rate limit exceeded' });
     return;
   }
 
@@ -576,18 +663,25 @@ socket.on('chat:message', async (data: any) => {
   if (!chatJob) return;
 
   // Process through shared pipeline
+  // FIX #1: use safechat_enabled (correct field), not sovguard_enabled
+  // FIX #6: pass job.status for paused-job gate
+  // FIX #7: use job:${jobId} room key to share circuit breaker with dashboard
+  // FIX #9: use module-level engines, not globalThis
   const result = await processChatMessage({
     jobId: socket.wsJobId,
     senderVerusId: socket.wsVerusId,
     content: data.content,
-    sovguardEngine: (globalThis as any).__sovguardEngine || null,
-    outputScanEngine: (globalThis as any).__outputScanEngine || null,
-    safechatEnabled: chatJob.sovguard_enabled !== false,
+    signed: false,  // CLI doesn't sign messages
+    sovguardEngine,
+    outputScanEngine,
+    safechatEnabled: chatJob?.safechat_enabled === true,
     job: {
       buyer_verus_id: chatJob.buyer_verus_id,
       seller_verus_id: chatJob.seller_verus_id,
       payment_address: chatJob.payment_address,
+      status: chatJob.status,
     },
+    circuitBreakerRoom: `job:${socket.wsJobId}`,
   });
 
   if ('blocked' in result) {
@@ -596,7 +690,8 @@ socket.on('chat:message', async (data: any) => {
   }
 
   if (result.held) {
-    socket.emit('ws:error', { code: 'MESSAGE_HELD', message: 'Message held for review' });
+    // FIX #10: use message_held event (not ws:error) so agent SDK can handle it
+    socket.emit('message_held', { jobId: socket.wsJobId, message: 'Message held for review' });
     return;
   }
 
@@ -613,7 +708,7 @@ socket.on('chat:message', async (data: any) => {
 });
 ```
 
-- [ ] **Step 4: Add chat:message handler for agent**
+- [ ] **Step 5: Add chat:message handler for agent**
 
 Inside `registerAgentHandlers()` (after the mcp:call handler around line 705), add the same handler pattern but for agent-side:
 
@@ -624,8 +719,8 @@ socket.on('chat:message', async (data: any) => {
     return;
   }
 
-  if (!checkOpRate(socket.wsSessionId)) {
-    socket.emit('ws:error', { code: 'RATE_LIMITED', message: 'Rate limit exceeded' });
+  if (!checkChatRate(socket.wsSessionId)) {
+    socket.emit('ws:error', { code: 'RATE_LIMITED', message: 'Chat rate limit exceeded' });
     return;
   }
 
@@ -642,14 +737,17 @@ socket.on('chat:message', async (data: any) => {
     jobId: socket.wsJobId,
     senderVerusId: socket.wsVerusId,
     content: data.content,
-    sovguardEngine: (globalThis as any).__sovguardEngine || null,
-    outputScanEngine: (globalThis as any).__outputScanEngine || null,
-    safechatEnabled: chatJob.sovguard_enabled !== false,
+    signed: false,
+    sovguardEngine,
+    outputScanEngine,
+    safechatEnabled: chatJob?.safechat_enabled === true,
     job: {
       buyer_verus_id: chatJob.buyer_verus_id,
       seller_verus_id: chatJob.seller_verus_id,
       payment_address: chatJob.payment_address,
+      status: chatJob.status,
     },
+    circuitBreakerRoom: `job:${socket.wsJobId}`,
   });
 
   if ('blocked' in result) {
@@ -658,7 +756,7 @@ socket.on('chat:message', async (data: any) => {
   }
 
   if (result.held) {
-    socket.emit('ws:error', { code: 'MESSAGE_HELD', message: 'Message held for review' });
+    socket.emit('message_held', { jobId: socket.wsJobId, message: 'Message held for review' });
     return;
   }
 
@@ -674,28 +772,34 @@ socket.on('chat:message', async (data: any) => {
 });
 ```
 
-- [ ] **Step 5: Pass SovGuard engines to globalThis**
+- [ ] **Step 6: Add chat:history handler for buyer**
 
-In ws-server.ts where the SovGuard engines are initialized, store them on globalThis so workspace-relay.ts can access them:
+The buyer CLI needs chat history but can't use the REST API (requires session cookie auth, not workspace UID). Add a Socket.IO event instead:
 
 ```typescript
-// In ws-server.ts, after sovguardEngine and outputScanEngine are created:
-(globalThis as any).__sovguardEngine = sovguardEngine;
-(globalThis as any).__outputScanEngine = outputScanEngine;
+// FIX #5: Serve chat history via Socket.IO instead of REST
+socket.on('chat:history', async (data: any, callback: Function) => {
+  try {
+    const limit = Math.min(data?.limit || 15, 50);
+    const messages = await jobMessageQueries.getByJobId(socket.wsJobId, limit, 0);
+    // Messages come DESC, reverse for oldest-first
+    callback({ data: messages.reverse() });
+  } catch {
+    callback({ data: [] });
+  }
+});
 ```
 
-Alternative: If SovGuard engines are passed into `initWebSocket()`, pass them into `initWorkspaceRelay()` too and store as module-level variables. Check how ws-server.ts receives its engines and follow the same pattern.
-
-- [ ] **Step 6: Build and verify**
+- [ ] **Step 7: Build and verify**
 
 Run: `cd /home/bigbox/code/junction41 && sudo docker compose up -d --build`
 Expected: Build succeeds. No runtime errors in logs.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 cd /home/bigbox/code/junction41
-git add src/chat/workspace-relay.ts src/chat/ws-server.ts
+git add src/chat/workspace-relay.ts src/chat/ws-server.ts src/api/server.ts
 git commit -m "feat: chat:message events on workspace relay + agent metadata"
 ```
 
@@ -786,6 +890,30 @@ onChatMessageReceived(handler: (msg: ChatMessage) => void): void {
 }
 ```
 
+Add history fetch via Socket.IO acknowledgment:
+```typescript
+// FIX #5: Fetch history via Socket.IO, not REST (avoids auth mismatch)
+fetchChatHistory(limit: number = 15): Promise<ChatMessage[]> {
+  return new Promise((resolve) => {
+    if (!this.socket) { resolve([]); return; }
+    this.socket.emit('chat:history', { limit }, (response: any) => {
+      const messages: ChatMessage[] = (response?.data || []).map((m: any) => ({
+        id: m.id,
+        senderVerusId: m.sender_verus_id || m.senderVerusId,
+        content: m.content,
+        safetyScore: m.safety_score ?? m.safetyScore ?? null,
+        safetyWarning: (m.safety_score ?? m.safetyScore ?? 0) >= 0.4,
+        safetyDetail: m.safetyDetail || null,
+        createdAt: m.created_at || m.createdAt,
+      }));
+      resolve(messages);
+    });
+    // Timeout after 5s
+    setTimeout(() => resolve([]), 5000);
+  });
+}
+```
+
 - [ ] **Step 3: Commit**
 
 ```bash
@@ -801,7 +929,7 @@ git commit -m "feat: chat message types + relay-client chat support"
 **Files:**
 - Create: `/home/bigbox/code/j41-connect/src/chat.ts`
 
-- [ ] **Step 1: Create the chat display + history + theming module**
+- [ ] **Step 1: Create the chat display + theming module**
 
 ```typescript
 // /home/bigbox/code/j41-connect/src/chat.ts
@@ -839,19 +967,23 @@ function getAgentTheme(meta: AgentMeta): Theme {
 
 // ── Display ────────────────────────────────────────────────
 
+// FIX #4: Use agentVerusId to distinguish sender instead of buyerVerusId
+// (buyerVerusId doesn't exist in WorkspaceConfig).
+// Any message NOT from the agent is rendered as "you ›".
+
 export function formatChatMessage(
   msg: ChatMessage,
-  buyerVerusId: string,
+  agentVerusId: string | null,
   meta: AgentMeta,
 ): string {
-  const isBuyer = msg.senderVerusId === buyerVerusId;
+  const isAgent = agentVerusId && msg.senderVerusId === agentVerusId;
   const theme = getAgentTheme(meta);
 
   let prefix: string;
-  if (isBuyer) {
-    prefix = BUYER_COLOR('you ›');
-  } else {
+  if (isAgent) {
     prefix = theme.color(`${theme.prefix} ›`);
+  } else {
+    prefix = BUYER_COLOR('you ›');
   }
 
   let line = `${prefix} ${msg.content}`;
@@ -867,54 +999,24 @@ export function formatChatMessage(
 
 export function printChatHistory(
   messages: ChatMessage[],
-  buyerVerusId: string,
+  agentVerusId: string | null,
   meta: AgentMeta,
 ): void {
   if (messages.length === 0) return;
 
   console.log(chalk.dim('─── chat history ─────────────────────────────────'));
   for (const msg of messages) {
-    console.log(formatChatMessage(msg, buyerVerusId, meta));
+    console.log(formatChatMessage(msg, agentVerusId, meta));
   }
   console.log(chalk.dim('─── live ─────────────────────────────────────────'));
 }
 
 export function printChatLine(
   msg: ChatMessage,
-  buyerVerusId: string,
+  agentVerusId: string | null,
   meta: AgentMeta,
 ): void {
-  console.log(formatChatMessage(msg, buyerVerusId, meta));
-}
-
-// ── History Fetch ──────────────────────────────────────────
-
-export async function fetchChatHistory(
-  apiUrl: string,
-  jobId: string,
-  sessionToken: string,
-): Promise<ChatMessage[]> {
-  try {
-    const url = `${apiUrl}/v1/jobs/${jobId}/messages?limit=15`;
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${sessionToken}` },
-    });
-    if (!res.ok) return [];
-    const body = await res.json() as any;
-    const messages: ChatMessage[] = (body.data || []).map((m: any) => ({
-      id: m.id,
-      senderVerusId: m.senderVerusId || m.sender_verus_id,
-      content: m.content,
-      safetyScore: m.safetyScore ?? m.safety_score ?? null,
-      safetyWarning: (m.safetyScore ?? m.safety_score ?? 0) >= 0.4,
-      safetyDetail: m.safetyDetail || null,
-      createdAt: m.createdAt || m.created_at,
-    }));
-    // API returns DESC, we want oldest first
-    return messages.reverse();
-  } catch {
-    return [];
-  }
+  console.log(formatChatMessage(msg, agentVerusId, meta));
 }
 ```
 
@@ -949,13 +1051,8 @@ onChat(handler: (msg: string) => void): void {
 }
 ```
 
-Modify the line handler (lines 33-64). The current logic:
-1. Checks for `abort` (any state)
-2. If `APPROVAL_PENDING`, checks for `y`/`n`
-3. If `IDLE`, checks for `pause`/`resume`/`accept`
-
-Change it to:
-1. Check for `abort` → becomes `/abort`
+Modify the line handler (lines 33-64). Change it to:
+1. Check for `/abort` OR bare `abort` (backward compat — FIX #11)
 2. If `APPROVAL_PENDING`, check for `y`/`n` (unchanged)
 3. If line starts with `/`, extract command name, route to commandHandler
 4. Otherwise, route to chatHandler
@@ -966,13 +1063,15 @@ this.rl.on('line', (raw: string) => {
   const line = raw.trim();
   if (!line) return; // ignore empty
 
-  // Approval mode: Y/N only (plus /abort)
+  // FIX #11: abort works with or without / prefix, in any state (backward compat)
+  const lower = line.toLowerCase();
+  if (lower === 'abort' || lower === '/abort') {
+    this.commandHandler?.('abort');
+    return;
+  }
+
+  // Approval mode: Y/N only
   if (this.state === 'APPROVAL_PENDING') {
-    const lower = line.toLowerCase();
-    if (lower === '/abort') {
-      this.commandHandler?.('abort');
-      return;
-    }
     if (lower === 'y' || lower === 'yes') {
       this.pendingResolve?.(true);
       this.state = 'IDLE';
@@ -990,7 +1089,7 @@ this.rl.on('line', (raw: string) => {
   // Command: starts with /
   if (line.startsWith('/')) {
     const cmd = line.slice(1).toLowerCase().trim();
-    if (['abort', 'pause', 'resume', 'accept'].includes(cmd)) {
+    if (['pause', 'resume', 'accept'].includes(cmd)) {
       this.commandHandler?.(cmd);
     } else {
       console.log(chalk.dim(`Unknown command: ${line}. Available: /accept /abort /pause /resume`));
@@ -1019,13 +1118,18 @@ stdModeRl.on('line', (raw: string) => {
   const line = raw.trim();
   if (!line) return;
 
+  const lower = line.toLowerCase();
+  // FIX #11: bare abort still works
+  if (lower === 'abort' || lower === '/abort') {
+    relay.sendAbort(); feed.logStatus('Aborting...'); return;
+  }
+
   if (line.startsWith('/')) {
     const cmd = line.slice(1).toLowerCase().trim();
     switch (cmd) {
       case 'pause': relay.sendPause(); feed.logStatus('Pausing...'); break;
       case 'resume': relay.sendResume(); feed.logStatus('Resuming...'); break;
       case 'accept': relay.sendAccept(); feed.logStatus('Accepting...'); break;
-      case 'abort': relay.sendAbort(); feed.logStatus('Aborting...'); break;
       default: console.log(chalk.dim(`Unknown command: ${line}. Available: /accept /abort /pause /resume`));
     }
     return;
@@ -1042,45 +1146,38 @@ In `cli.ts`, after relay connection and event registration (around line 330), ad
 
 ```typescript
 // Import at top of cli.ts:
-import { fetchChatHistory, printChatHistory, printChatLine } from './chat.js';
+import { printChatHistory, printChatLine } from './chat.js';
 
 // After relay.connect() succeeds and status_changed fires (around line 340):
 
-// Fetch and display chat history
-if (relay.agentMeta.jobId) {
-  const history = await fetchChatHistory(
-    config.apiUrl,
-    relay.agentMeta.jobId,
-    auth.uid || '',  // use the workspace UID as token context
-  );
-  printChatHistory(history, config.buyerVerusId || '', relay.agentMeta);
-}
+// FIX #5: Fetch history via Socket.IO (not REST — avoids auth mismatch)
+// FIX #4: Use agentVerusId for sender distinction (buyerVerusId not in config)
+const history = await relay.fetchChatHistory(15);
+printChatHistory(history, relay.agentMeta.agentVerusId, relay.agentMeta);
 
 // Register incoming chat message handler
 relay.onChatMessageReceived((msg) => {
-  // Don't echo back our own messages
-  if (msg.senderVerusId === config.buyerVerusId) return;
-  printChatLine(msg, config.buyerVerusId || '', relay.agentMeta);
+  // Don't echo back our own messages (anything NOT from agent = ours)
+  if (relay.agentMeta.agentVerusId && msg.senderVerusId !== relay.agentMeta.agentVerusId) return;
+  printChatLine(msg, relay.agentMeta.agentVerusId, relay.agentMeta);
 });
 
 // Wire supervisor chat handler (supervised mode)
 if (supervisor) {
   supervisor.onChat((text) => {
     relay.sendChatMessage(text);
-    // Echo our own message locally
+    // Echo our own message locally with "you ›" prefix
     printChatLine({
       id: '',
-      senderVerusId: config.buyerVerusId || '',
+      senderVerusId: '__self__',  // Not the agent = renders as "you ›"
       content: text,
       safetyScore: null,
       safetyWarning: false,
       createdAt: new Date().toISOString(),
-    }, config.buyerVerusId || '', relay.agentMeta);
+    }, relay.agentMeta.agentVerusId, relay.agentMeta);
   });
 }
 ```
-
-Note: `config.buyerVerusId` may need to be derived from the auth context. Check what's available in the `config` object — if the buyer's verusId isn't there, it can be parsed from the workspace session or passed as a CLI argument. If not available, use an empty string and the "you ›" prefix still works (it just won't match incoming messages to suppress echo).
 
 - [ ] **Step 4: Add chat prompt indicator**
 
@@ -1133,8 +1230,10 @@ cd /home/bigbox/code/j41-connect && yarn build
 6. Send message from dashboard → verify it appears in terminal
 7. Type `/pause` → verify workspace pauses
 8. Type `/resume` → verify workspace resumes
-9. In supervised mode, verify Y/N approval still works for writes
-10. Type `/accept` → verify session completes
+9. Type bare `abort` → verify it still works (backward compat)
+10. In supervised mode, verify Y/N approval still works for writes
+11. Type `/accept` → verify session completes
+12. Verify SovGuard scanning works on CLI messages (check logs for scan calls)
 
 - [ ] **Step 4: Final commit if any fixes needed**
 
@@ -1144,21 +1243,40 @@ git add -A && git commit -m "fix: terminal chat adjustments from e2e testing"
 
 ---
 
+## Audit Fixes Applied
+
+| # | Issue | Fix |
+|---|-------|-----|
+| 1 | `sovguard_enabled` wrong field | Changed to `safechat_enabled === true` everywhere |
+| 2 | Message stored before output scan | Moved `jobMessageQueries.insert()` after output scan block |
+| 3 | Signature verification removed | Caller does RPC verify, passes boolean; pipeline stores it |
+| 4 | `config.buyerVerusId` doesn't exist | Use `agentMeta.agentVerusId` — anything NOT from agent = "you ›" |
+| 5 | Chat history REST auth broken | Fetch via Socket.IO `chat:history` event with acknowledgment callback |
+| 6 | Paused-job gate missing | Added `job.status === 'paused'` check in pipeline |
+| 7 | Circuit breaker room key mismatch | Caller passes `circuitBreakerRoom: \`job:${jobId}\`` |
+| 8 | Rate limiter wrong (300/min shared) | Added dedicated `chatRates` Map with 30/min limit |
+| 9 | globalThis engine access | Pass engines into `initWorkspaceRelay()` as parameters |
+| 10 | Missing recalcTrustScore on hold | Added `recalcTrustScore(senderVerusId)` call after hold |
+| 11 | Breaking change: bare `abort` | Both `abort` and `/abort` work (backward compat) |
+
+---
+
 ## Critical Files Summary
 
 **Backend (junction41):**
 | File | Action | Purpose |
 |------|--------|---------|
 | `src/chat/chat-pipeline.ts` | CREATE | Shared safety pipeline (sanitize, scan, store, circuit breaker) |
-| `src/chat/ws-server.ts` | MODIFY | Refactor to use chat-pipeline |
-| `src/chat/workspace-relay.ts` | MODIFY | Add chat:message events + agent metadata on connect |
+| `src/chat/ws-server.ts` | MODIFY | Refactor to use chat-pipeline, RPC signature verify before pipeline |
+| `src/chat/workspace-relay.ts` | MODIFY | Add chat:message + chat:history events, agent metadata, chat rate limiter |
+| `src/api/server.ts` | MODIFY | Pass SovGuard engines to initWorkspaceRelay() |
 
 **j41-connect:**
 | File | Action | Purpose |
 |------|--------|---------|
-| `src/chat.ts` | CREATE | Display formatting, history fetch, model theming |
+| `src/chat.ts` | CREATE | Display formatting, model theming (uses agentVerusId for sender check) |
 | `src/types.ts` | MODIFY | ChatMessage + AgentMeta interfaces |
-| `src/relay-client.ts` | MODIFY | Chat send/receive + agent meta capture |
-| `src/supervisor.ts` | MODIFY | /command prefix, chat-as-default input |
-| `src/cli.ts` | MODIFY | Wire chat into main loop |
+| `src/relay-client.ts` | MODIFY | Chat send/receive, agent meta capture, fetchChatHistory via Socket.IO |
+| `src/supervisor.ts` | MODIFY | /command prefix, chat-as-default, bare abort backward compat |
+| `src/cli.ts` | MODIFY | Wire chat into main loop, history via Socket.IO |
 | `src/feed.ts` | MODIFY | Chat-ready status message |
