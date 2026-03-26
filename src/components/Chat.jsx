@@ -106,6 +106,13 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
   const [heldMessages, setHeldMessages] = useState([]);
   const [peerOnline, setPeerOnline] = useState(false);
   const [sessionWarning, setSessionWarning] = useState(null);
+  // Budget request state
+  const [budgetRequests, setBudgetRequests] = useState([]);
+  const [budgetPayment, setBudgetPayment] = useState(null);
+  const [budgetTxid, setBudgetTxid] = useState('');
+  const [addBudgetOpen, setAddBudgetOpen] = useState(false);
+  const [addBudgetAmount, setAddBudgetAmount] = useState('');
+  const [addBudgetReason, setAddBudgetReason] = useState('');
   const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
@@ -313,6 +320,31 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
       if (data.status === 'completed') {
         setEndSessionPanel('done');
       }
+    });
+
+    // Budget request events
+    socket.on('budget_request', (data) => {
+      const myRole = isBuyer ? 'buyer' : 'agent';
+      if (data.requester === myRole) return; // don't show to requester
+      setBudgetRequests(prev => [...prev, { ...data, status: 'pending' }]);
+    });
+
+    socket.on('budget_approved', (data) => {
+      setBudgetRequests(prev => prev.map(r => r.id === data.id ? { ...r, status: 'approved' } : r));
+    });
+
+    socket.on('budget_declined', (data) => {
+      setBudgetRequests(prev => prev.map(r => r.id === data.id ? { ...r, status: 'declined' } : r));
+    });
+
+    socket.on('budget_added', (data) => {
+      setMessages(prev => [...prev, {
+        id: `budget-${Date.now()}`,
+        senderVerusId: 'system',
+        content: `Budget increased by ${data.amount} ${data.currency || 'VRSCTEST'}`,
+        createdAt: new Date().toISOString(),
+        system: true,
+      }]);
     });
 
     } // end connectChat
@@ -1114,6 +1146,86 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
         {heldMessages.map(h => (
           <HeldMessageIndicator key={h.id} />
         ))}
+        {/* Budget request action cards */}
+        {budgetRequests.map(req => (
+          <div key={req.id} style={{
+            padding: '10px 12px', margin: '4px 0', borderRadius: 4,
+            border: `1px solid ${req.status === 'pending' ? '#1a1a2e' : req.status === 'approved' ? 'rgba(52,211,153,0.3)' : 'rgba(239,68,68,0.3)'}`,
+            background: req.status === 'pending' ? '#0f0f14' : 'transparent',
+            fontFamily: 'inherit',
+          }}>
+            {req.status === 'pending' && (
+              <>
+                <div style={{ fontSize: 11, color: '#818cf8', fontWeight: 600, marginBottom: 6 }}>budget request</div>
+                <div style={{ fontSize: 13, color: '#d1d5db', marginBottom: 4 }}>
+                  {req.requester === 'agent' ? 'Agent' : 'Buyer'} requests {req.amount} {req.currency || 'VRSCTEST'}
+                </div>
+                {req.reason && <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>{req.reason}</div>}
+                {req.breakdown && <div style={{ fontSize: 11, color: '#4b5563', marginBottom: 8, fontStyle: 'italic' }}>{req.breakdown}</div>}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const res = await apiFetch(`/v1/jobs/${jobId}/budget-request/${req.id}/approve`, { method: 'POST' });
+                        const data = await res.json();
+                        if (res.ok && data.data) {
+                          setBudgetRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'approved' } : r));
+                          if (!data.data.free) setBudgetPayment({ reqId: req.id, ...data.data });
+                        }
+                      } catch {}
+                    }}
+                    style={{ padding: '4px 12px', fontSize: 11, fontFamily: 'inherit', cursor: 'pointer', background: 'rgba(52,211,153,0.1)', color: '#34d399', border: '1px solid rgba(52,211,153,0.3)', borderRadius: 3 }}
+                  >approve</button>
+                  <button
+                    onClick={async () => {
+                      try {
+                        await apiFetch(`/v1/jobs/${jobId}/budget-request/${req.id}/decline`, { method: 'POST' });
+                        setBudgetRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'declined' } : r));
+                      } catch {}
+                    }}
+                    style={{ padding: '4px 12px', fontSize: 11, fontFamily: 'inherit', cursor: 'pointer', background: 'rgba(239,68,68,0.06)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 3 }}
+                  >decline</button>
+                </div>
+              </>
+            )}
+            {req.status === 'approved' && <div style={{ fontSize: 11, color: '#34d399' }}>-- budget approved -- {req.amount} {req.currency || 'VRSCTEST'} --</div>}
+            {req.status === 'declined' && <div style={{ fontSize: 11, color: '#ef4444' }}>-- budget declined -- agent notified --</div>}
+          </div>
+        ))}
+        {/* Budget payment card */}
+        {budgetPayment && (
+          <div style={{ padding: '10px 12px', margin: '4px 0', borderRadius: 4, border: '1px solid #1a1a2e', background: '#0f0f14', fontFamily: 'inherit' }}>
+            <div style={{ fontSize: 11, color: '#818cf8', fontWeight: 600, marginBottom: 6 }}>payment</div>
+            <div style={{ fontSize: 12, color: '#d1d5db', marginBottom: 8 }}>
+              Send {budgetPayment.total} {budgetPayment.currency} ({budgetPayment.amount} + {budgetPayment.fee} fee)
+            </div>
+            <div style={{ position: 'relative', marginBottom: 8 }}>
+              <pre style={{ background: '#0a0a0a', padding: '8px 10px', borderRadius: 3, fontSize: 11, color: '#34d399', overflowX: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-all', border: '1px solid #1a1a2e' }}>
+                {budgetPayment.cliCommand}
+              </pre>
+              <SignCopyButtons command={budgetPayment.cliCommand} className="absolute top-1 right-1" />
+            </div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <input type="text" value={budgetTxid} onChange={e => setBudgetTxid(e.target.value)} placeholder="Transaction ID"
+                style={{ flex: 1, background: 'transparent', border: '1px solid #1a1a2e', borderRadius: 3, padding: '6px 8px', color: '#d1d5db', fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
+              />
+              <button
+                onClick={async () => {
+                  if (!budgetTxid.trim()) return;
+                  try {
+                    const res = await apiFetch(`/v1/jobs/${jobId}/extensions/${budgetPayment.extensionId}/payment`, {
+                      method: 'POST', headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ agentTxid: budgetTxid.trim(), feeTxid: budgetTxid.trim() }),
+                    });
+                    if (res.ok) { setBudgetPayment(null); setBudgetTxid(''); onJobStatusChanged?.(); }
+                  } catch {}
+                }}
+                disabled={!budgetTxid.trim()}
+                style={{ padding: '6px 12px', fontSize: 11, fontFamily: 'inherit', cursor: 'pointer', background: budgetTxid.trim() ? 'rgba(52,211,153,0.1)' : 'transparent', color: budgetTxid.trim() ? '#34d399' : '#374151', border: '1px solid rgba(52,211,153,0.3)', borderRadius: 3 }}
+              >submit</button>
+            </div>
+          </div>
+        )}
         <div ref={messagesEndRef} />
       </div>
 
@@ -1166,6 +1278,36 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
           borderTop: '1px solid #1a1a2e', fontFamily: 'inherit',
         }}>
           reconnecting...
+        </div>
+      )}
+
+      {/* Add budget inline form */}
+      {addBudgetOpen && (
+        <div style={{ padding: '8px 14px', borderTop: '1px solid #1a1a2e', background: '#0f0f14', display: 'flex', gap: 8, alignItems: 'center', fontFamily: 'inherit' }}>
+          <span style={{ color: '#4b5563', fontSize: 11 }}>add budget:</span>
+          <input type="number" value={addBudgetAmount} onChange={e => setAddBudgetAmount(e.target.value)} placeholder="amount"
+            style={{ width: 80, background: 'transparent', border: '1px solid #1a1a2e', borderRadius: 3, padding: '4px 6px', color: '#d1d5db', fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
+          />
+          <input type="text" value={addBudgetReason} onChange={e => setAddBudgetReason(e.target.value)} placeholder="reason (optional)"
+            style={{ flex: 1, background: 'transparent', border: '1px solid #1a1a2e', borderRadius: 3, padding: '4px 6px', color: '#d1d5db', fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
+          />
+          <button
+            onClick={async () => {
+              if (!addBudgetAmount || Number(addBudgetAmount) <= 0) return;
+              try {
+                await apiFetch(`/v1/jobs/${jobId}/extensions`, {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ amount: Number(addBudgetAmount), reason: addBudgetReason || 'Buyer added budget' }),
+                });
+                setAddBudgetOpen(false); setAddBudgetAmount(''); setAddBudgetReason(''); onJobStatusChanged?.();
+              } catch {}
+            }}
+            disabled={!addBudgetAmount || Number(addBudgetAmount) <= 0}
+            style={{ padding: '4px 10px', fontSize: 11, fontFamily: 'inherit', cursor: 'pointer', background: 'rgba(52,211,153,0.1)', color: '#34d399', border: '1px solid rgba(52,211,153,0.3)', borderRadius: 3 }}
+          >send</button>
+          <button onClick={() => { setAddBudgetOpen(false); setAddBudgetAmount(''); setAddBudgetReason(''); }}
+            style={{ background: 'none', border: 'none', color: '#4b5563', cursor: 'pointer', fontSize: 11, fontFamily: 'inherit' }}
+          >[x]</button>
         </div>
       )}
 
@@ -1229,6 +1371,18 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
           style={{ display: 'none' }}
           accept="image/*,.pdf,.txt,.md,.csv,.json,.xml,.zip,.tar,.gz,.7z,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
         />
+        <button
+          type="button"
+          onClick={() => setAddBudgetOpen(!addBudgetOpen)}
+          disabled={inputDisabled}
+          title="Add budget"
+          style={{
+            background: 'none', border: 'none', cursor: inputDisabled ? 'default' : 'pointer',
+            padding: '8px 4px 8px 14px', color: addBudgetOpen ? '#34d399' : '#4b5563',
+            opacity: inputDisabled ? 0.3 : 0.7, fontSize: 12, fontFamily: 'inherit',
+            flexShrink: 0,
+          }}
+        >$</button>
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
