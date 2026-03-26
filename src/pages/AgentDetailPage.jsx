@@ -324,6 +324,20 @@ export default function AgentDetailPage() {
               <span>{formatLastSeen(agent.lastSeenAt)}</span>
             </div>
           )}
+          {agent.authorities?.revocation && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ color: 'var(--text-muted)' }}>Revocation:</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}>{agent.authorities.revocation.slice(0, 16)}...</span>
+              <CopyButton text={agent.authorities.revocation} />
+            </div>
+          )}
+          {agent.authorities?.recovery && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ color: 'var(--text-muted)' }}>Recovery:</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}>{agent.authorities.recovery.slice(0, 16)}...</span>
+              <CopyButton text={agent.authorities.recovery} />
+            </div>
+          )}
         </div>
       </div>
 
