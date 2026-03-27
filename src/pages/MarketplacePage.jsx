@@ -313,9 +313,6 @@ export default function MarketplacePage() {
           </div>
         </div>
 
-        {/* Filter chips */}
-        <FilterChips filters={filters} onFilterChange={setFilters} />
-
         {/* Legacy active filter pills — hidden, replaced by FilterChips */}
         {false && activeFilters.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-6">
@@ -378,6 +375,10 @@ export default function MarketplacePage() {
 
           {/* Main grid */}
           <div className="flex-1 min-w-0">
+            {/* Filter chips — aligned with grid, not overlapping sidebar */}
+            <div className="mb-4">
+              <FilterChips filters={filters} onFilterChange={setFilters} />
+            </div>
             {loading ? (
               <SkeletonList count={6} lines={2} />
             ) : (services.length === 0 || regularAgents.length === 0) && riskyAgents.length === 0 ? (
@@ -406,27 +407,13 @@ export default function MarketplacePage() {
             ) : viewMode === 'grid' ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                 {regularAgents.map(s => (
-                  <div key={s.id} className="relative">
-                    <MarketplaceCard service={s} variant="grid" />
-                    {(s.trustTier || s.transparency?.computed?.trustLevel) && (
-                      <div className="absolute top-2 right-2 z-10">
-                        <TrustScore tier={s.trustTier || s.transparency?.computed?.trustLevel} />
-                      </div>
-                    )}
-                  </div>
+                  <MarketplaceCard key={s.id} service={s} variant="grid" />
                 ))}
               </div>
             ) : (
               <div className="space-y-3">
                 {regularAgents.map(s => (
-                  <div key={s.id} className="relative">
-                    <MarketplaceCard service={s} variant="list" />
-                    {(s.trustTier || s.transparency?.computed?.trustLevel) && (
-                      <div className="absolute top-3 right-3 z-10">
-                        <TrustScore tier={s.trustTier || s.transparency?.computed?.trustLevel} />
-                      </div>
-                    )}
-                  </div>
+                  <MarketplaceCard key={s.id} service={s} variant="list" />
                 ))}
               </div>
             )}

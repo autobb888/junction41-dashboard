@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import AgentAvatar from '../AgentAvatar';
-import TrustBadge from '../TrustBadge';
+import TrustScore from '../TrustScore';
 
 function StarRating({ rating }) {
   return (
@@ -22,8 +22,6 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
   const tags = service.tags || [];
   const jobs = service.reputation?.completedJobs || 0;
   const agentUrl = `/agents/${encodeURIComponent(service.verusId || service.id)}`;
-  const trustLevel = service.transparency?.computed?.trustLevel;
-  const trustScore = service.transparency?.computed?.trustScore;
 
   if (variant === 'list') {
     return (
@@ -99,29 +97,7 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
         </div>
       </div>
 
-      {/* Workspace indicator — bottom right corner */}
-      {service.workspaceCapable && (
-        <span title="This agent can connect to your local project via workspace"
-          className="absolute bottom-2 right-2 z-10 px-1.5 py-0.5 rounded text-xs font-mono"
-          style={{ background: 'rgba(96, 165, 250, 0.15)', color: '#60A5FA', border: '1px solid rgba(96, 165, 250, 0.25)' }}>
-          &lt;-&gt;
-        </span>
-      )}
 
-      {/* Reactivation fee badge */}
-      {service.reactivationFee > 0 && (
-        <span className="absolute bottom-2 left-2 z-10 text-xs px-1.5 py-0.5 rounded font-mono"
-          style={{ background: 'rgba(251, 191, 36, 0.15)', color: '#FBBF24', border: '1px solid rgba(251, 191, 36, 0.25)' }}>
-          {service.reactivationFee} reactivation
-        </span>
-      )}
-
-      {/* Trust badge */}
-      {trustLevel && (
-        <div className="mb-2">
-          <TrustBadge level={trustLevel} score={trustScore} />
-        </div>
-      )}
 
       {/* Description */}
       <p className="text-xs mb-3 line-clamp-2" style={{ color: 'var(--text-secondary)' }}>{desc}</p>
@@ -167,13 +143,31 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-white font-semibold text-sm">{service.price}</span>
           <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{service.currency}</span>
+          {service.reactivationFee > 0 && (
+            <span className="text-xs px-1.5 py-0.5 rounded font-mono"
+              style={{ background: 'rgba(251, 191, 36, 0.15)', color: '#FBBF24', border: '1px solid rgba(251, 191, 36, 0.25)' }}>
+              {service.reactivationFee} reactivation
+            </span>
+          )}
           {service.acceptedCurrencies?.length > 1 && (
             <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(52, 211, 153, 0.08)', color: 'var(--text-tertiary)' }}>
               +{service.acceptedCurrencies.length - 1} more
             </span>
           )}
         </div>
-        {jobs > 0 && <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-tertiary)' }}>{jobs} jobs</span>}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {jobs > 0 && <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{jobs} jobs</span>}
+          {service.workspaceCapable && (
+            <span title="Workspace capable"
+              className="px-1.5 py-0.5 rounded text-xs font-mono"
+              style={{ background: 'rgba(96, 165, 250, 0.15)', color: '#60A5FA', border: '1px solid rgba(96, 165, 250, 0.25)' }}>
+              &lt;-&gt;
+            </span>
+          )}
+          {(service.trustTier || service.transparency?.computed?.trustLevel) && (
+            <TrustScore tier={service.trustTier || service.transparency?.computed?.trustLevel} />
+          )}
+        </div>
       </div>
     </div>
   );

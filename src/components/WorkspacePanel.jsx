@@ -163,10 +163,10 @@ export default function WorkspacePanel({ job }) {
   // ── Active Session View ────────────────────────────────────────
   if (session && session.status !== 'completed' && session.status !== 'aborted') {
     return (
-      <div className="card" style={{ borderColor: 'var(--border-accent)' }}>
+      <div className="card" style={{ borderColor: 'var(--border-purple)' }}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Terminal size={18} style={{ color: 'var(--accent-primary)' }} />
+            <Terminal size={18} style={{ color: 'var(--accent-purple)' }} />
             <h3 className="text-white font-semibold">Workspace</h3>
           </div>
           <div className="flex items-center gap-2">
@@ -210,8 +210,8 @@ export default function WorkspacePanel({ job }) {
                 onClick={copyCommand}
                 className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg transition-colors"
                 style={{
-                  background: copied ? 'rgba(52, 211, 153, 0.2)' : 'var(--bg-elevated)',
-                  color: copied ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                  background: copied ? 'var(--accent-purple-glow)' : 'var(--bg-elevated)',
+                  color: copied ? 'var(--accent-purple)' : 'var(--text-secondary)',
                   border: '1px solid var(--border-subtle)',
                 }}
               >
@@ -294,7 +294,7 @@ export default function WorkspacePanel({ job }) {
         {session.counts && (
           <div className="grid grid-cols-4 gap-3 mb-4">
             {[
-              { label: 'Read', value: session.counts.reads, color: 'var(--accent-primary)' },
+              { label: 'Read', value: session.counts.reads, color: 'var(--accent-purple)' },
               { label: 'Written', value: session.counts.writes, color: '#60a5fa' },
               { label: 'Listed', value: session.counts.list_dirs, color: 'var(--text-secondary)' },
               { label: 'Blocked', value: session.counts.blocked, color: session.counts.blocked > 0 ? '#f87171' : 'var(--text-tertiary)' },
@@ -355,7 +355,7 @@ export default function WorkspacePanel({ job }) {
         )}
         {session.attestation && (
           <div className="mt-3 p-3 rounded-lg" style={{ background: 'var(--bg-inset)' }}>
-            <p className="text-xs font-medium" style={{ color: 'var(--accent-primary)' }}>
+            <p className="text-xs font-medium" style={{ color: 'var(--accent-purple)' }}>
               Workspace attestation signed by platform
             </p>
           </div>
@@ -368,7 +368,7 @@ export default function WorkspacePanel({ job }) {
   return (
     <div className="card">
       <div className="flex items-center gap-2 mb-4">
-        <Terminal size={18} style={{ color: 'var(--accent-primary)' }} />
+        <Terminal size={18} style={{ color: 'var(--accent-purple)' }} />
         <h3 className="text-white font-semibold">Workspace</h3>
       </div>
 
@@ -387,8 +387,8 @@ export default function WorkspacePanel({ job }) {
             <label key={opt.value}
               className="flex items-start gap-2 cursor-pointer p-3 rounded-lg flex-1"
               style={{
-                background: mode === opt.value ? 'rgba(52, 211, 153, 0.1)' : 'var(--bg-inset)',
-                border: `1px solid ${mode === opt.value ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
+                background: mode === opt.value ? 'var(--accent-purple-dim)' : 'var(--bg-inset)',
+                border: `1px solid ${mode === opt.value ? 'var(--accent-purple)' : 'var(--border-subtle)'}`,
               }}
             >
               <input
@@ -446,8 +446,8 @@ export default function WorkspacePanel({ job }) {
             onClick={copyCommand}
             className="mt-2 flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg transition-colors"
             style={{
-              background: copied ? 'rgba(52, 211, 153, 0.2)' : 'var(--bg-elevated)',
-              color: copied ? 'var(--accent-primary)' : 'var(--text-secondary)',
+              background: copied ? 'var(--accent-purple-glow)' : 'var(--bg-elevated)',
+              color: copied ? 'var(--accent-purple)' : 'var(--text-secondary)',
               border: '1px solid var(--border-subtle)',
             }}
           >
@@ -465,7 +465,7 @@ export default function WorkspacePanel({ job }) {
           disabled={generating}
           className="w-full py-3 rounded-lg font-medium text-sm transition-colors"
           style={{
-            background: generating ? 'var(--bg-elevated)' : 'var(--accent-primary)',
+            background: generating ? 'var(--bg-elevated)' : 'var(--accent-purple)',
             color: generating ? 'var(--text-tertiary)' : 'white',
           }}
         >

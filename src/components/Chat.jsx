@@ -906,11 +906,11 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
       if (isBuyer) {
         return (
           <div style={{
-            padding: '10px 16px', background: 'rgba(52, 211, 153, 0.1)',
-            borderTop: '1px solid rgba(52, 211, 153, 0.3)',
+            padding: '10px 16px', background: 'rgba(167, 139, 250, 0.1)',
+            borderTop: '1px solid rgba(167, 139, 250, 0.3)',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}>
-            <span style={{ color: '#34D399', fontWeight: 600, fontSize: 13 }}>
+            <span style={{ color: '#A78BFA', fontWeight: 600, fontSize: 13 }}>
               Work delivered — ready to confirm?
             </span>
             <button
@@ -925,11 +925,11 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
       }
       return (
         <div style={{
-          padding: '10px 16px', background: 'rgba(52, 211, 153, 0.1)',
-          borderTop: '1px solid rgba(52, 211, 153, 0.3)',
+          padding: '10px 16px', background: 'rgba(167, 139, 250, 0.1)',
+          borderTop: '1px solid rgba(167, 139, 250, 0.3)',
           display: 'flex', alignItems: 'center', gap: 8,
         }}>
-          <span style={{ color: '#34D399', fontWeight: 600, fontSize: 13 }}>
+          <span style={{ color: '#A78BFA', fontWeight: 600, fontSize: 13 }}>
             Delivered — waiting for buyer confirmation
           </span>
         </div>
@@ -1174,7 +1174,7 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
                         }
                       } catch {}
                     }}
-                    style={{ padding: '4px 12px', fontSize: 11, fontFamily: 'inherit', cursor: 'pointer', background: 'rgba(52,211,153,0.1)', color: '#34d399', border: '1px solid rgba(52,211,153,0.3)', borderRadius: 3 }}
+                    style={{ padding: '4px 12px', fontSize: 11, fontFamily: 'inherit', cursor: 'pointer', background: 'rgba(167,139,250,0.1)', color: '#A78BFA', border: '1px solid rgba(167,139,250,0.3)', borderRadius: 3 }}
                   >approve</button>
                   <button
                     onClick={async () => {
@@ -1188,7 +1188,7 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
                 </div>
               </>
             )}
-            {req.status === 'approved' && <div style={{ fontSize: 11, color: '#34d399' }}>-- budget approved -- {req.amount} {req.currency || 'VRSCTEST'} --</div>}
+            {req.status === 'approved' && <div style={{ fontSize: 11, color: '#A78BFA' }}>-- budget approved -- {req.amount} {req.currency || 'VRSCTEST'} --</div>}
             {req.status === 'declined' && <div style={{ fontSize: 11, color: '#ef4444' }}>-- budget declined -- agent notified --</div>}
           </div>
         ))}
@@ -1378,7 +1378,7 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
           title="Add budget"
           style={{
             background: 'none', border: 'none', cursor: inputDisabled ? 'default' : 'pointer',
-            padding: '8px 4px 8px 14px', color: addBudgetOpen ? '#34d399' : '#4b5563',
+            padding: '8px 4px 8px 14px', color: addBudgetOpen ? '#A78BFA' : '#4b5563',
             opacity: inputDisabled ? 0.3 : 0.7, fontSize: 12, fontFamily: 'inherit',
             flexShrink: 0,
           }}

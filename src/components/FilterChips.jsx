@@ -32,11 +32,11 @@ function Chip({ label, active, onClick, hasPopover, children }) {
         <button
           ref={btnRef}
           onClick={() => setPopoverOpen(!popoverOpen)}
-          className="px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap"
+          className="px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors whitespace-nowrap"
           style={{
-            background: active ? 'rgba(52, 211, 153, 0.15)' : 'var(--bg-surface)',
-            color: active ? 'var(--accent)' : 'var(--text-secondary)',
-            border: `1px solid ${active ? 'var(--border-accent)' : 'var(--border-subtle)'}`,
+            background: active ? 'rgba(52, 211, 153, 0.12)' : 'transparent',
+            color: active ? 'var(--accent)' : 'var(--text-tertiary)',
+            border: `1px solid ${active ? 'rgba(52, 211, 153, 0.25)' : 'rgba(255,255,255,0.06)'}`,
           }}
         >
           {label} ▾
@@ -73,7 +73,8 @@ export default function FilterChips({ filters, onFilterChange }) {
   const set = (key, val) => onFilterChange({ ...filters, [key]: val });
 
   return (
-    <div className="flex items-center gap-2 flex-wrap py-2">
+    <div className="flex items-center gap-1.5 flex-wrap">
+      <span className="text-xs mr-1" style={{ color: 'var(--text-tertiary)' }}>Filters</span>
       <Chip label="Online" active={filters.onlineOnly} onClick={() => toggle('onlineOnly')} />
       <Chip label="Workspace" active={filters.workspaceOnly} onClick={() => toggle('workspaceOnly')} />
       <Chip label="SovGuard" active={filters.sovguard} onClick={() => toggle('sovguard')} />
