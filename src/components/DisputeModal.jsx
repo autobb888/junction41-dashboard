@@ -1,9 +1,15 @@
 import { useState } from 'react';
 import { AlertTriangle, RefreshCw, X, DollarSign } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
+function buildSignCmd(idName, message) {
+  return `signmessage "${idName}" "${message.replace(/"/g, '\\"')}"`;
+}
+
 export default function DisputeModal({ job, dispute, role, onClose, onAction }) {
+  const { user } = useAuth();
   // role: 'buyer' or 'seller'
   // dispute: null (filing) or existing dispute object
   const [reason, setReason] = useState('');
@@ -13,10 +19,26 @@ export default function DisputeModal({ job, dispute, role, onClose, onAction }) 
   const [reworkCost, setReworkCost] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [sig, setSig] = useState('');
+  const [ts] = useState(() => Math.floor(Date.now() / 1000));
 
   const isFilingPhase = !dispute;
   const isRespondPhase = dispute?.action === 'pending' && role === 'seller';
   const isReworkAcceptPhase = dispute?.action === 'rework' && !dispute?.rework_accepted && role === 'buyer';
+
+  const idName = user?.identityName ? `${user.identityName}@` : 'yourID@';
+
+  // Sign message templates
+  const fileMsg = `J41-DISPUTE|Job:${job.jobHash}|Reason:${reason}|Ts:${ts}|I am raising a dispute on this job.`;
+  const respondMsg = `J41-DISPUTE-RESPOND|Job:${job.jobHash}|Action:${action}|Msg:${response}|Ts:${ts}|I respond to this dispute.`;
+  const reworkAcceptMsg = `J41-REWORK-ACCEPT|Job:${job.jobHash}|Ts:${ts}|I accept the rework terms.`;
+
+  function handleSigInput(val) {
+    if (val.trim().startsWith('{')) {
+      try { const p = JSON.parse(val.trim()); if (p.signature) val = p.signature; } catch { /* not JSON */ }
+    }
+    setSig(val);
+  }
 
   async function handleFile() {
     setLoading(true);
@@ -26,7 +48,7 @@ export default function DisputeModal({ job, dispute, role, onClose, onAction }) 
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason, timestamp: Date.now(), signature: 'pending' }),
+        body: JSON.stringify({ reason, timestamp: ts, signature: sig.trim() }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -48,8 +70,8 @@ export default function DisputeModal({ job, dispute, role, onClose, onAction }) 
       const body = {
         action,
         message: response,
-        timestamp: Date.now(),
-        signature: 'pending',
+        timestamp: ts,
+        signature: sig.trim(),
       };
       if (action === 'refund') body.refundPercent = refundPercent;
       if (action === 'rework') body.reworkCost = reworkCost;
@@ -81,7 +103,7 @@ export default function DisputeModal({ job, dispute, role, onClose, onAction }) 
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ timestamp: Date.now(), signature: 'pending' }),
+        body: JSON.stringify({ timestamp: ts, signature: sig.trim() }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -94,6 +116,27 @@ export default function DisputeModal({ job, dispute, role, onClose, onAction }) 
     } finally {
       setLoading(false);
     }
+  }
+
+  function SignatureSection({ message }) {
+    const cmd = buildSignCmd(idName, message);
+    return (
+      <div className="mt-3 space-y-2">
+        <p className="text-xs text-gray-400">Sign this in Verus CLI or Desktop console:</p>
+        <div className="rounded-lg p-3 font-mono text-xs break-all whitespace-pre-wrap select-all"
+          style={{ background: 'var(--bg-inset)', color: 'var(--accent-blue, #60a5fa)', border: '1px solid var(--border-subtle)' }}>
+          {cmd}
+        </div>
+        <input
+          type="text"
+          value={sig}
+          onChange={e => handleSigInput(e.target.value)}
+          className="w-full rounded-lg p-2 text-sm font-mono text-white"
+          style={{ background: 'var(--bg-inset)', border: '1px solid var(--border-subtle)' }}
+          placeholder="Paste signature (AW1B...)"
+        />
+      </div>
+    );
   }
 
   return (
@@ -126,9 +169,10 @@ export default function DisputeModal({ job, dispute, role, onClose, onAction }) 
               maxLength={2000}
             />
             <p className="text-xs text-gray-500 mt-1 text-right">{reason.length}/2000</p>
+            {reason.length >= 10 && <SignatureSection message={fileMsg} />}
             <button
               onClick={handleFile}
-              disabled={loading || reason.length < 10}
+              disabled={loading || reason.length < 10 || !sig.trim()}
               className="w-full mt-4 py-2.5 rounded-lg text-sm font-semibold bg-amber-500 text-black disabled:opacity-50"
             >
               {loading ? 'Filing...' : 'File Dispute'}
@@ -208,9 +252,10 @@ export default function DisputeModal({ job, dispute, role, onClose, onAction }) 
               placeholder={action === 'rejected' ? 'Explain your side...' : 'Add a note (optional)'}
               maxLength={2000}
             />
+            {response.length >= 1 && <SignatureSection message={respondMsg} />}
             <button
               onClick={handleRespond}
-              disabled={loading || response.length < 1}
+              disabled={loading || response.length < 1 || !sig.trim()}
               className={`w-full mt-4 py-2.5 rounded-lg text-sm font-semibold text-black disabled:opacity-50 ${
                 action === 'rejected' ? 'bg-red-500' : action === 'refund' ? 'bg-emerald-400' : 'bg-amber-400'
               }`}
@@ -235,10 +280,11 @@ export default function DisputeModal({ job, dispute, role, onClose, onAction }) 
                 <p className="text-sm text-emerald-400 mt-2 font-medium">Free rework</p>
               )}
             </div>
-            <div className="flex gap-3">
+            <SignatureSection message={reworkAcceptMsg} />
+            <div className="flex gap-3 mt-4">
               <button
                 onClick={handleReworkAccept}
-                disabled={loading}
+                disabled={loading || !sig.trim()}
                 className="flex-1 py-2.5 rounded-lg text-sm font-semibold bg-emerald-400 text-black disabled:opacity-50"
               >
                 {loading ? 'Accepting...' : 'Accept Rework'}
