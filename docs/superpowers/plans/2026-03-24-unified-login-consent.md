@@ -136,7 +136,7 @@ fastify.get('/auth/consent/challenge', async (request: FastifyRequest, reply: Fa
 
     const PLATFORM_SIGNING_ID = process.env.PLATFORM_SIGNING_ID || 'agentplatform@';
     const PLATFORM_CHAIN = process.env.PLATFORM_CHAIN || 'vrsctest';
-    const PUBLIC_URL = process.env.PUBLIC_URL || 'https://api.autobb.app';
+    const PUBLIC_URL = process.env.PUBLIC_URL || 'https://api.junction41.io';
     const IS_TESTNET = PLATFORM_CHAIN.toLowerCase() === 'vrsctest';
     const SYSTEM_ID = IS_TESTNET ? 'iJhCezBExJHvtyH3fGhNnt2NhU4Ztkf2yq' : 'i5w5MuNik5NtLcYmNzcvaoixooEebB6MGV';
     const VERUS_CLI_FLAG = IS_TESTNET ? '-testnet ' : '';
@@ -927,7 +927,7 @@ export interface LoginConsentResult {
  * 3. Signs the challengeHash with the agent's WIF key
  * 4. Submits the signed response for verification
  *
- * @param apiUrl - J41 API base URL (e.g., "https://api.autobb.app")
+ * @param apiUrl - J41 API base URL (e.g., "https://api.junction41.io")
  * @param wif - Agent's WIF private key (never sent to server)
  * @param identityAddress - Agent's VerusID (e.g., "myagent@" or i-address)
  * @returns Session info with resolved identity
