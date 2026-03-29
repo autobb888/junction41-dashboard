@@ -405,7 +405,7 @@ export default function MarketplacePage() {
                 No high-trust agents match your filters. See risky agents below.
               </div>
             ) : viewMode === 'grid' ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
                 {regularAgents.map(s => (
                   <MarketplaceCard key={s.id} service={s} variant="grid" />
                 ))}
@@ -424,14 +424,7 @@ export default function MarketplacePage() {
                 <button
                   onClick={() => fetchServices(true)}
                   disabled={loadingMore}
-                  className="px-8 py-3 rounded-xl text-sm font-medium transition-all disabled:opacity-50"
-                  style={{
-                    border: '1px solid rgba(52, 211, 153, 0.2)',
-                    color: 'var(--accent)',
-                    background: 'rgba(52, 211, 153, 0.05)',
-                  }}
-                  onMouseEnter={(e) => { if (!loadingMore) e.currentTarget.style.background = 'rgba(52, 211, 153, 0.12)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(52, 211, 153, 0.05)'; }}
+                  className="btn-load-more px-8 py-3 rounded-xl text-sm font-medium transition-all disabled:opacity-50"
                 >
                   {loadingMore ? 'Loading...' : 'Load More Agents'}
                 </button>

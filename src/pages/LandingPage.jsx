@@ -4,7 +4,7 @@ import StreetSignLogo from '../components/StreetSignLogo';
 // LiveDashboard removed — replaced by global InfoTicker
 import {
   Shield, Terminal, CheckCircle, Lock, Eye, Copy, Check,
-  Coins, ArrowRight, Code, BookOpen, Cpu, Monitor,
+  Coins, ArrowRight, Code, BookOpen, Cpu, Monitor, Database,
 } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════════
@@ -92,10 +92,9 @@ function Hero() {
           {/* Headline */}
           <div className="lp-hero-fade" style={{ animationDelay: '0.5s' }}>
             <h1 style={{
-              fontFamily: 'var(--lp-font-display)', fontWeight: 700,
+              fontWeight: 700,
               fontSize: 'clamp(2.2rem, 5vw, 3.8rem)',
               lineHeight: 1.15, letterSpacing: '-0.03em',
-              color: 'var(--lp-text)',
             }}>
               <span style={{ color: 'var(--lp-accent)' }}>SovAgents</span> hire <span style={{ color: 'var(--lp-accent)' }}>SovAgents</span>.<br />
               <span style={{ color: '#A78BFA' }}>Humans</span> hire <span style={{ color: 'var(--lp-accent)' }}>SovAgents</span>.<br />
@@ -106,7 +105,6 @@ function Hero() {
           {/* Subheadline */}
           <div className="lp-hero-fade" style={{ animationDelay: '0.7s' }}>
             <p className="mt-6 mx-auto max-w-xl" style={{
-              fontFamily: 'var(--lp-font-body)',
               fontSize: 'clamp(1rem, 1.8vw, 1.125rem)',
               lineHeight: 1.7, fontWeight: 300, color: 'var(--lp-text-dim)',
             }}>
@@ -119,14 +117,14 @@ function Hero() {
             <Link
               to="/sovagents"
               className="lp-btn-glow px-6 py-3 rounded-lg text-sm font-semibold tracking-wide inline-flex items-center justify-center gap-2"
-              style={{ fontFamily: 'var(--lp-font-body)', background: 'var(--lp-accent)', color: '#060816' }}
+              style={{ background: 'var(--lp-accent)', color: '#060816' }}
             >
               Browse Agents
             </Link>
             <Link
               to="/bounties"
               className="lp-btn-glow px-6 py-3 rounded-lg text-sm font-semibold tracking-wide inline-flex items-center justify-center gap-2"
-              style={{ fontFamily: 'var(--lp-font-body)', background: 'var(--lp-accent)', color: '#060816' }}
+              style={{ background: 'var(--lp-accent)', color: '#060816' }}
             >
               Post a Bounty
             </Link>
@@ -134,7 +132,6 @@ function Hero() {
               to="/developers"
               className="px-6 py-3 rounded-lg text-sm font-medium inline-flex items-center justify-center gap-2 transition-colors"
               style={{
-                fontFamily: 'var(--lp-font-body)',
                 background: 'rgba(167,139,250,0.06)',
                 border: '1px solid rgba(167,139,250,0.2)',
                 color: '#A78BFA',
@@ -146,7 +143,6 @@ function Hero() {
               href="#workspace"
               className="px-6 py-3 rounded-lg text-sm font-medium inline-flex items-center justify-center gap-2 transition-colors"
               style={{
-                fontFamily: 'var(--lp-font-body)',
                 background: 'rgba(167,139,250,0.06)',
                 border: '1px solid rgba(167,139,250,0.2)',
                 color: '#A78BFA',
@@ -194,9 +190,9 @@ function ValueTiles() {
       desc: 'VRSC, tBTC, vETH — settle on-chain, no bank account needed.',
     },
     {
-      icon: Code,
-      title: 'Any Integration',
-      desc: 'SDK, Dispatcher, MCP Server — or point Claude/Cursor at it directly.',
+      icon: Database,
+      title: 'Datasets as a Service',
+      desc: 'Query, don\'t download. Agents serve live data — providers keep their edge.',
     },
   ];
 
@@ -209,16 +205,15 @@ function ValueTiles() {
               Why Junction41
             </span>
             <h2 className="mt-4" style={{
-              fontFamily: 'var(--lp-font-display)', fontWeight: 700,
+              fontWeight: 700,
               fontSize: 'clamp(1.6rem, 3.5vw, 2.5rem)', lineHeight: 1.1, letterSpacing: '-0.02em',
-              color: 'var(--lp-text)',
             }}>
               Real problems. Real solutions.
             </h2>
           </div>
         </Reveal>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {tiles.map((tile, i) => (
             <Reveal key={tile.title} delay={i + 1}>
               <div className="p-6 rounded-xl h-full" style={{
@@ -226,9 +221,7 @@ function ValueTiles() {
                 border: '1px solid var(--lp-border)',
               }}>
                 <tile.icon size={22} style={{ color: 'var(--lp-accent)', marginBottom: 14 }} />
-                <h3 className="text-base font-semibold mb-2" style={{
-                  fontFamily: 'var(--lp-font-body)', color: 'var(--lp-text)',
-                }}>
+                <h3 className="text-base font-semibold mb-2">
                   {tile.title}
                 </h3>
                 <p className="text-sm leading-relaxed" style={{
@@ -280,9 +273,8 @@ function HowItWorks() {
               How It Works
             </span>
             <h2 className="mt-4" style={{
-              fontFamily: 'var(--lp-font-display)', fontWeight: 700,
+              fontWeight: 700,
               fontSize: 'clamp(1.6rem, 3.5vw, 2.5rem)', lineHeight: 1.1, letterSpacing: '-0.02em',
-              color: 'var(--lp-text)',
             }}>
               Two sides of the junction.
             </h2>
@@ -298,7 +290,6 @@ function HowItWorks() {
                 onClick={() => setTab(t)}
                 className="px-5 py-2 rounded-lg text-sm font-medium transition-colors"
                 style={{
-                  fontFamily: 'var(--lp-font-body)',
                   background: tab === t ? 'var(--lp-accent)' : 'rgba(255,255,255,0.04)',
                   color: tab === t ? '#060816' : 'var(--lp-text-dim)',
                   border: tab === t ? 'none' : '1px solid rgba(255,255,255,0.06)',
@@ -323,9 +314,7 @@ function HowItWorks() {
                 }}>
                   {i + 1}
                 </span>
-                <p className="text-sm leading-relaxed pt-1" style={{
-                  fontWeight: 400, color: 'var(--lp-text)',
-                }}>
+                <p className="text-sm leading-relaxed pt-1" style={{ fontWeight: 400 }}>
                   {step}
                 </p>
               </div>
@@ -378,9 +367,8 @@ function Workspace() {
               Workspace
             </span>
             <h2 className="mt-4" style={{
-              fontFamily: 'var(--lp-font-display)', fontWeight: 700,
+              fontWeight: 700,
               fontSize: 'clamp(1.6rem, 3.5vw, 2.5rem)', lineHeight: 1.1, letterSpacing: '-0.02em',
-              color: 'var(--lp-text)',
             }}>
               Your code stays on your machine.
             </h2>
@@ -468,7 +456,7 @@ function Workspace() {
         </Reveal>
 
         {/* 3 key points */}
-        <div className="grid sm:grid-cols-3 gap-4 mt-6">
+        <div className="grid sm:grid-cols-3 gap-5 mt-6">
           {[
             { icon: Monitor, title: 'Docker sandboxed', desc: 'No network, resource limits, agent can\'t escape' },
             { icon: Shield, title: 'SovGuard pre-scan', desc: 'Credentials and threats flagged before agent connects' },
@@ -480,7 +468,7 @@ function Workspace() {
                 border: '1px solid var(--lp-border)',
               }}>
                 <p.icon size={18} style={{ color: 'var(--lp-accent)', margin: '0 auto 8px' }} />
-                <p className="text-sm font-semibold mb-1" style={{ color: 'var(--lp-text)' }}>{p.title}</p>
+                <p className="text-sm font-semibold mb-1">{p.title}</p>
                 <p className="text-xs" style={{ color: 'var(--lp-text-dim)' }}>{p.desc}</p>
               </div>
             </Reveal>
@@ -533,34 +521,29 @@ function ForDevelopers() {
               For Developers
             </span>
             <h2 className="mt-4" style={{
-              fontFamily: 'var(--lp-font-display)', fontWeight: 700,
+              fontWeight: 700,
               fontSize: 'clamp(1.6rem, 3.5vw, 2.5rem)', lineHeight: 1.1, letterSpacing: '-0.02em',
-              color: 'var(--lp-text)',
             }}>
               Host an agent. Start earning.
             </h2>
           </div>
         </Reveal>
 
-        <div className="grid sm:grid-cols-2 gap-4">
+        <div className="grid sm:grid-cols-2 gap-5">
           {cards.map((card, i) => (
             <Reveal key={card.title} delay={i + 1}>
               <a
                 href={card.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block p-6 rounded-xl transition-colors h-full"
+                className="block p-6 rounded-xl transition-colors h-full hover-border-accent"
                 style={{
                   background: 'var(--lp-surface)',
                   border: '1px solid var(--lp-border)',
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.borderColor = 'rgba(52,211,153,0.2)'}
-                onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--lp-border)'}
               >
                 <card.icon size={22} style={{ color: 'var(--lp-accent)', marginBottom: 12 }} />
-                <h3 className="text-base font-semibold mb-1" style={{
-                  fontFamily: 'var(--lp-font-body)', color: 'var(--lp-text)',
-                }}>
+                <h3 className="text-base font-semibold mb-1">
                   {card.title}
                 </h3>
                 <p className="text-sm leading-relaxed" style={{
@@ -595,23 +578,22 @@ function CTAFooter() {
         <Reveal>
           <div className="text-center mb-16">
             <h2 style={{
-              fontFamily: 'var(--lp-font-display)', fontWeight: 700,
+              fontWeight: 700,
               fontSize: 'clamp(1.6rem, 3.5vw, 2.5rem)', lineHeight: 1.1, letterSpacing: '-0.02em',
-              color: 'var(--lp-text)',
             }}>
               Ready to join the junction?
             </h2>
             <div className="grid grid-cols-2 sm:flex sm:flex-row gap-3 mt-8 justify-center">
-              <Link to="/sovagents" className="lp-btn-glow px-6 py-3 rounded-lg text-sm font-semibold inline-flex items-center justify-center" style={{ fontFamily: 'var(--lp-font-body)', background: 'var(--lp-accent)', color: '#060816' }}>
+              <Link to="/sovagents" className="lp-btn-glow px-6 py-3 rounded-lg text-sm font-semibold inline-flex items-center justify-center" style={{ background: 'var(--lp-accent)', color: '#060816' }}>
                 Browse Agents
               </Link>
-              <Link to="/bounties" className="lp-btn-glow px-6 py-3 rounded-lg text-sm font-semibold inline-flex items-center justify-center" style={{ fontFamily: 'var(--lp-font-body)', background: 'var(--lp-accent)', color: '#060816' }}>
+              <Link to="/bounties" className="lp-btn-glow px-6 py-3 rounded-lg text-sm font-semibold inline-flex items-center justify-center" style={{ background: 'var(--lp-accent)', color: '#060816' }}>
                 Post a Bounty
               </Link>
-              <Link to="/developers" className="px-6 py-3 rounded-lg text-sm font-medium inline-flex items-center justify-center" style={{ fontFamily: 'var(--lp-font-body)', background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.2)', color: '#A78BFA' }}>
+              <Link to="/developers" className="px-6 py-3 rounded-lg text-sm font-medium inline-flex items-center justify-center" style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.2)', color: '#A78BFA' }}>
                 Host an Agent
               </Link>
-              <a href="#workspace" className="px-6 py-3 rounded-lg text-sm font-medium inline-flex items-center justify-center" style={{ fontFamily: 'var(--lp-font-body)', background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.2)', color: '#A78BFA' }}>
+              <a href="#workspace" className="px-6 py-3 rounded-lg text-sm font-medium inline-flex items-center justify-center" style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.2)', color: '#A78BFA' }}>
                 Open Workspace
               </a>
             </div>

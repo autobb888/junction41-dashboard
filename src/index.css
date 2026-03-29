@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 /* Dark mode default */
 :root {
@@ -61,7 +61,7 @@
 
   /* Fonts */
   --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-display: 'Syne', 'DM Sans', sans-serif;
+  --font-display: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
 
   /* Type scale */
@@ -106,19 +106,94 @@ h3 {
   color: var(--text-primary);
 }
 
-/* Card system */
+/* Card system — one consistent style everywhere */
 .card {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: 12px;
   padding: 20px 24px;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 .card:hover {
   border-color: var(--border-accent);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(52, 211, 153, 0.05);
+  box-shadow: 0 0 20px rgba(52, 211, 153, 0.06);
   transform: translateY(-1px);
+}
+
+/* Marketplace card — standardized, no glassmorphism */
+.marketplace-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 20px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  cursor: pointer;
+}
+
+.marketplace-card:hover {
+  border-color: var(--border-accent);
+  box-shadow: 0 0 20px rgba(52, 211, 153, 0.08);
+  transform: translateY(-2px);
+}
+
+/* Featured card variant */
+.featured-card {
+  background: var(--bg-surface);
+  border: 1px solid rgba(52, 211, 153, 0.15);
+  border-radius: 12px;
+  padding: 16px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+}
+
+.featured-card:hover {
+  border-color: rgba(52, 211, 153, 0.35);
+  box-shadow: 0 0 24px rgba(52, 211, 153, 0.08);
+}
+
+/* Interactive list item hover */
+.hover-bg-subtle:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Menu item that turns red on hover (logout) */
+.hover-danger:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #f87171;
+}
+
+/* Accent border on hover */
+.hover-border-accent:hover {
+  border-color: var(--border-accent);
+}
+
+/* Load more button */
+.btn-load-more {
+  border: 1px solid rgba(52, 211, 153, 0.2);
+  color: var(--accent);
+  background: rgba(52, 211, 153, 0.05);
+  transition: background 0.15s ease;
+}
+
+.btn-load-more:hover {
+  background: rgba(52, 211, 153, 0.12);
+}
+
+/* Copy button hover */
+.hover-accent:hover {
+  color: #34D399;
+}
+
+/* Nav link hover */
+.nav-hover:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+/* Icon hover */
+.icon-hover:hover {
+  color: var(--text-primary);
 }
 
 /* Button system */
@@ -410,7 +485,7 @@ h3 {
   --lp-border-accent: rgba(52, 211, 153, 0.20);
   --lp-border-green: rgba(56, 189, 248, 0.15);
   --lp-border-warm: rgba(245, 158, 11, 0.15);
-  --lp-font-display: 'Syne', sans-serif;
+  --lp-font-display: 'DM Sans', sans-serif;
   --lp-font-body: 'DM Sans', sans-serif;
   --lp-font-mono: 'JetBrains Mono', monospace;
 
@@ -420,18 +495,7 @@ h3 {
   overflow-x: hidden;
 }
 
-/* Noise grain overlay */
-.landing-page::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  opacity: 0.018;
-  pointer-events: none;
-  z-index: 9999;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-repeat: repeat;
-  background-size: 256px 256px;
-}
+/* Noise grain overlay — removed for cleaner aesthetic */
 
 /* Junction grid pattern — crosshatch with bright intersections */
 .lp-junctiongrid {
@@ -555,53 +619,7 @@ h3 {
 }
 .lp-glow { animation: lp-glow-pulse 3s ease-in-out infinite; }
 
-@keyframes lp-text-shimmer {
-  0%, 100% { text-shadow: 0 0 20px rgba(52, 211, 153, 0.25); }
-  50% { text-shadow: 0 0 40px rgba(52, 211, 153, 0.45), 0 0 80px rgba(52, 211, 153, 0.15); }
-}
-.lp-text-shimmer { animation: lp-text-shimmer 4s ease-in-out infinite; }
-
-@keyframes lp-green-glow-pulse {
-  0%, 100% { box-shadow: 0 0 20px rgba(56, 189, 248, 0.12), 0 0 60px rgba(56, 189, 248, 0.04); }
-  50% { box-shadow: 0 0 30px rgba(56, 189, 248, 0.22), 0 0 80px rgba(56, 189, 248, 0.08); }
-}
-.lp-green-glow { animation: lp-green-glow-pulse 3s ease-in-out infinite; }
-
-/* ── Warm accent glow ────────────────────────────────── */
-@keyframes lp-warm-glow-pulse {
-  0%, 100% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.12), 0 0 60px rgba(245, 158, 11, 0.04); }
-  50% { box-shadow: 0 0 30px rgba(245, 158, 11, 0.22), 0 0 80px rgba(245, 158, 11, 0.08); }
-}
-.lp-warm-glow { animation: lp-warm-glow-pulse 3s ease-in-out infinite; }
-
-/* ── Hero gradient mesh ───────────────────────────────── */
-@keyframes lp-mesh-drift {
-  0%, 100% { background-position: 0% 0%; }
-  33% { background-position: 100% 50%; }
-  66% { background-position: 50% 100%; }
-}
-.lp-hero-mesh {
-  background:
-    radial-gradient(ellipse 80% 50% at 20% 30%, rgba(52, 211, 153, 0.06) 0%, transparent 70%),
-    radial-gradient(ellipse 60% 60% at 85% 20%, rgba(245, 158, 11, 0.04) 0%, transparent 70%),
-    radial-gradient(ellipse 70% 70% at 50% 90%, rgba(52, 211, 153, 0.025) 0%, transparent 70%);
-  background-size: 200% 200%;
-  animation: lp-mesh-drift 25s ease-in-out infinite;
-}
-
-/* ── Floating orbs ────────────────────────────────────── */
-@keyframes lp-float-1 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(40px, -60px) scale(1.05); }
-  66% { transform: translate(-30px, 30px) scale(0.95); }
-}
-@keyframes lp-float-2 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(-50px, 40px) scale(1.08); }
-  66% { transform: translate(35px, -45px) scale(0.92); }
-}
-.lp-orb-1 { animation: lp-float-1 20s ease-in-out infinite; }
-.lp-orb-2 { animation: lp-float-2 25s ease-in-out infinite; }
+/* Removed: lp-text-shimmer, lp-green-glow, lp-warm-glow, lp-hero-mesh, lp-float orbs — cleaner aesthetic */
 
 /* ── Outlined text ────────────────────────────────────── */
 .lp-text-outline {

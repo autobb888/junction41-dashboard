@@ -27,13 +27,7 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
     return (
       <div
         onClick={() => navigate(agentUrl)}
-        className="flex items-center gap-4 p-4 rounded-xl cursor-pointer transition-all"
-        style={{
-          background: 'rgba(15, 19, 32, 0.6)',
-          border: '1px solid rgba(52, 211, 153, 0.08)',
-        }}
-        onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(52, 211, 153, 0.25)'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(52, 211, 153, 0.08)'; }}
+        className="marketplace-card flex items-center gap-4 rounded-xl"
       >
         <AgentAvatar name={displayName} verusId={service.verusId} size="md" online={online} />
         <div className="flex-1 min-w-0">
@@ -61,23 +55,7 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
   return (
     <div
       onClick={() => navigate(agentUrl)}
-      className="group relative rounded-xl p-4 transition-all duration-300 cursor-pointer"
-      style={{
-        background: 'rgba(15, 19, 32, 0.6)',
-        backdropFilter: 'blur(12px)',
-        border: '1px solid rgba(52, 211, 153, 0.08)',
-        boxShadow: '0 0 0 0 rgba(52, 211, 153, 0)',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.border = '1px solid rgba(52, 211, 153, 0.25)';
-        e.currentTarget.style.boxShadow = '0 0 20px rgba(52, 211, 153, 0.08), inset 0 0 20px rgba(52, 211, 153, 0.03)';
-        e.currentTarget.style.transform = 'translateY(-2px)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.border = '1px solid rgba(52, 211, 153, 0.08)';
-        e.currentTarget.style.boxShadow = '0 0 0 0 rgba(52, 211, 153, 0)';
-        e.currentTarget.style.transform = 'translateY(0)';
-      }}
+      className="marketplace-card group relative rounded-xl"
     >
       {/* Header: avatar + name + rating */}
       <div className="flex items-start gap-3 mb-3">

@@ -68,10 +68,8 @@ function Collapsible({ title, icon: Icon, children, defaultOpen = false }) {
     <div className="rounded-xl overflow-hidden" style={{ background: 'var(--lp-surface)', border: '1px solid var(--lp-border)' }}>
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center gap-3 px-5 py-4 text-left transition-colors"
+        className="hover-bg-subtle w-full flex items-center gap-3 px-5 py-4 text-left transition-colors"
         style={{ color: 'var(--lp-text)' }}
-        onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)'}
-        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
       >
         {Icon && <Icon size={18} style={{ color: 'var(--lp-accent)', flexShrink: 0 }} />}
         <span className="flex-1 text-sm font-semibold" style={{ fontFamily: 'var(--lp-font-body)' }}>{title}</span>
@@ -200,7 +198,7 @@ const SDK_CODE = {
   managed: `import { SovAgent } from '@j41/sovagent-sdk';
 
 const agent = new SovAgent({
-  apiUrl: 'https://api.autobb.app',
+  apiUrl: 'https://api.junction41.io',
   wif: process.env.J41_WIF,
   network: 'verustest',
 });
@@ -214,7 +212,7 @@ agent.onJob(async (job, chat) => {
 
   bridge: `import { J41Client } from '@j41/sovagent-sdk';
 
-const client = new J41Client({ apiUrl: 'https://api.autobb.app' });
+const client = new J41Client({ apiUrl: 'https://api.junction41.io' });
 await client.authenticateWithWIF(process.env.J41_WIF, 'myagent@', 'verustest');
 
 const jobs = await client.getMyJobs();
@@ -604,7 +602,7 @@ node build/index.js --transport sse --port 3001
       "command": "node",
       "args": ["./j41-sovagent-mcp-server/build/index.js"],
       "env": {
-        "J41_API_URL": "https://api.autobb.app",
+        "J41_API_URL": "https://api.junction41.io",
         "J41_WIF": "<your-agent-private-key-WIF>"
       }
     }

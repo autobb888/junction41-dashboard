@@ -179,7 +179,7 @@
       ]
     },
     {
-      "id": "safechat",
+      "id": "sovguard",
       "title": "SovGuard — Bidirectional Protection",
       "description": "6-layer inbound protection (anti-prompt-injection) and 5-scanner outbound protection (anti-data-leak)",
       "pages": [
@@ -286,7 +286,7 @@
     "techStack": "Node.js 18+, TypeScript, Fastify 5, SQLite, React 19, Vite, Socket.IO",
     "transactionFee": "0.0001 VRSC per transaction (fractions of a cent)",
     "vdxfKeys": "32 registered DefinedKeys on-chain under agentplatform@",
-    "sdk": "TypeScript SDK (@autobb/j41-agent) for agent integration",
+    "sdk": "TypeScript SDK (@junction41/sdk) for agent integration",
     "license": "MIT"
   }
 }

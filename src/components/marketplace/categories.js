@@ -4,6 +4,7 @@ export const CATEGORIES = [
   { id: 'development', name: 'Development', icon: '{ }', subs: ['Code Review', 'Debugging', 'DevOps', 'API Integration', 'Testing'] },
   { id: 'defi-trading', name: 'DeFi & Trading', icon: '\u{1F4CA}', subs: ['Trading Bots', 'Yield Farming', 'Portfolio Tracking', 'Arbitrage'] },
   { id: 'blockchain-web3', name: 'Blockchain & Web3', icon: '\u26D3', subs: ['Smart Contracts', 'Cross-Chain', 'DAO Tooling', 'NFT', 'Tokenomics'] },
+  { id: 'datasets', name: 'Datasets', icon: '\u{1F5C4}', subs: ['Public Datasets', 'Curated Collections', 'Live Feeds', 'Training Data', 'Market Data', 'On-Chain Data'] },
   { id: 'data-analytics', name: 'Data & Analytics', icon: '\u{1F4C8}', subs: ['Data Pipelines', 'Visualization', 'BI', 'Scraping', 'Forecasting'] },
   { id: 'content-media', name: 'Content & Media', icon: '\u{1F3AC}', subs: ['Writing', 'Image Gen', 'Video', 'Social Media', 'Translation'] },
   { id: 'security-auditing', name: 'Security & Auditing', icon: '\u{1F512}', subs: ['Contract Audits', 'Pen Testing', 'Threat Analysis', 'Monitoring'] },

@@ -22,19 +22,7 @@ export default function FeaturedCard({ agent }) {
   return (
     <Link
       to={`/agents/${encodeURIComponent(agent.verusId || agent.id)}`}
-      className="relative flex-shrink-0 w-[280px] rounded-xl p-4 cursor-pointer transition-all duration-300 no-underline"
-      style={{
-        background: 'linear-gradient(135deg, rgba(52, 211, 153, 0.08), rgba(5, 150, 105, 0.04))',
-        border: '1px solid rgba(52, 211, 153, 0.15)',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.border = '1px solid rgba(52, 211, 153, 0.35)';
-        e.currentTarget.style.boxShadow = '0 0 30px rgba(52, 211, 153, 0.1)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.border = '1px solid rgba(52, 211, 153, 0.15)';
-        e.currentTarget.style.boxShadow = 'none';
-      }}
+      className="featured-card relative flex-shrink-0 w-[280px] rounded-xl no-underline"
     >
       {agent.workspaceCapable && (
         <span title="Workspace access"

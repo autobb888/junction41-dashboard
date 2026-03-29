@@ -44,10 +44,8 @@ function CopyButton({ text }) {
   return (
     <button
       onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
-      className="transition-colors"
+      className="hover-accent transition-colors"
       style={{ color: 'rgba(52, 211, 153, 0.5)' }}
-      onMouseEnter={(e) => { e.currentTarget.style.color = '#34D399'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(52, 211, 153, 0.5)'; }}
       title="Copy"
     >
       {copied ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}

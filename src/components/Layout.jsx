@@ -138,22 +138,10 @@ export default function Layout() {
     return (
       <Link
         to={to}
-        className="px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2"
+        className="nav-hover px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2"
         style={{
           color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
           backgroundColor: isActive ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
-        }}
-        onMouseEnter={(e) => {
-          if (!isActive) {
-            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
-            e.currentTarget.style.color = 'var(--text-primary)';
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!isActive) {
-            e.currentTarget.style.backgroundColor = 'transparent';
-            e.currentTarget.style.color = 'var(--text-secondary)';
-          }
         }}
       >
         {children}
@@ -166,11 +154,9 @@ export default function Layout() {
     return (
       <Link
         to={to}
-        className="relative p-2 rounded-lg transition-colors"
+        className="icon-hover relative p-2 rounded-lg transition-colors"
         aria-label={ariaLabel}
         style={{ color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)' }}
-        onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-primary)'}
-        onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.color = 'var(--text-secondary)'; }}
       >
         {children}
         {badge > 0 && (
@@ -242,11 +228,9 @@ export default function Layout() {
                 <div className="relative" ref={avatarMenuRef}>
                   <button
                     onClick={() => setAvatarMenuOpen(o => !o)}
-                    className="flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors"
+                    className="hover-bg-subtle flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors"
                     aria-label="Account menu"
                     style={{ color: 'var(--text-secondary)' }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'}
-                    onMouseLeave={(e) => { if (!avatarMenuOpen) e.currentTarget.style.backgroundColor = 'transparent'; }}
                   >
                     <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0" style={{ background: 'linear-gradient(135deg, #34D399, #059669)' }}>
                       {initials}
@@ -278,13 +262,11 @@ export default function Layout() {
                             <Link
                               key={item.path}
                               to={item.path}
-                              className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors"
+                              className="hover-bg-subtle flex items-center gap-3 px-4 py-2.5 text-sm transition-colors"
                               style={{
                                 color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
                                 backgroundColor: isActive ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
                               }}
-                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'}
-                              onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.backgroundColor = 'transparent'; }}
                             >
                               <Icon size={16} />
                               {item.label}
@@ -297,10 +279,8 @@ export default function Layout() {
                       <div className="border-t py-1" style={{ borderColor: 'var(--border-subtle)' }}>
                         <button
                           onClick={logout}
-                          className="flex items-center gap-3 px-4 py-2.5 text-sm w-full transition-colors"
+                          className="hover-danger flex items-center gap-3 px-4 py-2.5 text-sm w-full transition-colors"
                           style={{ color: 'var(--text-secondary)' }}
-                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'; e.currentTarget.style.color = '#f87171'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
                         >
                           <LogOut size={16} />
                           Sign Out
