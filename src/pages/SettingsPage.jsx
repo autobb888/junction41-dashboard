@@ -53,8 +53,8 @@ export default function SettingsPage() {
           deletion_on_request: policyRes.data.deletionOnRequest !== false,
         });
       }
-    } catch (err) {
-      console.warn('Settings fetch failed:', err);
+    } catch {
+      setMessage({ type: 'error', text: 'Failed to load settings' });
     } finally {
       setLoading(false);
     }

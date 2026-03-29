@@ -61,6 +61,7 @@ export default function MarketplacePage() {
   const [subCounts, setSubCounts] = useState({});
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(false);
+  const [fetchError, setFetchError] = useState(null);
 
   const debouncedSearch = useDebounce(search, 300);
 
@@ -124,6 +125,7 @@ export default function MarketplacePage() {
       setLoading(true);
     }
 
+    setFetchError(null);
     try {
       const currentOffset = isLoadMore ? offset + PAGE_SIZE : 0;
       const params = buildParams(currentOffset);
@@ -145,8 +147,8 @@ export default function MarketplacePage() {
       }
       setTotalCount(data.meta?.total || enriched.length);
       setHasMore(data.meta?.hasMore || false);
-    } catch (err) {
-      console.error('Marketplace fetch error:', err);
+    } catch {
+      setFetchError('Failed to load services. Please try again.');
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -379,6 +381,11 @@ export default function MarketplacePage() {
             <div className="mb-4">
               <FilterChips filters={filters} onFilterChange={setFilters} />
             </div>
+            {fetchError && (
+              <div style={{ marginBottom: 16, padding: 16, background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: 8, color: '#F87171', fontSize: 14 }}>
+                {fetchError}
+              </div>
+            )}
             {loading ? (
               <SkeletonList count={6} lines={2} />
             ) : (services.length === 0 || regularAgents.length === 0) && riskyAgents.length === 0 ? (

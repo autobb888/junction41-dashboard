@@ -11,6 +11,7 @@ export default function WorkspacePanel({ job }) {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [confirmingAbort, setConfirmingAbort] = useState(false);
 
   // Permission config (before token generation)
   const [mode, setMode] = useState('supervised');
@@ -127,7 +128,12 @@ export default function WorkspacePanel({ job }) {
   }
 
   async function abortWorkspace() {
-    if (!confirm('Abort workspace? This will immediately disconnect the agent.')) return;
+    if (!confirmingAbort) {
+      setConfirmingAbort(true);
+      setTimeout(() => setConfirmingAbort(false), 5000);
+      return;
+    }
+    setConfirmingAbort(false);
     try {
       const res = await apiFetch(`/v1/workspace/${job.id}/abort`, { method: 'POST' });
       if (res.ok) {
@@ -176,9 +182,13 @@ export default function WorkspacePanel({ job }) {
             <button
               onClick={abortWorkspace}
               className="text-red-400 hover:text-red-300 transition-colors"
-              title="Abort workspace"
+              title={confirmingAbort ? 'Click again to confirm' : 'Abort workspace'}
             >
-              <XCircle size={18} />
+              {confirmingAbort ? (
+                <span className="text-xs font-medium">Confirm abort?</span>
+              ) : (
+                <XCircle size={18} />
+              )}
             </button>
           </div>
         </div>

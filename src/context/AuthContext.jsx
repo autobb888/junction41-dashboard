@@ -11,6 +11,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(() => sessionStorage.getItem('j41_isAdmin') === 'true');
 
   // requireAuth: call this to trigger the login modal. Returns void.
   // Components can use: const { requireAuth } = useAuth(); then requireAuth();
@@ -23,9 +24,36 @@ export function AuthProvider({ children }) {
     checkSession();
     setSessionExpiredHandler(() => {
       setUser(null);
+      setIsAdmin(false);
+      sessionStorage.removeItem('j41_isAdmin');
       setShowAuthModal(true);
     });
   }, []);
+
+  // Check admin access once per session (not on every navigation)
+  useEffect(() => {
+    if (!user) {
+      setIsAdmin(false);
+      sessionStorage.removeItem('j41_isAdmin');
+      return;
+    }
+    // Already checked this session — skip the fetch
+    if (sessionStorage.getItem('j41_isAdmin_checked') === 'true') return;
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/v1/internal/admin-stats`, {
+          credentials: 'include',
+        });
+        const admin = res.ok;
+        setIsAdmin(admin);
+        sessionStorage.setItem('j41_isAdmin', String(admin));
+      } catch {
+        setIsAdmin(false);
+        sessionStorage.setItem('j41_isAdmin', 'false');
+      }
+      sessionStorage.setItem('j41_isAdmin_checked', 'true');
+    })();
+  }, [user]);
 
   async function checkSession() {
     try {
@@ -117,10 +145,13 @@ export function AuthProvider({ children }) {
       // Logout failed — clear local state anyway
     }
     setUser(null);
+    setIsAdmin(false);
+    sessionStorage.removeItem('j41_isAdmin');
+    sessionStorage.removeItem('j41_isAdmin_checked');
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, getChallenge, login, logout, refreshUser, requireAuth, showAuthModal, setShowAuthModal }}>
+    <AuthContext.Provider value={{ user, loading, isAdmin, getChallenge, login, logout, refreshUser, requireAuth, showAuthModal, setShowAuthModal }}>
       {children}
     </AuthContext.Provider>
   );

@@ -9,7 +9,7 @@ import { useState, useEffect, useRef } from 'react';
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
 export default function Layout() {
-  const { user, logout, requireAuth } = useAuth();
+  const { user, logout, requireAuth, isAdmin } = useAuth();
   const location = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -18,7 +18,6 @@ export default function Layout() {
   const [profileEmpty, setProfileEmpty] = useState(false);
   const [profileBannerDismissed, setProfileBannerDismissed] = useState(() => sessionStorage.getItem('profileBannerDismissed') === 'true');
   const [showToast, setShowToast] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
 
   // Close menus on navigation
   useEffect(() => {
@@ -78,17 +77,6 @@ export default function Layout() {
     fetchUnread();
     const interval = setInterval(fetchUnread, 30000);
     return () => clearInterval(interval);
-  }, [user]);
-
-  // Check admin access (lightweight HEAD-like probe)
-  useEffect(() => {
-    if (!user) { setIsAdmin(false); return; }
-    (async () => {
-      try {
-        const res = await fetch(`${API_BASE}/v1/internal/admin-stats`, { credentials: 'include', method: 'GET', headers: { 'Accept': 'application/json' } });
-        setIsAdmin(res.ok);
-      } catch { setIsAdmin(false); }
-    })();
   }, [user]);
 
   // Main nav — shown in top bar on desktop

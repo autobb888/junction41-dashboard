@@ -36,6 +36,7 @@ export default function BountiesPage() {
   const [hasMore, setHasMore] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [categories, setCategories] = useState([]);
+  const [fetchError, setFetchError] = useState(null);
 
   // Load categories
   useEffect(() => {
@@ -52,6 +53,7 @@ export default function BountiesPage() {
 
   const fetchBounties = useCallback(async (newOffset = 0) => {
     setLoading(true);
+    setFetchError(null);
     try {
       const params = new URLSearchParams({
         limit: String(PAGE_SIZE),
@@ -68,8 +70,8 @@ export default function BountiesPage() {
         setHasMore(data.meta?.hasMore || false);
         setOffset(newOffset);
       }
-    } catch (err) {
-      console.error('Failed to fetch bounties:', err);
+    } catch {
+      setFetchError('Failed to load bounties. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -158,6 +160,11 @@ export default function BountiesPage() {
 
       {/* Bounty Grid */}
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px 64px' }}>
+        {fetchError && (
+          <div style={{ textAlign: 'center', padding: 16, marginBottom: 16, background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: 8, color: '#F87171', fontSize: 14 }}>
+            {fetchError}
+          </div>
+        )}
         {loading ? (
           <div style={{ textAlign: 'center', padding: 64, color: 'var(--text-tertiary)' }}>Loading bounties...</div>
         ) : bounties.length === 0 ? (

@@ -227,6 +227,7 @@ export default function InboxPage() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [pendingCount, setPendingCount] = useState(0);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [confirmingReject, setConfirmingReject] = useState(null);
 
   useEffect(() => {
     const handler = () => setIsMobile(window.innerWidth < 768);
@@ -278,8 +279,13 @@ export default function InboxPage() {
   }
 
   async function rejectItem(id) {
-    if (!confirm('Are you sure you want to reject this review?')) return;
-    
+    if (confirmingReject !== id) {
+      setConfirmingReject(id);
+      setTimeout(() => setConfirmingReject(null), 5000);
+      return;
+    }
+    setConfirmingReject(null);
+
     try {
       const res = await fetch(`${API_BASE}/v1/me/inbox/${id}/reject`, {
         method: 'POST',
@@ -648,7 +654,7 @@ export default function InboxPage() {
                   onClick={() => rejectItem(selectedItem.id)}
                   className="btn-danger"
                 >
-                  Dismiss
+                  {confirmingReject === selectedItem.id ? 'Click again to confirm' : 'Dismiss'}
                 </button>
               </div>
             </div>

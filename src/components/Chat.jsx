@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../utils/api';
 import HeldMessageIndicator from './HeldMessageIndicator';
 import SafetyScanBadge from './SafetyScanBadge';
+import { useToast } from './Toast';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -97,6 +98,7 @@ function FileAttachment({ fileInfo, jobId }) {
 
 export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) {
   const { user } = useAuth();
+  const addToast = useToast();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [connected, setConnected] = useState(false);
@@ -430,12 +432,12 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
       if (res.status === 401) return;
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(data.error?.message || 'Upload failed');
+        addToast?.(data.error?.message || 'Upload failed', 'error');
         return;
       }
       clearPendingFile();
     } catch (err) {
-      alert('Upload failed: ' + err.message);
+      addToast?.('Upload failed: ' + err.message, 'error');
     } finally {
       setUploading(false);
     }

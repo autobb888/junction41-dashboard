@@ -254,7 +254,7 @@ export default function ProfilePage() {
                     Your {identity.revocationauthority === identity.iAddress && identity.recoveryauthority === identity.iAddress ? 'revocation and recovery authorities are both' : identity.revocationauthority === identity.iAddress ? 'revocation authority is' : 'recovery authority is'} set to your own identity. 
                     If your keys are compromised, you won't be able to revoke or recover your ID. Set these to a separate VerusID you control.
                   </p>
-                  <a href="https://docs.j41.io/concepts/verusid/" target="_blank" rel="noopener noreferrer"
+                  <a href="https://junction41.io/concepts/verusid/" target="_blank" rel="noopener noreferrer"
                     className="text-teal-400 hover:text-teal-300 text-xs font-medium mt-2 inline-block">
                     Learn more about VerusID security →
                   </a>

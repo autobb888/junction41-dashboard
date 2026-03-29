@@ -39,6 +39,7 @@ export default function BountyDetailPage() {
   const [selectedApplicants, setSelectedApplicants] = useState([]);
   const [awarding, setAwarding] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
 
   const fetchBounty = useCallback(async () => {
     try {
@@ -155,7 +156,12 @@ export default function BountyDetailPage() {
 
   async function handleCancel() {
     if (!user) { requireAuth(); return; }
-    if (!confirm('Cancel this bounty? All applicants will be notified.')) return;
+    if (!confirmingCancel) {
+      setConfirmingCancel(true);
+      setTimeout(() => setConfirmingCancel(false), 5000);
+      return;
+    }
+    setConfirmingCancel(false);
     setCancelling(true);
 
     try {
@@ -277,9 +283,9 @@ export default function BountyDetailPage() {
             <button
               onClick={handleCancel}
               disabled={cancelling}
-              style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(248,113,113,0.3)', background: 'rgba(248,113,113,0.08)', color: '#F87171', fontSize: 13, cursor: 'pointer' }}
+              style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(248,113,113,0.3)', background: confirmingCancel ? 'rgba(248,113,113,0.2)' : 'rgba(248,113,113,0.08)', color: '#F87171', fontSize: 13, cursor: 'pointer' }}
             >
-              {cancelling ? 'Cancelling...' : 'Cancel Bounty'}
+              {cancelling ? 'Cancelling...' : confirmingCancel ? 'Click again to confirm cancel' : 'Cancel Bounty'}
             </button>
           </div>
         )}

@@ -69,8 +69,8 @@ export default function DashboardPage() {
       const res = await apiFetch(`/v1/stats`);
       const data = await res.json();
       if (data.data) setStats(data.data);
-    } catch (err) {
-      console.warn('Failed to fetch stats:', err);
+    } catch {
+      // Stats are non-critical; silently ignore failures
     }
   }
 
