@@ -33,7 +33,7 @@ export default function JobDetailPage() {
   // Poll for status changes when waiting on the other party (e.g. buyer waiting for agent to accept)
   useEffect(() => {
     if (!job || loading) return;
-    const waitingStatuses = ['requested', 'accepted', 'delivered'];
+    const waitingStatuses = ['requested', 'accepted', 'delivered', 'rework'];
     if (!waitingStatuses.includes(job.status)) return;
     const interval = setInterval(fetchJob, 5000);
     return () => clearInterval(interval);
@@ -214,7 +214,7 @@ export default function JobDetailPage() {
               {job.amount} {job.currency}
             </p>
             <p className="text-gray-500 text-sm">
-              {job.payment.terms}
+              {job.payment?.terms}
             </p>
           </div>
         </div>
@@ -236,14 +236,14 @@ export default function JobDetailPage() {
             <div>
               <p className="text-gray-400 text-sm">Payment Status</p>
               <p className="text-white">
-                {job.payment.txid ? (
+                {job.payment?.txid ? (
                   <span className="text-green-400">✓ Paid ({job.payment.txid.slice(0, 16)}...)</span>
                 ) : (
                   <span className="text-yellow-400">Pending</span>
                 )}
               </p>
             </div>
-            {job.payment.address && (
+            {job.payment?.address && (
               <div className="text-right">
                 <p className="text-gray-400 text-sm">Pay to</p>
                 <p className="text-white font-mono text-xs">{job.payment.address}</p>
@@ -301,8 +301,8 @@ export default function JobDetailPage() {
         </div>
       )}
 
-      {/* Workspace Panel — buyer only, in_progress jobs */}
-      {isBuyer && job.status === 'in_progress' && (
+      {/* Workspace Panel — buyer only, active/delivered jobs */}
+      {isBuyer && ['in_progress', 'delivered', 'paused'].includes(job.status) && (
         <WorkspacePanel job={job} />
       )}
 
@@ -313,39 +313,57 @@ export default function JobDetailPage() {
         </div>
       )}
 
-      {/* Review Section — shown when job is completed */}
-      {job.status === 'completed' && (
-        <div className="card">
-          <h3 className="text-lg font-semibold text-white mb-4">Review</h3>
-          {existingReview ? (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="text-yellow-400 text-lg">
-                  {'★'.repeat(existingReview.rating)}{'☆'.repeat(5 - existingReview.rating)}
-                </span>
-                <span className="text-gray-400 text-sm">
-                  {existingReview.rating}/5
-                </span>
+      {/* Review Section — shown for completed, delivered, disputed, cancelled jobs */}
+      {(() => {
+        const reviewableStatuses = ['completed', 'delivered', 'disputed', 'cancelled'];
+        // For delivered jobs, only show if review window hasn't expired
+        const deliveredExpired = job.status === 'delivered' && job.reviewWindowExpiresAt && new Date(job.reviewWindowExpiresAt) < new Date();
+        const canReview = reviewableStatuses.includes(job.status) && !deliveredExpired;
+        if (!canReview) return null;
+
+        const isNegativeOutcome = ['disputed', 'cancelled'].includes(job.status);
+        const buttonLabel = isNegativeOutcome ? 'Rate This Experience' : 'Leave a Review';
+
+        return (
+          <div className="card">
+            <h3 className="text-lg font-semibold text-white mb-4">Review</h3>
+            {existingReview ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-yellow-400 text-lg">
+                    {'★'.repeat(existingReview.rating)}{'☆'.repeat(5 - existingReview.rating)}
+                  </span>
+                  <span className="text-gray-400 text-sm">
+                    {existingReview.rating}/5
+                  </span>
+                </div>
+                {existingReview.message && (
+                  <p className="text-gray-300">{existingReview.message}</p>
+                )}
+                <p className="text-gray-400 text-xs">
+                  Reviewed by <ResolvedId verusId={existingReview.buyerVerusId || existingReview.buyer_verus_id} />
+                </p>
               </div>
-              {existingReview.message && (
-                <p className="text-gray-300">{existingReview.message}</p>
-              )}
-              <p className="text-gray-400 text-xs">
-                Reviewed by <ResolvedId verusId={existingReview.buyerVerusId || existingReview.buyer_verus_id} />
-              </p>
-            </div>
-          ) : isBuyer ? (
-            <button
-              onClick={() => setShowReview(true)}
-              className="bg-teal-600 hover:bg-teal-500 text-white font-medium px-6 py-3 rounded-lg transition-colors"
-            >
-              ⭐ Leave a Review
-            </button>
-          ) : (
-            <p className="text-gray-500">No review yet</p>
-          )}
-        </div>
-      )}
+            ) : isBuyer ? (
+              <>
+                <button
+                  onClick={() => setShowReview(true)}
+                  className="bg-teal-600 hover:bg-teal-500 text-white font-medium px-6 py-3 rounded-lg transition-colors"
+                >
+                  {isNegativeOutcome ? '📝' : '⭐'} {buttonLabel}
+                </button>
+                {isNegativeOutcome && (
+                  <p className="text-gray-500 text-xs mt-2">
+                    Your review helps other buyers know what to expect from this agent.
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-gray-500">No review yet</p>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Review Modal */}
       {showReview && (

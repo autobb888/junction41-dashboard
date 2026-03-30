@@ -32,8 +32,27 @@ export default function ReviewModal({ job, onClose, onSubmitted }) {
   const [message, setMessage] = useState('');
   const [step, setStep] = useState('compose'); // compose | submitting | done
   const [signature, setSignature] = useState('');
+  const [sigCleared, setSigCleared] = useState(false);
+  const sigClearedTimer = useRef(null);
   const [error, setError] = useState(null);
   const [timestamp] = useState(() => Math.floor(Date.now() / 1000));
+
+  const isNegativeOutcome = ['disputed', 'cancelled'].includes(job.status);
+  const modalTitle = isNegativeOutcome ? 'Rate This Experience' : 'Leave a Review';
+
+  // Show "signature cleared" warning briefly when sig is cleared due to edits
+  function clearSignatureWithWarning() {
+    if (signature) {
+      setSignature('');
+      setSigCleared(true);
+      if (sigClearedTimer.current) clearTimeout(sigClearedTimer.current);
+      sigClearedTimer.current = setTimeout(() => setSigCleared(false), 4000);
+    }
+  }
+
+  useEffect(() => {
+    return () => { if (sigClearedTimer.current) clearTimeout(sigClearedTimer.current); };
+  }, []);
 
   const modalRef = useRef(null);
 
@@ -111,10 +130,10 @@ export default function ReviewModal({ job, onClose, onSubmitted }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div ref={modalRef} role="dialog" aria-modal="true" aria-label="Leave a Review" className="bg-[#1a1a2e] border border-white/10 rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+      <div ref={modalRef} role="dialog" aria-modal="true" aria-label={modalTitle} className="bg-[#1a1a2e] border border-white/10 rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-          <h2 className="text-lg font-semibold text-white">Leave a Review</h2>
+          <h2 className="text-lg font-semibold text-white">{modalTitle}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-white text-xl" aria-label="Close">✕</button>
         </div>
 
@@ -130,7 +149,7 @@ export default function ReviewModal({ job, onClose, onSubmitted }) {
                       key={star}
                       onMouseEnter={() => setHoverRating(star)}
                       onMouseLeave={() => setHoverRating(0)}
-                      onClick={() => { setRating(star); setSignature(''); }}
+                      onClick={() => { setRating(star); clearSignatureWithWarning(); }}
                       className="text-3xl transition-transform hover:scale-110"
                     >
                       {star <= (hoverRating || rating) ? '★' : '☆'}
@@ -149,7 +168,7 @@ export default function ReviewModal({ job, onClose, onSubmitted }) {
                 <label className="block text-sm text-gray-400 mb-2">Review (optional)</label>
                 <textarea
                   value={message}
-                  onChange={e => { setMessage(e.target.value); setSignature(''); }}
+                  onChange={e => { setMessage(e.target.value); clearSignatureWithWarning(); }}
                   placeholder="How was your experience?"
                   rows={3}
                   maxLength={500}
@@ -185,10 +204,16 @@ export default function ReviewModal({ job, onClose, onSubmitted }) {
                           try { const p = JSON.parse(val.trim()); if (p.signature) val = p.signature; } catch { /* not JSON */ }
                         }
                         setSignature(val);
+                        setSigCleared(false);
                       }}
                       placeholder="Paste the signature output here..."
                       className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-teal-500 font-mono text-sm"
                     />
+                    {sigCleared && (
+                      <p className="text-amber-400 text-xs mt-1 animate-pulse">
+                        Signature cleared — sign again after editing
+                      </p>
+                    )}
                   </div>
 
                   <button

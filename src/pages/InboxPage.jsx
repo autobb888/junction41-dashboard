@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { apiFetch } from '../utils/api';
 import ResolvedId from '../components/ResolvedId';
 import CopyButton from '../components/CopyButton';
 import SignCopyButtons from '../components/SignCopyButtons';
 import { SkeletonList } from '../components/Skeleton';
-
-const API_BASE = import.meta.env.VITE_API_URL || '';
 
 function JobAcceptPanel({ job, onAccepted }) {
   const { user } = useAuth();
@@ -25,10 +24,9 @@ function JobAcceptPanel({ job, onAccepted }) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/v1/jobs/${job.id}/accept`, {
+      const res = await apiFetch(`/v1/jobs/${job.id}/accept`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ timestamp, signature: signature.trim() }),
       });
       const data = await res.json();
@@ -243,9 +241,7 @@ export default function InboxPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`${API_BASE}/v1/me/inbox`, {
-        credentials: 'include',
-      });
+      const res = await apiFetch('/v1/me/inbox');
       const data = await res.json();
       
       if (!res.ok) {
@@ -263,9 +259,7 @@ export default function InboxPage() {
 
   async function fetchItemDetails(id) {
     try {
-      const res = await fetch(`${API_BASE}/v1/me/inbox/${id}`, {
-        credentials: 'include',
-      });
+      const res = await apiFetch(`/v1/me/inbox/${id}`);
       const data = await res.json();
       
       if (!res.ok) {
@@ -287,9 +281,8 @@ export default function InboxPage() {
     setConfirmingReject(null);
 
     try {
-      const res = await fetch(`${API_BASE}/v1/me/inbox/${id}/reject`, {
+      const res = await apiFetch(`/v1/me/inbox/${id}/reject`, {
         method: 'POST',
-        credentials: 'include',
       });
       
       if (!res.ok) {

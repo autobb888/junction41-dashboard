@@ -56,12 +56,10 @@ export default function WorkspacePanel({ job }) {
           const { status, counts } = data;
           setSession((prev) => {
             if (!prev) return prev;
-            // If status changed (reconnect, pause, resume), re-fetch full session
-            if (prev.status !== status) {
-              fetchSession();
-            }
             return { ...prev, status, counts: counts || prev.counts };
           });
+          // fetch full session data on status change
+          fetchSession();
         });
       } catch {
         // Socket.IO connection failed — status will refresh on next poll
@@ -337,9 +335,25 @@ export default function WorkspacePanel({ job }) {
         {session.status === 'disconnected' && (
           <div className="p-3 rounded-lg" style={{ background: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.3)' }}>
             <p className="text-yellow-400 text-sm font-medium">CLI disconnected — 30 min reconnect window</p>
-            <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
-              Reconnect with: <code>j41-jailbox . --resume &lt;token&gt;</code>
-            </p>
+            {command ? (
+              <p className="text-xs mt-1 font-mono break-all" style={{ color: 'var(--text-tertiary)' }}>
+                Reconnect with: <code>{command}</code>
+              </p>
+            ) : (
+              <div className="mt-2">
+                <button
+                  onClick={generateToken}
+                  disabled={generating}
+                  className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors"
+                  style={{
+                    background: generating ? 'var(--bg-elevated)' : 'var(--accent-purple)',
+                    color: generating ? 'var(--text-tertiary)' : 'white',
+                  }}
+                >
+                  {generating ? 'Generating...' : 'Generate new token'}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

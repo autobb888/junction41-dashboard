@@ -24,7 +24,15 @@ export default function DisputeModal({ job, dispute, role, onClose, onAction }) 
 
   const isFilingPhase = !dispute;
   const isRespondPhase = dispute?.action === 'pending' && role === 'seller';
-  const isReworkAcceptPhase = dispute?.action === 'rework' && !dispute?.rework_accepted && role === 'buyer';
+  const isReworkAcceptPhase = dispute?.action === 'rework' && dispute?.rework_accepted == null && role === 'buyer';
+  const isRejectedPhase = dispute?.action === 'rejected';
+  const isDeclinedReworkPhase = dispute?.action === 'rework' && dispute?.rework_accepted === false;
+  const isRefundedPhase = dispute?.action === 'refund';
+  const isPendingBuyerView = dispute?.action === 'pending' && role === 'buyer';
+  const isReworkSellerView = dispute?.action === 'rework' && role === 'seller' && dispute?.rework_accepted == null;
+  // Informational: any dispute state that doesn't have an actionable phase
+  const isInfoOnly = dispute && !isFilingPhase && !isRespondPhase && !isReworkAcceptPhase
+    && !isRejectedPhase && !isDeclinedReworkPhase && !isRefundedPhase && !isPendingBuyerView && !isReworkSellerView;
 
   const idName = user?.identityName ? `${user.identityName}@` : 'yourID@';
 
@@ -147,7 +155,15 @@ export default function DisputeModal({ job, dispute, role, onClose, onAction }) 
           <div className="flex items-center gap-2">
             <AlertTriangle size={18} className="text-amber-400" />
             <h3 className="text-base font-bold text-white">
-              {isFilingPhase ? 'File a Dispute' : isRespondPhase ? 'Respond to Dispute' : 'Rework Offer'}
+              {isFilingPhase ? 'File a Dispute'
+                : isRespondPhase ? 'Respond to Dispute'
+                : isReworkAcceptPhase ? 'Rework Offer'
+                : isRejectedPhase ? 'Dispute Rejected'
+                : isDeclinedReworkPhase ? 'Rework Declined'
+                : isRefundedPhase ? 'Refund Issued'
+                : isPendingBuyerView ? 'Dispute Pending'
+                : isReworkSellerView ? 'Rework Pending'
+                : 'Dispute Details'}
             </h3>
           </div>
           <button onClick={onClose} className="text-gray-500 hover:text-white"><X size={18} /></button>
@@ -297,6 +313,187 @@ export default function DisputeModal({ job, dispute, role, onClose, onAction }) 
                 Decline
               </button>
             </div>
+          </>
+        )}
+
+        {/* Rejected — seller rejected the dispute */}
+        {isRejectedPhase && (
+          <>
+            <div className="mb-4 p-3 rounded-lg" style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+              <p className="text-xs text-gray-500 mb-1">Your dispute reason:</p>
+              <p className="text-sm text-gray-300 italic mb-3">{dispute.reason}</p>
+              <p className="text-xs text-gray-500 mb-1">Seller response:</p>
+              <p className="text-sm text-gray-300">{dispute.response || 'No response provided.'}</p>
+            </div>
+            <div className="p-3 rounded-lg" style={{ background: 'rgba(239, 68, 68, 0.06)', border: '1px solid rgba(239, 68, 68, 0.15)' }}>
+              <p className="text-sm text-red-400 font-medium mb-1">Seller has rejected this dispute.</p>
+              <p className="text-xs text-gray-400">
+                You can escalate through external arbitration or accept the seller's resolution.
+                Contact support if you believe this rejection is unjust.
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-full mt-4 py-2.5 rounded-lg text-sm font-medium text-gray-400"
+              style={{ border: '1px solid rgba(255,255,255,0.1)' }}
+            >
+              Close
+            </button>
+          </>
+        )}
+
+        {/* Declined rework — buyer declined the rework offer */}
+        {isDeclinedReworkPhase && (
+          <>
+            <div className="mb-4 p-3 rounded-lg" style={{ background: 'var(--bg-inset)' }}>
+              <p className="text-xs text-gray-500 mb-1">Dispute reason:</p>
+              <p className="text-sm text-gray-300 italic mb-3">{dispute.reason}</p>
+              <p className="text-xs text-gray-500 mb-1">Rework offer from seller:</p>
+              <p className="text-sm text-gray-300">{dispute.response || 'No details provided.'}</p>
+              {dispute.rework_cost > 0 && (
+                <p className="text-sm text-amber-400 mt-2 font-medium">
+                  Proposed cost: +{dispute.rework_cost} {job.currency || 'VRSCTEST'}
+                </p>
+              )}
+            </div>
+            <div className="p-3 rounded-lg" style={{ background: 'rgba(251, 191, 36, 0.06)', border: '1px solid rgba(251, 191, 36, 0.15)' }}>
+              <p className="text-sm text-amber-400 font-medium mb-1">Rework was declined.</p>
+              <p className="text-xs text-gray-400">
+                The dispute remains open for resolution. Both parties may negotiate further
+                through the job chat, or escalate through external arbitration.
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-full mt-4 py-2.5 rounded-lg text-sm font-medium text-gray-400"
+              style={{ border: '1px solid rgba(255,255,255,0.1)' }}
+            >
+              Close
+            </button>
+          </>
+        )}
+
+        {/* Refund issued — informational */}
+        {isRefundedPhase && (
+          <>
+            <div className="mb-4 p-3 rounded-lg" style={{ background: 'var(--bg-inset)' }}>
+              <p className="text-xs text-gray-500 mb-1">Dispute reason:</p>
+              <p className="text-sm text-gray-300 italic mb-3">{dispute.reason}</p>
+              {dispute.response && (
+                <>
+                  <p className="text-xs text-gray-500 mb-1">Seller response:</p>
+                  <p className="text-sm text-gray-300 mb-3">{dispute.response}</p>
+                </>
+              )}
+            </div>
+            <div className="p-3 rounded-lg" style={{ background: 'rgba(52, 211, 153, 0.08)', border: '1px solid rgba(52, 211, 153, 0.2)' }}>
+              <p className="text-sm text-emerald-400 font-medium mb-1">Refund issued.</p>
+              {dispute.refund_percent && (
+                <p className="text-xs text-gray-400">
+                  {dispute.refund_percent}% of the job amount has been refunded.
+                </p>
+              )}
+              {dispute.refund_txid && (
+                <p className="text-xs text-gray-500 font-mono mt-1">
+                  TX: {dispute.refund_txid}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={onClose}
+              className="w-full mt-4 py-2.5 rounded-lg text-sm font-medium text-gray-400"
+              style={{ border: '1px solid rgba(255,255,255,0.1)' }}
+            >
+              Close
+            </button>
+          </>
+        )}
+
+        {/* Pending — buyer view (waiting for seller response) */}
+        {isPendingBuyerView && (
+          <>
+            <div className="mb-4 p-3 rounded-lg" style={{ background: 'var(--bg-inset)' }}>
+              <p className="text-xs text-gray-500 mb-1">Your dispute reason:</p>
+              <p className="text-sm text-gray-300 italic">{dispute.reason}</p>
+              <p className="text-xs text-gray-500 mt-2">
+                Filed: {new Date(dispute.created_at).toLocaleString()}
+              </p>
+            </div>
+            <div className="p-3 rounded-lg flex items-center gap-3" style={{ background: 'rgba(251, 191, 36, 0.06)', border: '1px solid rgba(251, 191, 36, 0.15)' }}>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-amber-400 flex-shrink-0"></div>
+              <div>
+                <p className="text-sm text-amber-400 font-medium">Waiting for seller response.</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  The seller has been notified and can respond with a refund, rework offer, or rejection.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-full mt-4 py-2.5 rounded-lg text-sm font-medium text-gray-400"
+              style={{ border: '1px solid rgba(255,255,255,0.1)' }}
+            >
+              Close
+            </button>
+          </>
+        )}
+
+        {/* Rework pending — seller view (waiting for buyer to accept/decline) */}
+        {isReworkSellerView && (
+          <>
+            <div className="mb-4 p-3 rounded-lg" style={{ background: 'var(--bg-inset)' }}>
+              <p className="text-xs text-gray-500 mb-1">Buyer dispute:</p>
+              <p className="text-sm text-gray-300 italic mb-3">{dispute.reason}</p>
+              <p className="text-xs text-gray-500 mb-1">Your rework offer:</p>
+              <p className="text-sm text-gray-300">{dispute.response || 'No details provided.'}</p>
+              {dispute.rework_cost > 0 && (
+                <p className="text-sm text-amber-400 mt-2 font-medium">
+                  Proposed cost: +{dispute.rework_cost} {job.currency || 'VRSCTEST'}
+                </p>
+              )}
+            </div>
+            <div className="p-3 rounded-lg flex items-center gap-3" style={{ background: 'rgba(251, 191, 36, 0.06)', border: '1px solid rgba(251, 191, 36, 0.15)' }}>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-amber-400 flex-shrink-0"></div>
+              <div>
+                <p className="text-sm text-amber-400 font-medium">Waiting for buyer to respond to your rework offer.</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  The buyer can accept the rework terms or decline.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-full mt-4 py-2.5 rounded-lg text-sm font-medium text-gray-400"
+              style={{ border: '1px solid rgba(255,255,255,0.1)' }}
+            >
+              Close
+            </button>
+          </>
+        )}
+
+        {/* Fallback — any other dispute state */}
+        {isInfoOnly && (
+          <>
+            <div className="mb-4 p-3 rounded-lg" style={{ background: 'var(--bg-inset)' }}>
+              <p className="text-xs text-gray-500 mb-1">Dispute reason:</p>
+              <p className="text-sm text-gray-300 italic">{dispute.reason}</p>
+              {dispute.response && (
+                <>
+                  <p className="text-xs text-gray-500 mt-2 mb-1">Response:</p>
+                  <p className="text-sm text-gray-300">{dispute.response}</p>
+                </>
+              )}
+              <p className="text-xs text-gray-500 mt-2">
+                Status: {dispute.action} {dispute.resolved_at ? '(resolved)' : '(open)'}
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-full mt-4 py-2.5 rounded-lg text-sm font-medium text-gray-400"
+              style={{ border: '1px solid rgba(255,255,255,0.1)' }}
+            >
+              Close
+            </button>
           </>
         )}
       </div>

@@ -5,6 +5,8 @@ import ResolvedId from '../components/ResolvedId';
 import JobStepper from '../components/JobStepper';
 import CopyButton from '../components/CopyButton';
 import SignCopyButtons from '../components/SignCopyButtons';
+import DisputeModal from '../components/DisputeModal';
+import DeliveryPanel from '../components/DeliveryPanel';
 import { SkeletonList, EmptyState } from '../components/Skeleton';
 import usePageTitle from '../hooks/usePageTitle';
 
@@ -117,61 +119,6 @@ function DeletionAttestationView({ jobId }) {
 }
 
 // Status badges now use CSS classes from index.css (badge + badge-{status})
-
-function DeliveryPanel({ job, user, loading, onSubmit, onCancel }) {
-  const [hash, setHash] = useState('');
-  const [msg, setMsg] = useState('');
-  const [sig, setSig] = useState('');
-  const [ts] = useState(Math.floor(Date.now() / 1000));
-
-  const signMsg = `J41-DELIVER|Job:${job.jobHash}|Delivery:${hash}|Ts:${ts}|I have delivered the work for this job.`;
-  const idName = user?.identityName ? `${user.identityName}@` : 'yourID@';
-  const cmd = `signmessage "${idName}" "${signMsg.replace(/"/g, '\\"')}"`;
-  const msgLines = [signMsg]; // compat
-
-  return (
-    <div className="mt-4 bg-gray-900 rounded-lg p-4 space-y-3 border border-gray-700">
-      <h4 className="text-white font-medium text-sm">Mark as Delivered</h4>
-      <div>
-        <label className="block text-xs text-gray-400 mb-1">Delivery Hash/URL</label>
-        <input type="text" value={hash} onChange={e => setHash(e.target.value)}
-          className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-verus-blue focus:outline-none"
-          placeholder="IPFS hash, URL, or file hash..." />
-      </div>
-      <div>
-        <label className="block text-xs text-gray-400 mb-1">Message (optional)</label>
-        <input type="text" value={msg} onChange={e => setMsg(e.target.value)}
-          className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-verus-blue focus:outline-none"
-          placeholder="Notes about the delivery..." />
-      </div>
-      {hash && (
-        <>
-          <div className="bg-gray-950 rounded p-3">
-            <div className="flex justify-between items-center mb-1">
-              <span className="text-xs text-gray-400">Sign command:</span>
-              <SignCopyButtons command={cmd} />
-            </div>
-            <code className="text-xs text-verus-blue break-all">{cmd}</code>
-          </div>
-          <div>
-            <label className="block text-xs text-gray-400 mb-1">Paste Signature</label>
-            <input type="text" value={sig} onChange={e => setSig(e.target.value)}
-              className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white font-mono text-sm focus:border-verus-blue focus:outline-none"
-              placeholder="AW1B..." />
-          </div>
-        </>
-      )}
-      <div className="flex gap-2">
-        <button
-          onClick={() => onSubmit({ deliveryHash: hash, deliveryMessage: msg, signature: sig.trim(), timestamp: ts })}
-          disabled={!hash || !sig.trim() || loading}
-          className="btn-primary text-sm"
-        >{loading ? 'Submitting...' : 'Submit Delivery'}</button>
-        <button onClick={onCancel} className="btn-secondary text-sm">Cancel</button>
-      </div>
-    </div>
-  );
-}
 
 export default function JobsPage() {
   usePageTitle('Jobs');
@@ -313,6 +260,7 @@ function JobCard({ job, currentUser, onUpdate }) {
   const [error, setError] = useState(null);
   const [signPanel, setSignPanel] = useState(null); // { action, message, command, timestamp }
   const [signatureInput, setSignatureInput] = useState('');
+  const [showDisputeModal, setShowDisputeModal] = useState(false);
 
   const isBuyer = job.buyerVerusId === currentUser;
   const isSeller = job.sellerVerusId === currentUser;
@@ -527,10 +475,10 @@ function JobCard({ job, currentUser, onUpdate }) {
               </button>
             )}
 
-            {/* Common actions */}
-            {!['completed', 'cancelled', 'disputed'].includes(job.status) && (
+            {/* Dispute — buyer only, actionable states, opens modal */}
+            {isBuyer && ['in_progress', 'delivered', 'paused'].includes(job.status) && (
               <button
-                onClick={() => handleAction('dispute')}
+                onClick={() => setShowDisputeModal(true)}
                 disabled={loading}
                 className="btn-danger text-sm"
               >
@@ -545,6 +493,17 @@ function JobCard({ job, currentUser, onUpdate }) {
               View Details
             </Link>
           </div>
+
+          {/* Dispute Modal */}
+          {showDisputeModal && (
+            <DisputeModal
+              job={job}
+              dispute={null}
+              role="buyer"
+              onClose={() => setShowDisputeModal(false)}
+              onAction={() => { setShowDisputeModal(false); onUpdate(); }}
+            />
+          )}
 
           {/* Sign Panel */}
           {signPanel && signPanel.type !== 'txid' && signPanel.type !== 'delivery' && (
@@ -657,9 +616,8 @@ function JobCard({ job, currentUser, onUpdate }) {
           {signPanel && signPanel.type === 'delivery' && (
             <DeliveryPanel
               job={job}
-              user={user}
-              loading={loading}
-              onSubmit={(body) => { handleAction('deliver', body); setSignPanel(null); }}
+              isSeller={isSeller}
+              onDelivered={() => { setSignPanel(null); onUpdate(); }}
               onCancel={() => { setSignPanel(null); setSignatureInput(''); }}
             />
           )}

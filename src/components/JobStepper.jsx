@@ -7,6 +7,7 @@ function getStepIndex(status, hasPayment) {
     requested: 0,
     accepted: 1,
     in_progress: hasPayment ? 2 : 1,
+    paused: hasPayment ? 2 : 1,
     delivered: 3,
     completed: 4,
     rework: 3,
@@ -30,6 +31,7 @@ function getStatusLabel(status) {
 }
 
 export default function JobStepper({ status, hasPayment = false }) {
+  const isPaused = status === 'paused';
   const isError = ['disputed', 'cancelled', 'resolved_rejected'].includes(status);
   const currentIndex = getStepIndex(status, hasPayment);
 
@@ -44,8 +46,10 @@ export default function JobStepper({ status, hasPayment = false }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 0, padding: '4px 0' }}>
       {STEPS.map((step, i) => {
-        const isCompleted = !isError && i < currentIndex;
-        const isCurrent = !isError && i === currentIndex;
+        const isCompleted = !isError && !isPaused && i < currentIndex;
+        const isCurrent = !isError && !isPaused && i === currentIndex;
+        const isPausedStep = isPaused && i === currentIndex;
+        const isPastPaused = isPaused && i < currentIndex;
         const isErrorStep = isError && i === errorAtIndex;
         const isPast = isError && i < errorAtIndex;
 
@@ -54,7 +58,7 @@ export default function JobStepper({ status, hasPayment = false }) {
         let connectorColor = 'rgba(255,255,255,0.08)';
         let labelColor = 'var(--text-muted)';
 
-        if (isCompleted || isPast) {
+        if (isCompleted || isPast || isPastPaused) {
           dotColor = '#34d399';
           connectorColor = '#34d399';
           labelColor = 'var(--text-secondary)';
@@ -63,6 +67,11 @@ export default function JobStepper({ status, hasPayment = false }) {
           dotColor = '#fbbf24';
           dotShadow = '0 0 8px rgba(251, 191, 36, 0.4)';
           labelColor = '#fbbf24';
+        }
+        if (isPausedStep) {
+          dotColor = '#f97316';
+          dotShadow = '0 0 8px rgba(249, 115, 22, 0.4)';
+          labelColor = '#f97316';
         }
         if (isErrorStep) {
           dotColor = '#ef4444';
@@ -78,7 +87,7 @@ export default function JobStepper({ status, hasPayment = false }) {
                 style={{
                   width: 20,
                   height: 2,
-                  background: (isCompleted || isPast) ? '#34d399' : 'rgba(255,255,255,0.08)',
+                  background: (isCompleted || isPast || isPastPaused) ? '#34d399' : 'rgba(255,255,255,0.08)',
                   transition: 'background 0.3s',
                 }}
               />
@@ -98,12 +107,12 @@ export default function JobStepper({ status, hasPayment = false }) {
               <span
                 style={{
                   fontSize: 10,
-                  fontWeight: (isCurrent || isErrorStep) ? 600 : 400,
+                  fontWeight: (isCurrent || isErrorStep || isPausedStep) ? 600 : 400,
                   color: labelColor,
                   whiteSpace: 'nowrap',
                 }}
               >
-                {isErrorStep ? getStatusLabel(status) : STEP_LABELS[i]}
+                {isErrorStep ? getStatusLabel(status) : isPausedStep ? 'Paused' : STEP_LABELS[i]}
               </span>
             </div>
           </div>

@@ -5,6 +5,7 @@ import rehypeSanitize from 'rehype-sanitize';
 import ResolvedId from './ResolvedId';
 import CopyButton from './CopyButton';
 import SignCopyButtons from './SignCopyButtons';
+import DeliveryPanel from './DeliveryPanel';
 import { useDisplayName } from '../context/IdentityContext';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../utils/api';
@@ -129,14 +130,11 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState(null);
 
-  // Delivery panel state
-  const [deliveryMsg, setDeliveryMsg] = useState('');
-  const [deliverySig, setDeliverySig] = useState('');
-  const [deliveryTs, setDeliveryTs] = useState(null);
+  // Delivery panel state (managed by shared DeliveryPanel component)
 
   // Complete + review panel state
   const [completeSig, setCompleteSig] = useState('');
-  const [completeTs, setCompleteTs] = useState(null);
+  const [completeTs, setCompleteTs] = useState(() => Math.floor(Date.now() / 1000));
   const [completeStep, setCompleteStep] = useState('review'); // review | sign
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewHover, setReviewHover] = useState(0);
@@ -470,34 +468,7 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
     }
   }
 
-  async function handleDeliver() {
-    setActionLoading(true);
-    setActionError(null);
-    try {
-      const res = await fetch(`${API_BASE}/v1/jobs/${jobId}/deliver`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          deliveryHash: 'pending',
-          deliveryMessage: deliveryMsg || undefined,
-          timestamp: deliveryTs,
-          signature: deliverySig.trim(),
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error?.message || 'Delivery failed');
-      setEndSessionPanel(null);
-      setDeliveryMsg('');
-      setDeliverySig('');
-      setDeliveryTs(null);
-      onJobStatusChanged?.();
-    } catch (err) {
-      setActionError(err.message);
-    } finally {
-      setActionLoading(false);
-    }
-  }
+  // handleDeliver removed — shared DeliveryPanel handles its own submission
 
   async function handleComplete() {
     setActionLoading(true);
@@ -543,6 +514,24 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error?.message || 'Failed to request extension');
+
+      const extStatus = data.data?.status;
+      const extensionId = data.data?.id;
+
+      if (extStatus === 'approved' || jobStatus === 'paused') {
+        // Auto-approved (paused jobs) — fetch invoice and show payment card
+        try {
+          const invRes = await apiFetch(`/v1/jobs/${jobId}/extension-invoice?amount=${extAmount}`);
+          const invData = await invRes.json();
+          if (invRes.ok && invData.data) {
+            setBudgetPayment({ extensionId, ...invData.data });
+          }
+        } catch { /* invoice fetch failed — user can still pay via JobActions */ }
+        addToast('Extension approved — complete payment below', 'info');
+      } else {
+        addToast('Extension requested — waiting for agent approval', 'info');
+      }
+
       setEndSessionPanel(null);
       setSessionEndingInfo(null);
       setExtAmount('');
@@ -577,11 +566,25 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
       );
     }
 
+    // Paused state
+    if (jobStatus === 'paused') {
+      return (
+        <div style={{
+          padding: '10px 16px', background: 'rgba(245, 158, 11, 0.1)',
+          borderTop: '1px solid rgba(245, 158, 11, 0.3)',
+          display: 'flex', alignItems: 'center', gap: 8,
+        }}>
+          <span style={{ color: '#f59e0b', fontSize: 14 }}>||</span>
+          <span style={{ color: '#f59e0b', fontWeight: 600, fontSize: 13 }}>
+            Session paused — {isBuyer ? 'go to job details to reactivate' : 'buyer needs to reactivate the session'}
+          </span>
+        </div>
+      );
+    }
 
     // Completion panel (buyer, job delivered)
     if (endSessionPanel === 'complete' && isBuyer) {
-      if (!completeTs) setCompleteTs(Math.floor(Date.now() / 1000));
-      const ts = completeTs || Math.floor(Date.now() / 1000);
+      const ts = completeTs;
 
       // Step 1: Review (stars + message)
       if (completeStep === 'review') {
@@ -593,7 +596,7 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>
               Complete & Review
             </div>
-            <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
+            <div style={{ display: 'flex', gap: 4, marginBottom: 4 }}>
               {[1, 2, 3, 4, 5].map(star => (
                 <button
                   key={star}
@@ -614,6 +617,11 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
                 </span>
               )}
             </div>
+            {reviewRating < 1 && (
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>
+                Rating required to complete
+              </p>
+            )}
             <textarea
               value={reviewMessage}
               onChange={e => setReviewMessage(e.target.value)}
@@ -735,81 +743,17 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
 
     // Delivery panel (seller)
     if (endSessionPanel === 'deliver' && isSeller) {
-      if (!deliveryTs) setDeliveryTs(Math.floor(Date.now() / 1000));
-      const ts = deliveryTs || Math.floor(Date.now() / 1000);
-      const deliveryHash = 'pending';
-      const msg = `J41-DELIVER|Job:${job.jobHash}|Delivery:${deliveryHash}|Ts:${ts}|I have delivered the work for this job.`;
-      const cmd = buildSignCmd(idName, msg);
-
       return (
         <div style={{
           padding: '12px 16px', background: 'var(--bg-tertiary)',
           borderTop: '1px solid var(--border-primary)',
         }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>
-            Mark as Delivered
-          </div>
-          <textarea
-            value={deliveryMsg}
-            onChange={e => setDeliveryMsg(e.target.value)}
-            placeholder="Delivery message (optional)..."
-            rows={2}
-            maxLength={1000}
-            style={{
-              width: '100%', background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)',
-              borderRadius: 6, padding: '6px 10px', color: 'var(--text-primary)', fontSize: 13,
-              resize: 'none', outline: 'none', marginBottom: 8,
-            }}
+          <DeliveryPanel
+            job={job}
+            isSeller={isSeller}
+            onDelivered={() => { setEndSessionPanel(null); onJobStatusChanged?.(); }}
+            onCancel={() => setEndSessionPanel(null)}
           />
-          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>
-            Sign this message:
-          </p>
-          <div style={{
-            background: 'var(--bg-secondary)', borderRadius: 6, padding: 8,
-            fontFamily: 'monospace', fontSize: 11, color: '#34D399',
-            wordBreak: 'break-all', whiteSpace: 'pre-wrap', marginBottom: 8,
-          }}>
-            {cmd}
-          </div>
-          <SignCopyButtons command={cmd} />
-          <input
-            type="text"
-            value={deliverySig}
-            onChange={e => {
-              let val = e.target.value;
-              if (val.trim().startsWith('{')) {
-                try { const p = JSON.parse(val.trim()); if (p.signature) val = p.signature; } catch { /* not JSON */ }
-              }
-              setDeliverySig(val);
-            }}
-            placeholder="Paste signature..."
-            style={{
-              width: '100%', marginTop: 8, background: 'var(--bg-secondary)',
-              border: '1px solid var(--border-primary)', borderRadius: 6,
-              padding: '6px 10px', color: 'var(--text-primary)', fontFamily: 'monospace',
-              fontSize: 13, outline: 'none',
-            }}
-          />
-          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            <button
-              onClick={handleDeliver}
-              disabled={!deliverySig.trim() || actionLoading}
-              className="btn-primary"
-              style={{ padding: '6px 14px', fontSize: 13 }}
-            >
-              {actionLoading ? 'Submitting...' : 'Submit Delivery'}
-            </button>
-            <button
-              onClick={() => { setEndSessionPanel(null); setDeliverySig(''); setDeliveryMsg(''); setDeliveryTs(null); }}
-              style={{
-                background: 'none', border: '1px solid var(--border-primary)',
-                borderRadius: 6, padding: '6px 14px', fontSize: 13,
-                color: 'var(--text-muted)', cursor: 'pointer',
-              }}
-            >
-              Cancel
-            </button>
-          </div>
         </div>
       );
     }
@@ -959,7 +903,7 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
                 color: 'var(--text-primary)', cursor: 'pointer',
               }}
             >
-              Extend Session
+              {isSeller ? 'Request More Budget' : 'Extend Session'}
             </button>
             <button
               onClick={() => {
@@ -1088,7 +1032,7 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
                     fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
                     color: isMe ? '#34d399' : '#818cf8',
                   }}>
-                    {isMe ? 'you' : 'agent'}
+                    {isMe ? 'you' : isSeller ? (job.buyerVerusId || 'buyer') : (job.seller?.name || job.sellerVerusId || 'agent')}
                   </span>
                   <span style={{ color: '#2a2a3a', fontSize: 11 }}>&rsaquo;</span>
                   <span style={{ fontSize: 10, color: '#374151', fontFamily: 'inherit' }}>
@@ -1297,12 +1241,35 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
             onClick={async () => {
               if (!addBudgetAmount || Number(addBudgetAmount) <= 0) return;
               try {
-                await apiFetch(`/v1/jobs/${jobId}/extensions`, {
+                const res = await apiFetch(`/v1/jobs/${jobId}/extensions`, {
                   method: 'POST', headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ amount: Number(addBudgetAmount), reason: addBudgetReason || 'Buyer added budget' }),
                 });
-                setAddBudgetOpen(false); setAddBudgetAmount(''); setAddBudgetReason(''); onJobStatusChanged?.();
-              } catch {}
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error?.message || 'Failed to add budget');
+                const extStatus = data.data?.status;
+                const extensionId = data.data?.id;
+                const amt = addBudgetAmount;
+
+                setAddBudgetOpen(false); setAddBudgetAmount(''); setAddBudgetReason('');
+
+                if (extStatus === 'approved' || jobStatus === 'paused') {
+                  // Auto-approved — fetch invoice and show payment card
+                  try {
+                    const invRes = await apiFetch(`/v1/jobs/${jobId}/extension-invoice?amount=${amt}`);
+                    const invData = await invRes.json();
+                    if (invRes.ok && invData.data) {
+                      setBudgetPayment({ extensionId, ...invData.data });
+                    }
+                  } catch { /* invoice fetch failed */ }
+                  addToast('Budget approved — complete payment below', 'info');
+                } else {
+                  addToast('Budget request sent — waiting for agent approval', 'info');
+                }
+                onJobStatusChanged?.();
+              } catch (err) {
+                addToast(err.message || 'Failed to add budget', 'error');
+              }
             }}
             disabled={!addBudgetAmount || Number(addBudgetAmount) <= 0}
             style={{ padding: '4px 10px', fontSize: 11, fontFamily: 'inherit', cursor: 'pointer', background: 'rgba(52,211,153,0.1)', color: '#34d399', border: '1px solid rgba(52,211,153,0.3)', borderRadius: 3 }}
@@ -1373,6 +1340,7 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
           style={{ display: 'none' }}
           accept="image/*,.pdf,.txt,.md,.csv,.json,.xml,.zip,.tar,.gz,.7z,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
         />
+        {isBuyer && (
         <button
           type="button"
           onClick={() => setAddBudgetOpen(!addBudgetOpen)}
@@ -1385,6 +1353,7 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
             flexShrink: 0,
           }}
         >$</button>
+        )}
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}

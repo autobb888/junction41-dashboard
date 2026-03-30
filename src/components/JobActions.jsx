@@ -4,6 +4,7 @@ import QRCode from 'react-qr-code';
 import CopyButton from './CopyButton';
 import SignCopyButtons from './SignCopyButtons';
 import DisputeModal from './DisputeModal';
+import DeliveryPanel from './DeliveryPanel';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -27,6 +28,7 @@ function PaymentQR({ jobId, type, amount, currency, onTxDetected }) {
   const [qrData, setQrData] = useState(null);
   const [qrError, setQrError] = useState(null);
   const [polling, setPolling] = useState(true);
+  const [detectedTxid, setDetectedTxid] = useState(null);
   const intervalRef = useRef(null);
   const seenTxidsRef = useRef(new Set());
 
@@ -72,10 +74,16 @@ function PaymentQR({ jobId, type, amount, currency, onTxDetected }) {
         if (job?.payment?.txid && !seenTxidsRef.current.has(job.payment.txid)) {
           onTxDetected?.(job.payment.txid, 'agent');
           seenTxidsRef.current.add(job.payment.txid);
+          setDetectedTxid(job.payment.txid);
+          setPolling(false);
+          if (intervalRef.current) clearInterval(intervalRef.current);
         }
         if (job?.payment?.platformFeeTxid && !seenTxidsRef.current.has(job.payment.platformFeeTxid)) {
           onTxDetected?.(job.payment.platformFeeTxid, 'fee');
           seenTxidsRef.current.add(job.payment.platformFeeTxid);
+          setDetectedTxid(job.payment.platformFeeTxid);
+          setPolling(false);
+          if (intervalRef.current) clearInterval(intervalRef.current);
         }
       } catch {}
     }, 10000);
@@ -125,10 +133,15 @@ function PaymentQR({ jobId, type, amount, currency, onTxDetected }) {
             {qrData.cliCommand}
           </div>
         </div>
-        {polling && (
+        {polling && !detectedTxid && (
           <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-tertiary)' }}>
             <div className="animate-spin rounded-full h-3 w-3 border-b border-verus-blue"></div>
             Waiting for payment...
+          </div>
+        )}
+        {detectedTxid && (
+          <div className="flex items-center gap-2 text-xs text-green-400">
+            <span>&#10003;</span> Payment detected
           </div>
         )}
       </div>
@@ -151,10 +164,15 @@ function PaymentQR({ jobId, type, amount, currency, onTxDetected }) {
           Open in Verus Mobile →
         </a>
       )}
-      {polling && (
+      {polling && !detectedTxid && (
         <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-tertiary)' }}>
           <div className="animate-spin rounded-full h-3 w-3 border-b border-verus-blue"></div>
           Waiting for payment...
+        </div>
+      )}
+      {detectedTxid && (
+        <div className="flex items-center gap-2 text-xs text-green-400">
+          <span>&#10003;</span> Payment detected
         </div>
       )}
     </div>
@@ -311,69 +329,6 @@ function ExtensionPanel({ job, loading, setLoading, setError, onUpdate, onCancel
   );
 }
 
-function DeliveryPanel({ job, user, loading, onSubmit, onCancel }) {
-  const [deliveryMsg, setDeliveryMsg] = useState('');
-  const [sig, setSig] = useState('');
-
-  const ts = Math.floor(Date.now() / 1000);
-  const deliveryHash = 'pending'; // Will be computed by backend
-  const msg = `J41-DELIVER|Job:${job.jobHash}|Delivery:${deliveryHash}|Ts:${ts}|I have delivered the work for this job.`;
-  const idName = user?.identityName ? `${user.identityName}@` : 'yourID@';
-  const cmd = buildSignCmd(idName, msg);
-
-  return (
-    <div className="bg-gray-900 rounded-lg p-4 space-y-3 border border-gray-700">
-      <h4 className="text-white font-medium text-sm">Mark as Delivered</h4>
-      <div>
-        <label className="block text-xs text-gray-400 mb-1">Delivery Message (optional)</label>
-        <textarea
-          value={deliveryMsg}
-          onChange={(e) => setDeliveryMsg(e.target.value)}
-          rows={2}
-          maxLength={1000}
-          className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-verus-blue focus:outline-none"
-          placeholder="Describe what was delivered..."
-        />
-      </div>
-      <p className="text-gray-400 text-xs">Run this command in Verus CLI or Desktop console, then paste the <strong>signature</strong> value below.</p>
-      <div className="bg-gray-950 rounded p-3">
-        <div className="flex justify-between items-center mb-1">
-          <span className="text-xs text-gray-400">Sign command:</span>
-          <SignCopyButtons command={cmd} />
-        </div>
-        <div className="font-mono text-xs text-verus-blue break-all whitespace-pre-wrap select-all">
-          {cmd}
-        </div>
-      </div>
-      <div>
-        <label className="block text-xs text-gray-400 mb-1">Paste Signature (base64 string starting with A...)</label>
-        <input
-          type="text"
-          value={sig}
-          onChange={(e) => {
-            let val = e.target.value;
-            if (val.trim().startsWith('{')) {
-              try { const p = JSON.parse(val.trim()); if (p.signature) val = p.signature; } catch { /* not JSON */ }
-            }
-            setSig(val);
-          }}
-          className="w-full bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-white font-mono text-sm focus:border-verus-blue focus:outline-none"
-          placeholder="AW1B..."
-        />
-      </div>
-      <div className="flex gap-2">
-        <button
-          onClick={() => onSubmit({ signature: sig.trim(), timestamp: ts, deliveryMessage: deliveryMsg })}
-          disabled={!sig.trim() || loading}
-          className="btn-primary text-sm"
-        >
-          {loading ? 'Submitting...' : 'Submit Delivery'}
-        </button>
-        <button onClick={onCancel} className="btn-secondary text-sm">Cancel</button>
-      </div>
-    </div>
-  );
-}
 
 export default function JobActions({ job, onUpdate, autoOpenPayment, onAutoOpenConsumed, onJobStarted }) {
   const { user } = useAuth();
@@ -580,8 +535,8 @@ export default function JobActions({ job, onUpdate, autoOpenPayment, onAutoOpenC
           </button>
         )}
 
-        {/* Dispute — only show for delivered jobs within review window */}
-        {isBuyer && job.status === 'delivered' && (
+        {/* Dispute — buyer can file during in_progress, delivered, or paused */}
+        {isBuyer && ['in_progress', 'delivered', 'paused'].includes(job.status) && (
           <button onClick={() => setShowDisputeModal(true)} disabled={loading} className="btn-danger text-sm">
             Dispute
           </button>
@@ -608,17 +563,28 @@ export default function JobActions({ job, onUpdate, autoOpenPayment, onAutoOpenC
           <p className="text-amber-400 font-medium text-sm mb-2">Session Paused</p>
           <p className="text-xs text-gray-400 mb-3">
             Agent idle for {job.pausedAt ? Math.round((Date.now() - new Date(job.pausedAt.endsWith('Z') ? job.pausedAt : job.pausedAt + 'Z').getTime()) / 60000) : '?'} minutes.
-            Reactivate to continue or extend with additional payment.
+            {(job.lifecycle?.reactivationFee || 0) > 0
+              ? ' Reactivate to continue or extend with additional payment.'
+              : ' Resume to continue the session.'}
           </p>
           <div className="flex gap-2 flex-wrap">
             {(job.lifecycle?.reactivationFee || 0) > 0 ? (
-              <button
-                onClick={() => { setSignPanel({ action: 'reactivate', type: 'reactivate' }); setSignatureInput(''); }}
-                disabled={loading}
-                className="btn-primary text-sm"
-              >
-                Reactivate ({job.lifecycle.reactivationFee} {job.currency} + fee)
-              </button>
+              <>
+                <button
+                  onClick={() => { setSignPanel({ action: 'reactivate', type: 'reactivate' }); setSignatureInput(''); }}
+                  disabled={loading}
+                  className="btn-primary text-sm"
+                >
+                  Reactivate ({job.lifecycle.reactivationFee} {job.currency} + fee)
+                </button>
+                <button
+                  onClick={() => { setSignPanel({ action: 'extend', type: 'extend-paused' }); setSignatureInput(''); }}
+                  disabled={loading}
+                  className="btn-secondary text-sm"
+                >
+                  Extend Session
+                </button>
+              </>
             ) : (
               <button
                 onClick={async () => {
@@ -641,22 +607,15 @@ export default function JobActions({ job, onUpdate, autoOpenPayment, onAutoOpenC
                 disabled={loading}
                 className="btn-primary text-sm"
               >
-                {loading ? 'Reactivating...' : 'Reactivate (Free)'}
+                {loading ? 'Resuming...' : 'Resume Session (Free)'}
               </button>
             )}
-            <button
-              onClick={() => { setSignPanel({ action: 'extend', type: 'extend-paused' }); setSignatureInput(''); }}
-              disabled={loading}
-              className="btn-secondary text-sm"
-            >
-              Extend Session
-            </button>
           </div>
         </div>
       )}
 
       {/* Reconnect Agent — either party, active jobs (not paused) */}
-      {['in_progress', 'delivered', 'accepted', 'requested', 'disputed'].includes(job.status) && (
+      {['in_progress', 'delivered'].includes(job.status) && (
         <button
           onClick={async () => {
             setLoading(true);
@@ -869,8 +828,9 @@ export default function JobActions({ job, onUpdate, autoOpenPayment, onAutoOpenC
       {/* Delivery Panel */}
       {signPanel && signPanel.type === 'delivery' && (
         <DeliveryPanel
-          job={job} user={user} loading={loading}
-          onSubmit={(body) => handleAction('deliver', body)}
+          job={job}
+          isSeller={isSeller}
+          onDelivered={() => { setSignPanel(null); onUpdate(); }}
           onCancel={() => { setSignPanel(null); setSignatureInput(''); }}
         />
       )}
