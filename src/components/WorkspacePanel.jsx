@@ -146,7 +146,7 @@ export default function WorkspacePanel({ job }) {
 
   function copyCommand() {
     if (!command) return;
-    const full = `# Install (once):\nyarn global add @j41/connect\n\n# Start workspace:\n${command}`;
+    const full = `# Install (once):\nyarn global add @j41/jailbox\n\n# Start workspace:\n${command}`;
     try {
       navigator.clipboard.writeText(full);
     } catch {
@@ -203,7 +203,7 @@ export default function WorkspacePanel({ job }) {
           {session.permissions?.write && <span>Write: on</span>}
         </div>
 
-        {/* Pending — show connect command so buyer can run j41-connect */}
+        {/* Pending — show connect command so buyer can run j41-jailbox */}
         {session.status === 'pending' && command && (
           <div className="mb-4">
             <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
@@ -211,7 +211,7 @@ export default function WorkspacePanel({ job }) {
             </p>
             <div className="rounded-lg p-4 font-mono text-xs" style={{ background: 'var(--bg-inset)', border: '1px solid var(--border-subtle)' }}>
               <p style={{ color: 'var(--text-tertiary)' }}># Install (once):</p>
-              <p className="text-white mb-2">yarn global add @j41/connect</p>
+              <p className="text-white mb-2">yarn global add @j41/jailbox</p>
               <p style={{ color: 'var(--text-tertiary)' }}># Run from your project directory:</p>
               <p className="text-white break-all">{command}</p>
             </div>
@@ -231,7 +231,7 @@ export default function WorkspacePanel({ job }) {
             </div>
             <p className="text-xs mt-2" style={{ color: 'var(--text-tertiary)' }}>
               <code className="px-1 py-0.5 rounded" style={{ background: 'var(--bg-inset)' }}>.</code> = current directory (run from inside your project).
-              Or specify a path: <code className="px-1 py-0.5 rounded" style={{ background: 'var(--bg-inset)' }}>j41-connect ~/code/myapp --uid ...</code>
+              Or specify a path: <code className="px-1 py-0.5 rounded" style={{ background: 'var(--bg-inset)' }}>j41-jailbox ~/code/myapp --uid ...</code>
             </p>
           </div>
         )}
@@ -338,7 +338,7 @@ export default function WorkspacePanel({ job }) {
           <div className="p-3 rounded-lg" style={{ background: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.3)' }}>
             <p className="text-yellow-400 text-sm font-medium">CLI disconnected — 30 min reconnect window</p>
             <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
-              Reconnect with: <code>j41-connect . --resume &lt;token&gt;</code>
+              Reconnect with: <code>j41-jailbox . --resume &lt;token&gt;</code>
             </p>
           </div>
         )}
@@ -448,7 +448,7 @@ export default function WorkspacePanel({ job }) {
         <div className="mb-4">
           <div className="rounded-lg p-4 font-mono text-xs" style={{ background: 'var(--bg-inset)', border: '1px solid var(--border-subtle)' }}>
             <p style={{ color: 'var(--text-tertiary)' }}># Install (once):</p>
-            <p className="text-white mb-2">yarn global add @j41/connect</p>
+            <p className="text-white mb-2">yarn global add @j41/jailbox</p>
             <p style={{ color: 'var(--text-tertiary)' }}># Run from your project directory:</p>
             <p className="text-white break-all">{command}</p>
           </div>
@@ -466,7 +466,7 @@ export default function WorkspacePanel({ job }) {
           </button>
           <p className="text-xs mt-2" style={{ color: 'var(--text-tertiary)' }}>
             <code className="px-1 py-0.5 rounded" style={{ background: 'var(--bg-inset)' }}>.</code> = current directory (run from inside your project).
-            Or specify a path: <code className="px-1 py-0.5 rounded" style={{ background: 'var(--bg-inset)' }}>j41-connect ~/code/myapp --uid ...</code>
+            Or specify a path: <code className="px-1 py-0.5 rounded" style={{ background: 'var(--bg-inset)' }}>j41-jailbox ~/code/myapp --uid ...</code>
           </p>
         </div>
       ) : (
