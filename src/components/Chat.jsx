@@ -841,7 +841,7 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
         }}>
           <span style={{ color: '#22c55e', fontSize: 14 }}>&#10003;</span>
           <span style={{ color: '#22c55e', fontWeight: 600, fontSize: 13 }}>
-            {isBuyer ? 'Job completed — scroll down to leave a review' : 'Session Complete'}
+            {isBuyer ? 'Job completed — review submitted' : 'Session Complete'}
           </span>
         </div>
       );

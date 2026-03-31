@@ -22,6 +22,7 @@ export default function JobDetailPage() {
   const [error, setError] = useState(null);
   const [showReview, setShowReview] = useState(false);
   const [existingReview, setExistingReview] = useState(null);
+  const [reviewChecked, setReviewChecked] = useState(false);
   const [autoOpenPayment, setAutoOpenPayment] = useState(false);
   const chatRef = useRef(null);
   const prevStatusRef = useRef(null);
@@ -87,12 +88,12 @@ export default function JobDetailPage() {
           if (reviewRes.ok) {
             const reviewData = await reviewRes.json();
             if (reviewData.data) {
-              // API returns single review object or array
               const review = Array.isArray(reviewData.data) ? reviewData.data[0] : reviewData.data;
               if (review) setExistingReview(review);
             }
           }
         } catch { /* no review yet */ }
+        setReviewChecked(true);
       }
     } catch (err) {
       setError(err.message);
@@ -327,7 +328,9 @@ export default function JobDetailPage() {
         return (
           <div className="card">
             <h3 className="text-lg font-semibold text-white mb-4">Review</h3>
-            {existingReview ? (
+            {!reviewChecked ? (
+              <p className="text-gray-500 text-sm">Checking for reviews...</p>
+            ) : existingReview ? (
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <span className="text-yellow-400 text-lg">
