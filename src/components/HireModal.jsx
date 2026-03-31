@@ -35,7 +35,7 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
   const [allowTraining, setAllowTraining] = useState(false);
   const [allowThirdParty, setAllowThirdParty] = useState(false);
   const [requireDeletion, setRequireDeletion] = useState(true);
-  const [privateMode, setPrivateMode] = useState(false); // E2E encrypted premium
+  // privateMode removed — E2E encryption not yet implemented
   const agentRequiresSovguard = Boolean(service?.sovguard);
   const [sovguardEnabled, setSovguardEnabled] = useState(true);
   const modalRef = useRef(null);
@@ -145,8 +145,7 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
   const agentAmount = Math.max(amount * (1 - dataDiscountRate), 0);
   const platformFeeRate = 0.05; // Platform always takes 5% of agent amount
   const platformFee = agentAmount * platformFeeRate;
-  const privatePremium = privateMode ? amount * 0.50 : 0; // Private mode premium goes to J41
-  const totalPlatformFee = platformFee + privatePremium; // J41 receives: 5% fee + private premium
+  const totalPlatformFee = platformFee;
   const feeAmount = totalPlatformFee.toFixed(4);
   const totalCost = (agentAmount + totalPlatformFee).toFixed(4);
   const savingsAmount = (amount * dataDiscountRate).toFixed(4);
@@ -155,7 +154,7 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
   // Clear signature when any signed field changes (stale signature protection)
   useEffect(() => {
     setSignature('');
-  }, [description, deadlineDate, deadlineTime, sovguardEnabled, dataRetention, allowTraining, allowThirdParty, requireDeletion, privateMode, timestamp, selectedCurrencyIdx]);
+  }, [description, deadlineDate, deadlineTime, sovguardEnabled, dataRetention, allowTraining, allowThirdParty, requireDeletion, timestamp, selectedCurrencyIdx]);
   const paymentTerms = service?.paymentTerms || service?.payment_terms || 'prepay';
   const dataTermsStr = `Retain:${dataRetention}|Train:${allowTraining ? 'yes' : 'no'}|3rdParty:${allowThirdParty ? 'yes' : 'no'}|DelAttest:${requireDeletion ? 'yes' : 'no'}`;
   const paymentCommitment = paymentTerms === 'prepay'
@@ -422,27 +421,6 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
               </label>
             </div>
 
-            {/* Private Mode — E2E Premium */}
-            <div className="border-t pt-3 mt-2" style={{ borderColor: 'var(--border-subtle)' }}>
-              <label className="flex items-start gap-2 cursor-pointer">
-                <input type="checkbox" checked={privateMode} onChange={e => {
-                  setPrivateMode(e.target.checked);
-                  if (e.target.checked) {
-                    setAllowTraining(false);
-                    setAllowThirdParty(false);
-                    setRequireDeletion(true);
-                    setDataRetention('none');
-                  }
-                }}
-                  className="rounded border-gray-600 bg-gray-800 text-verus-blue focus:ring-verus-blue mt-0.5" />
-                <div>
-                  <span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>🔐 Private Mode — End-to-End Encrypted</span>
-                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
-                    Messages encrypted end-to-end. Neither the platform nor any third party can read your conversation. <span className="text-amber-400 font-medium">+50% premium</span>
-                  </p>
-                </div>
-              </label>
-            </div>
           </div>
 
           {/* SovGuard Protection */}
@@ -489,12 +467,6 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
                 <span style={{ color: 'var(--text-secondary)' }}>Platform Fee (5%)</span>
                 <span style={{ color: 'var(--text-primary)' }}>{platformFee.toFixed(4)} {currency}</span>
               </div>
-              {privateMode && (
-                <div className="flex justify-between">
-                  <span style={{ color: 'var(--text-secondary)' }}>🔐 Private Mode E2E Encryption</span>
-                  <span className="text-amber-400">{privatePremium.toFixed(4)} {currency}</span>
-                </div>
-              )}
 
               <div className="border-t pt-2 mt-2 flex justify-between font-semibold" style={{ borderColor: 'var(--border-subtle)' }}>
                 <span style={{ color: 'var(--text-primary)' }}>Total</span>
