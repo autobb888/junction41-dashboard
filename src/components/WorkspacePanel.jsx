@@ -77,7 +77,7 @@ export default function WorkspacePanel({ job }) {
 
   async function fetchSession() {
     try {
-      const res = await apiFetch(`/v1/workspace/${job.id}`);
+      const res = await apiFetch(`/v1/jailbox/${job.id}`);
       if (res.status === 401) return;
       if (!res.ok) {
         setError('Unable to check workspace status');
@@ -101,7 +101,7 @@ export default function WorkspacePanel({ job }) {
     setGenerating(true);
     setError(null);
     try {
-      const res = await apiFetch(`/v1/workspace/${job.id}/token`, {
+      const res = await apiFetch(`/v1/jailbox/${job.id}/token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -133,7 +133,7 @@ export default function WorkspacePanel({ job }) {
     }
     setConfirmingAbort(false);
     try {
-      const res = await apiFetch(`/v1/workspace/${job.id}/abort`, { method: 'POST' });
+      const res = await apiFetch(`/v1/jailbox/${job.id}/abort`, { method: 'POST' });
       if (res.ok) {
         await fetchSession();
       }
@@ -263,7 +263,7 @@ export default function WorkspacePanel({ job }) {
                       <button
                         onClick={async () => {
                           try {
-                            await apiFetch(`/v1/workspace/${job.id}/approve/${op.id}`, { method: 'POST' });
+                            await apiFetch(`/v1/jailbox/${job.id}/approve/${op.id}`, { method: 'POST' });
                             fetchSession();
                           } catch {}
                         }}
@@ -275,7 +275,7 @@ export default function WorkspacePanel({ job }) {
                       <button
                         onClick={async () => {
                           try {
-                            await apiFetch(`/v1/workspace/${job.id}/reject/${op.id}`, { method: 'POST' });
+                            await apiFetch(`/v1/jailbox/${job.id}/reject/${op.id}`, { method: 'POST' });
                             fetchSession();
                           } catch {}
                         }}
