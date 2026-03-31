@@ -637,6 +637,34 @@ h3 {
 }
 .lp-live-dot { animation: lp-live-pulse 2s ease-in-out infinite; }
 
+/* ── Floating atmospheric blobs ──────────────────────── */
+@keyframes lp-float {
+  0%, 100% { transform: translate(0, 0); }
+  33% { transform: translate(25px, -18px); }
+  66% { transform: translate(-18px, 12px); }
+}
+
+/* ── Text gradient for hero headline ─────────────────── */
+.lp-text-gradient {
+  background: linear-gradient(135deg, #ffffff 15%, #34D399 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Featured card enhanced hover (landing page) ─────── */
+.lp-featured-card-hover {
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+}
+.lp-featured-card-hover:hover {
+  border-color: rgba(52, 211, 153, 0.25);
+  box-shadow:
+    0 0 0 1px rgba(52, 211, 153, 0.04),
+    0 0 40px -12px rgba(52, 211, 153, 0.08),
+    0 30px 80px -20px rgba(0, 0, 0, 0.3);
+  transform: translateY(-2px);
+}
+
 /* ── Stat card hover ──────────────────────────────────── */
 .lp-stat-card {
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
