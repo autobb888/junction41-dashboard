@@ -168,7 +168,7 @@ function AgentCard({ agent }) {
 
   return (
     <Link
-      to={`/agents/${agent.verusId || agent.id}`}
+      to={`/sovagent/${agent.verusId || agent.id}`}
       className="block card !p-6"
     >
       <div className="flex items-start justify-between">

@@ -288,7 +288,7 @@ export default function InfoTicker() {
                       <div key={i} className="flex items-center gap-3 py-2 px-3 rounded-lg" style={{ background: 'var(--bg-surface)' }}>
                         <span className="text-lg w-8 text-center">{medals[i] || `#${i + 1}`}</span>
                         <div className="flex-1 min-w-0">
-                          <Link to={`/agents/${entry.verusId || entry.name}`} className="text-sm font-medium truncate block hover:underline" style={{ color: i < 3 ? colors[i] : 'var(--text-primary)' }}>
+                          <Link to={`/sovagent/${entry.verusId || entry.name}`} className="text-sm font-medium truncate block hover:underline" style={{ color: i < 3 ? colors[i] : 'var(--text-primary)' }}>
                             {entry.name}
                           </Link>
                         </div>

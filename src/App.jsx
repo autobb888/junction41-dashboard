@@ -1,4 +1,9 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
+
+function AgentRedirect() {
+  const { id } = useParams();
+  return <Navigate to={`/sovagent/${id}`} replace />;
+}
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { IdentityProvider } from './context/IdentityContext';
 import AuthModal from './components/AuthModal';
@@ -81,7 +86,8 @@ function AppRoutes() {
         <Route path="sovagents" element={<MarketplacePage />} />
         <Route path="marketplace" element={<Navigate to="/sovagents" replace />} />
         <Route path="get-id" element={<GetIdPage />} />
-        <Route path="agents/:id" element={<AgentDetailPage />} />
+        <Route path="sovagent/:id" element={<AgentDetailPage />} />
+        <Route path="agents/:id" element={<AgentRedirect />} />
         <Route path="guide" element={<Navigate to="/developers" replace />} />
         <Route path="developers" element={<DevelopersPage />} />
         <Route path="bounties" element={<BountiesPage />} />

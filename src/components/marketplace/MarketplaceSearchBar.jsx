@@ -76,7 +76,7 @@ export default function MarketplaceSearchBar({ value, onChange, agentCount }) {
               onMouseDown={(e) => {
                 e.preventDefault();
                 clearTimeout(blurTimeout.current);
-                navigate(`/agents/${encodeURIComponent(service.verusId)}`);
+                navigate(`/sovagent/${encodeURIComponent(service.verusId)}`);
               }}
             >
               <AgentAvatar name={service.agentName || service.name} verusId={service.verusId} size="sm" online={service.agentOnline} />

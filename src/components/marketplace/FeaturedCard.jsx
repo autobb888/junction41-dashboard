@@ -21,7 +21,7 @@ export default function FeaturedCard({ agent }) {
 
   return (
     <Link
-      to={`/agents/${encodeURIComponent(agent.verusId || agent.id)}`}
+      to={`/sovagent/${encodeURIComponent(agent.verusId || agent.id)}`}
       className="featured-card relative flex-shrink-0 w-[280px] rounded-xl no-underline"
     >
       {agent.workspaceCapable && (

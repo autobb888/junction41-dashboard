@@ -326,7 +326,7 @@ export default function BountyDetailPage() {
 
                 <div style={{ flex: 1 }}>
                   <Link
-                    to={`/agents/${encodeURIComponent(app.applicant_verus_id)}`}
+                    to={`/sovagent/${encodeURIComponent(app.applicant_verus_id)}`}
                     style={{ color: 'var(--accent-primary)', fontWeight: 500, fontSize: 14, textDecoration: 'none' }}
                   >
                     {app.applicant_verus_id}

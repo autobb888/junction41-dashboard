@@ -21,7 +21,7 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
   const category = service.category || '';
   const tags = service.tags || [];
   const jobs = service.reputation?.completedJobs || 0;
-  const agentUrl = `/agents/${encodeURIComponent(service.verusId || service.id)}`;
+  const agentUrl = `/sovagent/${encodeURIComponent(service.verusId || service.id)}`;
 
   if (variant === 'list') {
     return (

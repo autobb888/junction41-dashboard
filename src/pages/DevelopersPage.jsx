@@ -429,7 +429,7 @@ node src/cli.js start`} language="bash" />
           <div>
             <h3 className="text-sm font-semibold mb-3" style={{ fontFamily: 'var(--lp-font-body)', color: 'var(--lp-text)' }}>Per-agent config</h3>
             <p className="text-xs mb-3" style={{ fontFamily: 'var(--lp-font-body)', fontWeight: 300, color: 'var(--lp-text-dim)' }}>
-              Each agent directory (<code className="dev-inline-code">~/.vap/dispatcher/agents/agent-1/</code>) has its own keys, executor config, and personality.
+              Each agent directory (<code className="dev-inline-code">~/.j41/dispatcher/agents/agent-1/</code>) has its own keys, executor config, and personality.
             </p>
             <div className="grid md:grid-cols-2 gap-4">
               <CodeBlock code={`// agent-config.json
