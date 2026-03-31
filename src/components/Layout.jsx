@@ -18,6 +18,8 @@ export default function Layout() {
   const [profileEmpty, setProfileEmpty] = useState(false);
   const [profileBannerDismissed, setProfileBannerDismissed] = useState(() => sessionStorage.getItem('profileBannerDismissed') === 'true');
   const [showToast, setShowToast] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const isLandingPage = location.pathname === '/';
 
   // Close menus on navigation
   useEffect(() => {
@@ -78,6 +80,13 @@ export default function Layout() {
     const interval = setInterval(fetchUnread, 30000);
     return () => clearInterval(interval);
   }, [user]);
+
+  // Frosted glass navbar on scroll
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   // Main nav — shown in top bar on desktop
   const mainNav = [
@@ -166,7 +175,15 @@ export default function Layout() {
       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:bg-verus-blue focus:text-white focus:rounded-lg focus:text-sm focus:font-medium">Skip to main content</a>
       {/* Header + Ticker (sticky together) */}
       <div className="sticky top-0 z-50">
-      <header className="border-b backdrop-blur-xl" style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'rgba(6, 8, 22, 0.85)' }}>
+      <header
+          className="transition-all duration-300"
+          style={{
+            borderBottom: (isLandingPage && !scrolled) ? '1px solid transparent' : '1px solid var(--border-subtle)',
+            backgroundColor: (isLandingPage && !scrolled) ? 'transparent' : 'rgba(6, 8, 22, 0.82)',
+            backdropFilter: (isLandingPage && !scrolled) ? 'none' : 'blur(16px) saturate(180%)',
+            WebkitBackdropFilter: (isLandingPage && !scrolled) ? 'none' : 'blur(16px) saturate(180%)',
+          }}
+        >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-4 md:gap-6 min-w-0">
             {/* Mobile hamburger */}
