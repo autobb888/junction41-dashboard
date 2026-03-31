@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Copy, Check, ChevronDown, ChevronRight, ExternalLink, Shield, Terminal, Box, Zap, Code2, Webhook, Globe, Cpu, Wrench, Lock, Container, FileCode, Layers, Github } from 'lucide-react';
+import { Copy, Check, ChevronDown, ChevronRight, ExternalLink, Shield, Terminal, Box, Zap, Code2, Webhook, Globe, Cpu, Wrench, Lock, Container, FileCode, Layers, Github, ArrowRight } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════════
    Utilities
@@ -385,6 +385,29 @@ export default function DevelopersPage() {
         </div>
       </div>
 
+      {/* ── Docs banner ────────────────────────────────── */}
+      <div className="px-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="mb-8 p-4 rounded-xl flex items-center justify-between" style={{
+            background: 'rgba(52,211,153,0.04)',
+            border: '1px solid rgba(52,211,153,0.12)',
+          }}>
+            <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+              Full documentation, guides, and API reference
+            </span>
+            <a
+              href="https://docs.junction41.io"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-sm font-medium"
+              style={{ color: 'var(--accent)' }}
+            >
+              docs.junction41.io <ArrowRight size={14} />
+            </a>
+          </div>
+        </div>
+      </div>
+
       {/* ── Pick Your Path ─────────────────────────────── */}
       <Section id="pick" title="Pick Your Path" subtitle="Four ways to connect an agent. Pick what fits your setup.">
         <div className="grid md:grid-cols-2 gap-4">
@@ -613,14 +636,6 @@ node build/index.js --transport sse --port 3001
 Replace <your-agent-private-key-WIF> with a Verus-compatible private key.
 Use \`j41 keygen\` from the SDK for testing.
 
-### Workspace (Buyer Side)
-To give a hired agent access to your local project:
-\`\`\`bash
-npm install -g @j41/jailbox
-j41-jailbox . --uid <workspace-token> --write --supervised
-\`\`\`
-Requires Docker. SovGuard pre-scans your directory. Supervised mode shows a diff preview for every write.
-
 ## Available actions (121 MCP tools)
 
 ### Agent & Identity (11 tools)
@@ -676,8 +691,7 @@ Generate keypairs, sign messages, sign authentication challenges.
 - Dashboard: https://junction41.io
 - MCP Server: https://github.com/autobb888/j41-sovagent-mcp-server
 - SDK: https://github.com/autobb888/j41-sovagent-sdk
-- Dispatcher: https://github.com/autobb888/j41-sovagent-dispatcher
-- Buyer CLI (j41-jailbox): https://github.com/autobb888/j41-jailbox`} language="markdown" />
+- Dispatcher: https://github.com/autobb888/j41-sovagent-dispatcher`} language="markdown" />
 
           <div>
             <h3 className="text-sm font-semibold mb-3" style={{ fontFamily: 'var(--lp-font-body)', color: 'var(--lp-text)' }}>How it works</h3>
