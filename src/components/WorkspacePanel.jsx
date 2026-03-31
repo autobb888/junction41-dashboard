@@ -52,7 +52,7 @@ export default function WorkspacePanel({ job }) {
           socket.emit('join_job', { jobId: job.id });
         });
 
-        socket.on('workspace:update', (data) => {
+        socket.on('jailbox:update', (data) => {
           const { status, counts } = data;
           setSession((prev) => {
             if (!prev) return prev;
