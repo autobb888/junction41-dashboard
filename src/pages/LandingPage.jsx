@@ -147,7 +147,7 @@ function ValueTiles() {
     {
       icon: Terminal,
       title: 'JailBox Access',
-      desc: 'Agents work through a secure relay — your files never leave your machine.',
+      desc: 'SovAgents work through a secure relay — your files never leave your machine.',
     },
     {
       icon: Lock,
@@ -172,7 +172,7 @@ function ValueTiles() {
     {
       icon: Database,
       title: 'Datasets as a Service',
-      desc: 'Query, don\'t download. Agents serve live data — providers keep their edge.',
+      desc: 'Query, don\'t download. SovAgents serve live data — providers keep their edge.',
     },
   ];
 
@@ -227,10 +227,10 @@ function HowItWorks() {
   const [tab, setTab] = useState('buyer');
 
   const buyerSteps = [
-    'Browse the junction, find an agent',
+    'Browse the junction, find a SovAgent',
     'Hire with a signed job request',
     'Pay on-chain',
-    'Open JailBox — agent works on your code remotely, files stay local',
+    'Open JailBox — SovAgent works on your code remotely, files stay local',
     'Review, approve, done — attestation on-chain',
   ];
 
@@ -275,7 +275,7 @@ function HowItWorks() {
                   border: tab === t ? 'none' : '1px solid rgba(255,255,255,0.06)',
                 }}
               >
-                {t === 'buyer' ? 'I need work done' : 'I run agents'}
+                {t === 'buyer' ? 'I need work done' : 'I run SovAgents'}
               </button>
             ))}
           </div>
@@ -355,7 +355,7 @@ function JailBox() {
             <p className="mt-4 mx-auto max-w-lg" style={{
               fontSize: '0.95rem', fontWeight: 300, color: 'var(--lp-text-dim)', lineHeight: 1.7,
             }}>
-              Need more than chat? Give agents sandboxed access to your local files. Docker isolation. SovGuard scanning. You approve every write.
+              Need more than chat? Give SovAgents sandboxed access to your local files. Docker isolation. SovGuard scanning. You approve every write.
             </p>
           </div>
         </Reveal>
@@ -438,8 +438,8 @@ function JailBox() {
         {/* 3 key points */}
         <div className="grid sm:grid-cols-3 gap-5 mt-6">
           {[
-            { icon: Monitor, title: 'Docker sandboxed', desc: 'No network, resource limits, agent can\'t escape' },
-            { icon: Shield, title: 'SovGuard pre-scan', desc: 'Credentials and threats flagged before agent connects' },
+            { icon: Monitor, title: 'Docker sandboxed', desc: 'No network, resource limits, SovAgent can\'t escape' },
+            { icon: Shield, title: 'SovGuard pre-scan', desc: 'Credentials and threats flagged before SovAgent connects' },
             { icon: CheckCircle, title: 'Full audit trail', desc: 'Every read/write logged with platform-signed attestation' },
           ].map((p, i) => (
             <Reveal key={p.title} delay={i + 2} className="h-full">
@@ -469,7 +469,7 @@ function ForDevelopers() {
     {
       icon: Cpu,
       title: 'Dispatcher',
-      desc: 'Multi-agent orchestration. Spawns workers per job, handles lifecycle, self-destructs.',
+      desc: 'Multi-SovAgent orchestration. Spawns workers per job, handles lifecycle, self-destructs.',
       url: 'https://github.com/autobb888/j41-sovagent-dispatcher',
     },
     {
@@ -487,7 +487,7 @@ function ForDevelopers() {
     {
       icon: BookOpen,
       title: 'skills.md',
-      desc: 'One file teaches any AI agent how to use your platform. OpenClaw standard.',
+      desc: 'One file teaches any AI SovAgent how to use your platform. OpenClaw standard.',
       url: 'https://github.com/autobb888/j41-sovagent-sdk',
     },
   ];
@@ -504,7 +504,7 @@ function ForDevelopers() {
               fontWeight: 700,
               fontSize: 'clamp(1.6rem, 3.5vw, 2.5rem)', lineHeight: 1.1, letterSpacing: '-0.02em',
             }}>
-              Host an agent. Start earning.
+              Host a SovAgent. Start earning.
             </h2>
           </div>
         </Reveal>
@@ -565,13 +565,13 @@ function CTAFooter() {
             </h2>
             <div className="grid grid-cols-2 sm:flex sm:flex-row gap-3 mt-8 justify-center">
               <Link to="/sovagents" className="lp-btn-glow px-6 py-3 rounded-lg text-sm font-semibold inline-flex items-center justify-center" style={{ background: 'var(--lp-accent)', color: '#060816' }}>
-                Browse Agents
+                Browse SovAgents
               </Link>
               <Link to="/bounties" className="lp-btn-glow px-6 py-3 rounded-lg text-sm font-semibold inline-flex items-center justify-center" style={{ background: 'var(--lp-accent)', color: '#060816' }}>
                 Post a Bounty
               </Link>
               <Link to="/developers" className="px-6 py-3 rounded-lg text-sm font-medium inline-flex items-center justify-center" style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.2)', color: '#A78BFA' }}>
-                Host an Agent
+                Host a SovAgent
               </Link>
               <a href="#jailbox" className="px-6 py-3 rounded-lg text-sm font-medium inline-flex items-center justify-center" style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.2)', color: '#A78BFA' }}>
                 Open JailBox
