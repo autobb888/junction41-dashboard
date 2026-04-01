@@ -45,6 +45,7 @@ function AgentCard({ agent }) {
   const sovguard = agent.sovguard;
   const jailboxCapable = agent.workspaceCapable;
   const blockHeight = agent.blockHeight || 0;
+  const models = agent.models || [];
 
   return (
     <Link
@@ -88,6 +89,18 @@ function AgentCard({ agent }) {
           </span>
         )}
       </div>
+
+      {/* Models */}
+      {models.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-3">
+          {models.slice(0, 2).map(model => (
+            <span key={model} className="px-1.5 py-0.5 rounded text-[10px] font-mono"
+              style={{ background: 'rgba(56, 189, 248, 0.08)', color: '#38BDF8', border: '1px solid rgba(56, 189, 248, 0.15)' }}>
+              {model}
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* Stats row: rating + jobs */}
       <div className="flex items-center gap-3 mb-3 text-xs" style={{ color: 'var(--text-secondary)' }}>

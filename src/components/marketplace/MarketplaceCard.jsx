@@ -1,14 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import AgentAvatar from '../AgentAvatar';
 import TrustScore from '../TrustScore';
-
-function StarRating({ rating }) {
-  return (
-    <span className="text-amber-400 text-xs font-medium">
-      &#9733; {rating.toFixed(1)}
-    </span>
-  );
-}
+import { Shield, Terminal, Star } from 'lucide-react';
 
 export default function MarketplaceCard({ service, variant = 'grid' }) {
   const navigate = useNavigate();
@@ -19,8 +12,8 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
   const online = service.agentOnline ?? service.online;
   const desc = service.description || '';
   const category = service.category || '';
-  const tags = service.tags || [];
   const jobs = service.reputation?.completedJobs || 0;
+  const models = service.models || [];
   const agentUrl = `/sovagent/${encodeURIComponent(service.verusId || service.id)}`;
 
   if (variant === 'list') {
@@ -31,23 +24,26 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
       >
         <AgentAvatar name={displayName} verusId={service.verusId} size="md" online={online} />
         <div className="flex-1 min-w-0">
-          <h3 className="text-white font-semibold text-sm">{service.name}</h3>
-          <p className="text-xs truncate font-mono" style={{ color: 'var(--accent)', opacity: 0.7 }}>
-            {qualifiedName || displayName}
-          </p>
+          <h3 className="text-white font-semibold text-sm truncate">{displayName}</h3>
+          {qualifiedName && (
+            <p className="text-[11px] truncate" style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-tertiary)' }}>
+              {qualifiedName}
+            </p>
+          )}
         </div>
-        {service.workspaceCapable && (
-          <span title="Workspace access" className="text-xs px-1 rounded font-mono" style={{ background: 'rgba(96, 165, 250, 0.1)', color: '#60A5FA' }}>&lt;-&gt;</span>
+        <div className="flex items-center gap-2">
+          {service.sovguard && <Shield size={12} style={{ color: 'var(--accent)' }} />}
+          {service.workspaceCapable && <Terminal size={12} style={{ color: '#A78BFA' }} />}
+        </div>
+        {rating > 0 && (
+          <span className="inline-flex items-center gap-1 text-xs">
+            <Star size={11} className="text-amber-400" fill="currentColor" />
+            {rating.toFixed(1)}
+          </span>
         )}
         <span className="text-xs px-2 py-1 rounded-full hidden sm:block"
           style={{ background: 'rgba(52, 211, 153, 0.08)', color: 'var(--text-tertiary)' }}>{category}</span>
-        {rating > 0 && <StarRating rating={rating} />}
-        <div className="flex items-center gap-1.5">
-          <span className="text-white text-sm font-semibold whitespace-nowrap">{service.price} {service.currency}</span>
-          {service.acceptedCurrencies?.length > 1 && (
-            <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>+{service.acceptedCurrencies.length - 1}</span>
-          )}
-        </div>
+        <span className="text-white text-sm font-semibold whitespace-nowrap">{service.price} {service.currency}</span>
       </div>
     );
   }
@@ -55,95 +51,83 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
   return (
     <div
       onClick={() => navigate(agentUrl)}
-      className="marketplace-card group relative rounded-xl"
+      className="marketplace-card group relative rounded-xl lp-featured-card-hover"
     >
-      {/* Header: avatar + name + rating */}
-      <div className="flex items-start gap-3 mb-3">
+      {/* Header: avatar + name + online */}
+      <div className="flex items-center gap-3 mb-3">
         <AgentAvatar name={displayName} verusId={service.verusId} size="md" online={online} />
-        <div className="flex-1 min-w-0">
-          <h3 className="text-white font-semibold text-sm truncate">{service.name}</h3>
-          <p className="text-xs truncate font-mono" style={{ color: 'var(--accent)', opacity: 0.7 }}>
-            {qualifiedName || displayName}
-          </p>
-          <p className="text-xs truncate font-mono" style={{ color: 'var(--text-tertiary)', opacity: 0.5, fontSize: 10 }}>
-            {service.verusId?.slice(0, 8)}...{service.verusId?.slice(-4)}
-          </p>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold truncate text-white">{displayName}</p>
+          {qualifiedName && (
+            <p className="text-[11px] truncate" style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-tertiary)' }}>
+              {qualifiedName}
+            </p>
+          )}
         </div>
-        <div className="flex flex-col items-end gap-1">
-          {rating > 0 && <StarRating rating={rating} />}
-          {reviews > 0 && <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{reviews} reviews</span>}
-        </div>
+        {(service.trustTier || service.transparency?.computed?.trustLevel) && (
+          <TrustScore tier={service.trustTier || service.transparency?.computed?.trustLevel} />
+        )}
       </div>
 
-
-
       {/* Description */}
-      <p className="text-xs mb-3 line-clamp-2" style={{ color: 'var(--text-secondary)' }}>{desc}</p>
+      <p className="text-xs leading-relaxed mb-3 line-clamp-2" style={{ color: 'var(--text-secondary)', fontWeight: 300 }}>
+        {desc}
+      </p>
 
-      {/* Tags */}
-      {tags.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-3">
-          {tags.slice(0, 3).map(tag => (
-            <span key={tag} className="px-2 py-0.5 rounded-full text-xs"
-              style={{
-                background: 'rgba(52, 211, 153, 0.08)',
-                color: 'var(--accent)',
-                border: '1px solid rgba(52, 211, 153, 0.12)',
-              }}
-            >{tag}</span>
-          ))}
-        </div>
-      )}
+      {/* Badges row: SovGuard + JailBox */}
+      <div className="flex items-center gap-2 mb-3">
+        {service.sovguard && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium"
+            style={{ background: 'rgba(52,211,153,0.08)', color: 'var(--accent)', border: '1px solid rgba(52,211,153,0.15)' }}>
+            <Shield size={10} /> SovGuard
+          </span>
+        )}
+        {service.workspaceCapable && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium"
+            style={{ background: 'rgba(167,139,250,0.08)', color: '#A78BFA', border: '1px solid rgba(167,139,250,0.15)' }}>
+            <Terminal size={10} /> JailBox
+          </span>
+        )}
+      </div>
 
       {/* Models */}
-      {service.models?.length > 0 && (
+      {models.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-3">
-          {service.models.slice(0, 3).map(model => (
-            <span key={model} className="px-1.5 py-0.5 rounded text-xs font-mono"
-              style={{
-                background: 'rgba(56, 189, 248, 0.08)',
-                color: '#38BDF8',
-                border: '1px solid rgba(56, 189, 248, 0.15)',
-                fontSize: 10,
-              }}
-            >{model}</span>
+          {models.slice(0, 3).map(model => (
+            <span key={model} className="px-1.5 py-0.5 rounded text-[10px] font-mono"
+              style={{ background: 'rgba(56, 189, 248, 0.08)', color: '#38BDF8', border: '1px solid rgba(56, 189, 248, 0.15)' }}>
+              {model}
+            </span>
           ))}
           {service.markup && service.markup > 1 && (
-            <span className="px-1.5 py-0.5 rounded text-xs font-mono"
-              style={{ background: 'rgba(251,191,36,0.08)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.15)', fontSize: 10 }}
-            >{service.markup}x</span>
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-mono"
+              style={{ background: 'rgba(251,191,36,0.08)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.15)' }}>
+              {service.markup}x
+            </span>
           )}
         </div>
       )}
 
-      {/* Footer: price + accepted currencies + jobs */}
+      {/* Stats row: rating + jobs */}
+      <div className="flex items-center gap-3 mb-3 text-xs" style={{ color: 'var(--text-secondary)' }}>
+        <span className="inline-flex items-center gap-1">
+          <Star size={11} className="text-amber-400" fill="currentColor" />
+          {rating > 0 ? rating.toFixed(1) : '—'}
+          <span style={{ color: 'var(--text-tertiary)' }}>({reviews})</span>
+        </span>
+        {jobs > 0 && <span>{jobs} job{jobs !== 1 ? 's' : ''}</span>}
+      </div>
+
+      {/* Footer: price + block */}
       <div className="flex items-center justify-between pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-white font-semibold text-sm">{service.price}</span>
-          <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{service.currency}</span>
-          {service.reactivationFee > 0 && (
-            <span className="text-xs px-1.5 py-0.5 rounded font-mono"
-              style={{ background: 'rgba(251, 191, 36, 0.15)', color: '#FBBF24', border: '1px solid rgba(251, 191, 36, 0.25)' }}>
-              {service.reactivationFee} reactivation
-            </span>
-          )}
+        <span className="text-sm font-semibold" style={{ color: 'var(--accent)' }}>
+          {service.price} {service.currency}
+        </span>
+        <div className="flex items-center gap-2">
           {service.acceptedCurrencies?.length > 1 && (
-            <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(52, 211, 153, 0.08)', color: 'var(--text-tertiary)' }}>
-              +{service.acceptedCurrencies.length - 1} more
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(52, 211, 153, 0.08)', color: 'var(--text-tertiary)' }}>
+              +{service.acceptedCurrencies.length - 1} currencies
             </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {jobs > 0 && <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{jobs} jobs</span>}
-          {service.workspaceCapable && (
-            <span title="Workspace capable"
-              className="px-1.5 py-0.5 rounded text-xs font-mono"
-              style={{ background: 'rgba(96, 165, 250, 0.15)', color: '#60A5FA', border: '1px solid rgba(96, 165, 250, 0.25)' }}>
-              &lt;-&gt;
-            </span>
-          )}
-          {(service.trustTier || service.transparency?.computed?.trustLevel) && (
-            <TrustScore tier={service.trustTier || service.transparency?.computed?.trustLevel} />
           )}
         </div>
       </div>
