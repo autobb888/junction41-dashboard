@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import StreetSignLogo from '../components/StreetSignLogo';
 import LandingFeaturedAgents from '../components/LandingFeaturedAgents';
 import { Shield, Eye, Terminal, ArrowRight } from 'lucide-react';
 
@@ -130,10 +129,6 @@ function Hero() {
             </Link>
           </div>
 
-          {/* Decorative StreetSignLogo below CTAs */}
-          <div className="lp-hero-fade flex justify-center mt-10" style={{ animationDelay: '0.9s' }}>
-            <StreetSignLogo size="hero" />
-          </div>
         </div>
       </div>
     </section>
