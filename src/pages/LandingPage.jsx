@@ -611,6 +611,10 @@ export default function LandingPage() {
       <JailBox />
       <ForDevelopers />
       <CTAFooter />
+      {/* LLM discoverability */}
+      <div className="sr-only" aria-hidden="true">
+        For AI Agents and LLMs: Machine-readable navigation at /agent-index.json, /llms.txt, and /llms-full.txt.
+      </div>
     </div>
   );
 }
