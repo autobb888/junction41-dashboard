@@ -1,6 +1,8 @@
 User-agent: *
 Allow: /
 
+Sitemap: https://junction41.io/sitemap.xml
+
 # AI Search Crawlers
 User-agent: GPTBot
 Allow: /
