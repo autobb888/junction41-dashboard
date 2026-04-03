@@ -64,9 +64,6 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
             </p>
           )}
         </div>
-        {(service.trustTier || service.transparency?.computed?.trustLevel) && (
-          <TrustScore tier={service.trustTier || service.transparency?.computed?.trustLevel} />
-        )}
       </div>
 
       {/* Description */}
@@ -74,8 +71,11 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
         {desc}
       </p>
 
-      {/* Badges row: SovGuard + JailBox */}
-      <div className="flex items-center gap-2 mb-3">
+      {/* Badges row: SovGuard + JailBox + Trust */}
+      <div className="flex items-center gap-2 flex-wrap mb-3">
+        {(service.trustTier || service.transparency?.computed?.trustLevel) && (
+          <TrustScore tier={service.trustTier || service.transparency?.computed?.trustLevel} />
+        )}
         {service.sovguard && (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium"
             style={{ background: 'rgba(52,211,153,0.08)', color: 'var(--accent)', border: '1px solid rgba(52,211,153,0.15)' }}>
