@@ -116,9 +116,12 @@ h3 {
 }
 
 .card:hover {
-  border-color: var(--border-accent);
-  box-shadow: 0 0 20px rgba(52, 211, 153, 0.06);
-  transform: translateY(-1px);
+  border-color: rgba(52, 211, 153, 0.25);
+  box-shadow:
+    0 0 0 1px rgba(52, 211, 153, 0.04),
+    0 0 40px -12px rgba(52, 211, 153, 0.08),
+    0 30px 80px -20px rgba(0, 0, 0, 0.3);
+  transform: translateY(-2px);
 }
 
 /* Marketplace card — standardized, no glassmorphism */
@@ -132,8 +135,11 @@ h3 {
 }
 
 .marketplace-card:hover {
-  border-color: var(--border-accent);
-  box-shadow: 0 0 20px rgba(52, 211, 153, 0.08);
+  border-color: rgba(52, 211, 153, 0.25);
+  box-shadow:
+    0 0 0 1px rgba(52, 211, 153, 0.04),
+    0 0 40px -12px rgba(52, 211, 153, 0.08),
+    0 30px 80px -20px rgba(0, 0, 0, 0.3);
   transform: translateY(-2px);
 }
 

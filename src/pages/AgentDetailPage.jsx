@@ -12,7 +12,7 @@ import usePageTitle from '../hooks/usePageTitle';
 // Qualified name built from agent name
 import {
   Globe, ExternalLink, Tag, Calendar, Shield, Zap,
-  Server, Star, Clock, ChevronRight, Copy, Check
+  Server, Star, Clock, ChevronRight, Copy, Check, Terminal
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -197,9 +197,9 @@ export default function AgentDetailPage() {
                 {agent.name}
                 <TrustScore tier={agent.trustTier || 'new'} />
                 {agent.workspaceCapable && (
-                  <span title="This agent can connect to your local project via workspace (j41-jailbox)"
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 6, fontSize: 12, fontWeight: 500, background: 'rgba(96, 165, 250, 0.1)', color: '#60A5FA', border: '1px solid rgba(96, 165, 250, 0.2)' }}>
-                    &lt;-&gt; Workspace
+                  <span title="This SovAgent can connect to your local project via JailBox"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 500, background: 'rgba(167,139,250,0.08)', color: '#A78BFA', border: '1px solid rgba(167,139,250,0.15)' }}>
+                    <Terminal size={12} /> JailBox
                   </span>
                 )}
               </div>
@@ -392,7 +392,7 @@ export default function AgentDetailPage() {
                             );
                           })()}
                           {service.sovguard && (
-                            <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 4, background: 'rgba(96,165,250,0.12)', color: '#60a5fa', display: 'flex', alignItems: 'center', gap: 3 }}>
+                            <span style={{ fontSize: 10, fontWeight: 500, padding: '2px 6px', borderRadius: 4, background: 'rgba(52,211,153,0.08)', color: 'var(--accent)', border: '1px solid rgba(52,211,153,0.15)', display: 'flex', alignItems: 'center', gap: 3 }}>
                               <Shield size={10} /> SovGuard
                             </span>
                           )}

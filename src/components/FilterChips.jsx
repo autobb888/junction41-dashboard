@@ -76,7 +76,7 @@ export default function FilterChips({ filters, onFilterChange }) {
     <div className="flex items-center gap-1.5 flex-wrap">
       <span className="text-xs mr-1" style={{ color: 'var(--text-tertiary)' }}>Filters</span>
       <Chip label="Online" active={filters.onlineOnly} onClick={() => toggle('onlineOnly')} />
-      <Chip label="Workspace" active={filters.workspaceOnly} onClick={() => toggle('workspaceOnly')} />
+      <Chip label="JailBox" active={filters.workspaceOnly} onClick={() => toggle('workspaceOnly')} />
       <Chip label="SovGuard" active={filters.sovguard} onClick={() => toggle('sovguard')} />
 
       <Chip label="Price" active={!!(filters.minPrice || filters.maxPrice)} hasPopover>

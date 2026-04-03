@@ -171,7 +171,7 @@ export default function WorkspacePanel({ job }) {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Terminal size={18} style={{ color: 'var(--accent-purple)' }} />
-            <h3 className="text-white font-semibold">Workspace</h3>
+            <h3 className="text-white font-semibold">JailBox</h3>
           </div>
           <div className="flex items-center gap-2">
             <span className={`badge badge-${session.status === 'active' ? 'in_progress' : session.status}`}>
@@ -366,7 +366,7 @@ export default function WorkspacePanel({ job }) {
       <div className="card">
         <div className="flex items-center gap-2 mb-3">
           <Terminal size={18} style={{ color: 'var(--text-tertiary)' }} />
-          <h3 className="text-white font-semibold">Workspace</h3>
+          <h3 className="text-white font-semibold">JailBox</h3>
           <span className={`badge badge-${session.status}`}>
             {session.status}
           </span>
@@ -380,7 +380,7 @@ export default function WorkspacePanel({ job }) {
         {session.attestation && (
           <div className="mt-3 p-3 rounded-lg" style={{ background: 'var(--bg-inset)' }}>
             <p className="text-xs font-medium" style={{ color: 'var(--accent-purple)' }}>
-              Workspace attestation signed by platform
+              JailBox attestation signed by platform
             </p>
           </div>
         )}
@@ -393,7 +393,7 @@ export default function WorkspacePanel({ job }) {
     <div className="card">
       <div className="flex items-center gap-2 mb-4">
         <Terminal size={18} style={{ color: 'var(--accent-purple)' }} />
-        <h3 className="text-white font-semibold">Workspace</h3>
+        <h3 className="text-white font-semibold">JailBox</h3>
       </div>
 
       <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
@@ -493,7 +493,7 @@ export default function WorkspacePanel({ job }) {
             color: generating ? 'var(--text-tertiary)' : 'white',
           }}
         >
-          {generating ? 'Generating...' : 'Generate Workspace Token'}
+          {generating ? 'Generating...' : 'Generate JailBox Token'}
         </button>
       )}
     </div>

@@ -245,7 +245,7 @@ export default function MarketplacePage() {
   if (filters.sovguard) activeFilters.push({ key: 'sovguard', label: 'SovGuard', clear: () => setFilters(f => ({ ...f, sovguard: false })) });
   if (filters.privateMode) activeFilters.push({ key: 'privateMode', label: 'Private Mode', clear: () => setFilters(f => ({ ...f, privateMode: false })) });
   filters.paymentTerms.forEach(pt => activeFilters.push({ key: `pt-${pt}`, label: `${pt.charAt(0).toUpperCase() + pt.slice(1)}`, clear: () => setFilters(f => ({ ...f, paymentTerms: f.paymentTerms.filter(x => x !== pt) })) }));
-  if (filters.workspaceOnly) activeFilters.push({ key: 'workspace', label: '<-> Workspace', clear: () => setFilters(f => ({ ...f, workspaceOnly: false })) });
+  if (filters.workspaceOnly) activeFilters.push({ key: 'workspace', label: 'JailBox', clear: () => setFilters(f => ({ ...f, workspaceOnly: false })) });
   if (filters.freeReactivation) activeFilters.push({ key: 'freeReactivation', label: 'Free Reactivation', clear: () => setFilters(f => ({ ...f, freeReactivation: false })) });
   if (filters.trustTier) activeFilters.push({ key: 'trust', label: `Trust: ${filters.trustTier}`, clear: () => setFilters(f => ({ ...f, trustTier: null })) });
   (filters.agentTypes || []).forEach(t => activeFilters.push({ key: `type-${t}`, label: t.charAt(0).toUpperCase() + t.slice(1), clear: () => setFilters(f => ({ ...f, agentTypes: f.agentTypes.filter(x => x !== t) })) }));
