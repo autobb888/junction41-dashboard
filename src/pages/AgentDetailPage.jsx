@@ -13,8 +13,9 @@ import usePageTitle from '../hooks/usePageTitle';
 import {
   Globe, ExternalLink, Tag, Calendar, Shield, Zap,
   Server, Star, Clock, ChevronRight, Copy, Check, Terminal,
-  Wallet, Percent, Link2, BadgeCheck
+  Wallet, Percent, Link2, BadgeCheck, ChevronLeft
 } from 'lucide-react';
+import { apiFetch } from '../utils/api';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -64,6 +65,197 @@ function SectionHeader({ icon: Icon, title, count }) {
           fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 10,
           background: 'var(--accent-dim)', color: 'var(--accent-primary)',
         }}>{count}</span>
+      )}
+    </div>
+  );
+}
+
+const REVIEWS_PER_PAGE = 5;
+
+function ReviewsSection({ agentId, reviews: initialReviews, setReviews: setParentReviews, reputation }) {
+  const [reviews, setReviews] = useState(initialReviews || []);
+  const [distribution, setDistribution] = useState({ 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 });
+  const [ratingFilter, setRatingFilter] = useState(null); // null = all, 1-5 = filter
+  const [page, setPage] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch reviews with optional rating filter + pagination
+  async function fetchReviews(rating, pageNum) {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        limit: String(REVIEWS_PER_PAGE),
+        offset: String(pageNum * REVIEWS_PER_PAGE),
+      });
+      if (rating) params.set('rating', String(rating));
+      const res = await fetch(`${API_BASE}/v1/reviews/agent/${encodeURIComponent(agentId)}?${params}`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setReviews(data.data || []);
+        setTotal(data.meta?.total || 0);
+        if (data.distribution) setDistribution(data.distribution);
+      }
+    } catch {} finally { setLoading(false); }
+  }
+
+  // Initial load — get distribution
+  useEffect(() => {
+    fetchReviews(null, 0);
+  }, [agentId]);
+
+  function handleRatingClick(star) {
+    const newFilter = ratingFilter === star ? null : star;
+    setRatingFilter(newFilter);
+    setPage(0);
+    fetchReviews(newFilter, 0);
+  }
+
+  function handlePageChange(newPage) {
+    setPage(newPage);
+    fetchReviews(ratingFilter, newPage);
+  }
+
+  const totalReviews = Object.values(distribution).reduce((a, b) => a + b, 0);
+  const avgRating = totalReviews > 0
+    ? (Object.entries(distribution).reduce((sum, [star, count]) => sum + Number(star) * count, 0) / totalReviews).toFixed(1)
+    : '0.0';
+  const totalPages = Math.ceil(total / REVIEWS_PER_PAGE);
+
+  if (totalReviews === 0 && reviews.length === 0) return null;
+
+  return (
+    <div className="card" style={{ marginBottom: 20 }}>
+      <SectionHeader icon={Star} title="Reviews" count={totalReviews} />
+
+      {/* Rating Summary + Distribution Bars */}
+      <div style={{ display: 'flex', gap: 20, marginBottom: 16 }}>
+        {/* Average */}
+        <div style={{ textAlign: 'center', minWidth: 80 }}>
+          <div style={{ fontSize: 36, fontWeight: 700, color: '#fbbf24' }}>{avgRating}</div>
+          <div style={{ color: '#fbbf24', fontSize: 16, marginBottom: 2 }}>
+            {'★'.repeat(Math.round(Number(avgRating)))}{'☆'.repeat(5 - Math.round(Number(avgRating)))}
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{totalReviews} review{totalReviews !== 1 ? 's' : ''}</div>
+        </div>
+
+        {/* Distribution Bars */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3, justifyContent: 'center' }}>
+          {[5, 4, 3, 2, 1].map(star => {
+            const count = distribution[star] || 0;
+            const pct = totalReviews > 0 ? (count / totalReviews) * 100 : 0;
+            const isActive = ratingFilter === star;
+            return (
+              <button
+                key={star}
+                onClick={() => handleRatingClick(star)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none',
+                  cursor: 'pointer', padding: '2px 0', opacity: ratingFilter && !isActive ? 0.4 : 1,
+                  transition: 'opacity 0.15s',
+                }}
+              >
+                <span style={{ fontSize: 12, color: isActive ? '#fbbf24' : 'var(--text-muted)', width: 14, textAlign: 'right' }}>{star}</span>
+                <Star size={11} style={{ color: isActive ? '#fbbf24' : 'var(--text-muted)', fill: isActive ? '#fbbf24' : 'none' }} />
+                <div style={{ flex: 1, height: 8, borderRadius: 4, background: 'var(--bg-inset)', overflow: 'hidden' }}>
+                  <div style={{ width: `${pct}%`, height: '100%', borderRadius: 4, background: isActive ? '#fbbf24' : '#fbbf2480', transition: 'width 0.2s' }} />
+                </div>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', width: 24, textAlign: 'right' }}>{count}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {ratingFilter && (
+        <button
+          onClick={() => { setRatingFilter(null); setPage(0); fetchReviews(null, 0); }}
+          style={{ fontSize: 12, color: 'var(--accent-primary)', background: 'none', border: 'none', cursor: 'pointer', marginBottom: 12, padding: 0 }}
+        >
+          Showing {ratingFilter}-star reviews — clear filter
+        </button>
+      )}
+
+      {/* Review Cards */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, opacity: loading ? 0.6 : 1, transition: 'opacity 0.15s' }}>
+        {reviews.map(review => (
+          <div key={review.id} style={{
+            background: 'var(--bg-elevated)', borderRadius: 10, padding: 14,
+            border: '1px solid var(--border-subtle)',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ color: '#fbbf24', fontSize: 14 }}>
+                  {'★'.repeat(review.rating || 0)}{'☆'.repeat(5 - (review.rating || 0))}
+                </span>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{review.rating}/5</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                {review.verified && (
+                  <span style={{ fontSize: 10, color: '#22c55e', display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Check size={10} /> verified
+                  </span>
+                )}
+                {review.isPublic === false && (
+                  <span style={{ fontSize: 10, color: 'var(--text-muted)', fontStyle: 'italic' }}>private</span>
+                )}
+              </div>
+            </div>
+            {review.message && (
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '4px 0 8px', lineHeight: 1.4 }}>
+                {review.message}
+              </p>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                {review.buyerVerusId ? (
+                  <ResolvedId address={review.buyerVerusId} size="xs" />
+                ) : (
+                  <span style={{ fontStyle: 'italic' }}>Anonymous</span>
+                )}
+              </span>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                {review.timestamp ? new Date(review.timestamp * 1000).toLocaleDateString() : ''}
+              </span>
+            </div>
+          </div>
+        ))}
+        {reviews.length === 0 && !loading && (
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', padding: 20 }}>
+            {ratingFilter ? `No ${ratingFilter}-star reviews` : 'No reviews yet'}
+          </p>
+        )}
+      </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 16 }}>
+          <button
+            onClick={() => handlePageChange(page - 1)}
+            disabled={page === 0}
+            style={{
+              background: 'var(--bg-inset)', border: '1px solid var(--border-subtle)', borderRadius: 6,
+              padding: '4px 8px', cursor: page === 0 ? 'default' : 'pointer',
+              opacity: page === 0 ? 0.3 : 1, color: 'var(--text-secondary)',
+            }}
+          >
+            <ChevronLeft size={14} />
+          </button>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+            {page + 1} / {totalPages}
+          </span>
+          <button
+            onClick={() => handlePageChange(page + 1)}
+            disabled={page >= totalPages - 1}
+            style={{
+              background: 'var(--bg-inset)', border: '1px solid var(--border-subtle)', borderRadius: 6,
+              padding: '4px 8px', cursor: page >= totalPages - 1 ? 'default' : 'pointer',
+              opacity: page >= totalPages - 1 ? 0.3 : 1, color: 'var(--text-secondary)',
+            }}
+          >
+            <ChevronRight size={14} />
+          </button>
+        </div>
       )}
     </div>
   );
@@ -756,56 +948,8 @@ export default function AgentDetailPage() {
             </div>
           )}
 
-          {/* Individual Reviews */}
-          {reviews.length > 0 && (
-            <div className="card" style={{ marginBottom: 20 }}>
-              <SectionHeader icon={Star} title="Reviews" count={reviews.length} />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {reviews.map(review => (
-                  <div key={review.id} style={{
-                    background: 'var(--bg-elevated)', borderRadius: 10, padding: 14,
-                    border: '1px solid var(--border-subtle)',
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ color: '#fbbf24', fontSize: 14 }}>
-                          {'★'.repeat(review.rating || 0)}{'☆'.repeat(5 - (review.rating || 0))}
-                        </span>
-                        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{review.rating}/5</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        {review.verified && (
-                          <span style={{ fontSize: 10, color: '#22c55e', display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Check size={10} /> verified
-                          </span>
-                        )}
-                        {review.isPublic === false && (
-                          <span style={{ fontSize: 10, color: 'var(--text-muted)', fontStyle: 'italic' }}>private</span>
-                        )}
-                      </div>
-                    </div>
-                    {review.message && (
-                      <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '4px 0 8px', lineHeight: 1.4 }}>
-                        {review.message}
-                      </p>
-                    )}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                        {review.buyerVerusId ? (
-                          <ResolvedId address={review.buyerVerusId} size="xs" />
-                        ) : (
-                          <span style={{ fontStyle: 'italic' }}>Anonymous</span>
-                        )}
-                      </span>
-                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                        {review.timestamp ? new Date(review.timestamp * 1000).toLocaleDateString() : ''}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Reviews Section — Amazon-style with rating bars + pagination */}
+          <ReviewsSection agentId={id} reviews={reviews} setReviews={setReviews} reputation={reputation} />
         </div>
 
         {/* RIGHT COLUMN — Sidebar */}
