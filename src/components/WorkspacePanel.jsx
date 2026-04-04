@@ -302,11 +302,12 @@ export default function WorkspacePanel({ job }) {
 
         {/* Operation Counts */}
         {session.counts && (
-          <div className="grid grid-cols-4 gap-3 mb-4">
+          <div className="grid grid-cols-5 gap-2 mb-4">
             {[
               { label: 'Read', value: session.counts.reads ?? 0, color: 'var(--accent-purple)' },
               { label: 'Written', value: session.counts.writes ?? 0, color: '#60a5fa' },
               { label: 'Listed', value: session.counts.list_dirs ?? 0, color: 'var(--text-secondary)' },
+              { label: 'Excluded', value: session.excludedFiles?.length ?? 0, color: (session.excludedFiles?.length ?? 0) > 0 ? '#fbbf24' : 'var(--text-tertiary)' },
               { label: 'Blocked', value: session.counts.blocked ?? 0, color: (session.counts.blocked ?? 0) > 0 ? '#f87171' : 'var(--text-tertiary)' },
             ].map(({ label, value, color }) => (
               <div key={label} className="text-center p-2 rounded-lg" style={{ background: 'var(--bg-inset)' }}>

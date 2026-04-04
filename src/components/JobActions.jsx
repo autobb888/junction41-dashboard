@@ -180,11 +180,33 @@ function PaymentQR({ jobId, type, amount, currency, onTxDetected }) {
 }
 
 function ExtensionPanel({ job, loading, setLoading, setError, onUpdate, onCancel }) {
+  const isFreeLifecycle = job.status === 'paused' && (job.lifecycle?.reactivationFee || 0) === 0;
   const [extAmount, setExtAmount] = useState('');
   const [extReason, setExtReason] = useState('');
   const [invoice, setInvoice] = useState(null);
   const [extId, setExtId] = useState(null);
   const [txidInput, setTxidInput] = useState('');
+
+  const handleFreeExtension = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_BASE}/v1/jobs/${job.id}/extensions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ amount: 0, reason: 'Free extension' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error?.message || 'Failed to extend');
+      onCancel();
+      onUpdate?.();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleRequestExtension = async () => {
     if (!extAmount || Number(extAmount) <= 0) return;
@@ -252,11 +274,49 @@ function ExtensionPanel({ job, loading, setLoading, setError, onUpdate, onCancel
   };
 
   if (!invoice) {
-    // Step 1: Enter amount
+    // Free extension for paused jobs with free lifecycle
+    if (isFreeLifecycle) {
+      return (
+        <div className="bg-gray-900 rounded-lg p-4 space-y-3 border border-gray-700">
+          <h4 className="text-white font-medium text-sm">Extend Session</h4>
+          <p className="text-gray-400 text-xs">This agent offers free extensions. Resume the session at no cost.</p>
+          <div className="flex gap-2">
+            <button onClick={handleFreeExtension} disabled={loading} className="btn-primary text-sm">
+              {loading ? 'Resuming...' : 'Extend Session (Free)'}
+            </button>
+            <button onClick={onCancel} className="btn-secondary text-sm">Cancel</button>
+          </div>
+        </div>
+      );
+    }
+
+    // Step 1: Enter amount (paid extension)
+    const p = job.pricing;
     return (
       <div className="bg-gray-900 rounded-lg p-4 space-y-3 border border-gray-700">
         <h4 className="text-white font-medium text-sm">Extend Session</h4>
         <p className="text-gray-400 text-xs">Add more funds to continue working with this agent.</p>
+        {p?.adjustedPrice > 0 && (
+          <div className="rounded-lg p-3 space-y-1" style={{ background: 'rgba(139, 92, 246, 0.08)', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+            <p className="text-xs font-medium" style={{ color: 'var(--accent-purple)' }}>
+              Token Pricing — {p.servicePrice} {job.currency}/batch{p.agentMarkup > 0 ? ` + ${p.agentMarkup}% markup` : ''} = {p.adjustedPrice} {job.currency}
+            </p>
+            <div className="flex gap-3 flex-wrap">
+              {[10000, 50000, 100000].map(tokens => {
+                const cost = +(p.adjustedPrice * (tokens / (p.tokenLimit || 10000))).toFixed(4);
+                return (
+                  <button key={tokens} type="button"
+                    onClick={() => setExtAmount(String(cost))}
+                    className="text-xs px-2 py-1 rounded transition-colors"
+                    style={{ background: 'var(--bg-inset)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}
+                  >
+                    {(tokens/1000)}k tokens → {cost} {job.currency}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
         <div>
           <label className="block text-xs text-gray-400 mb-1">Additional Amount ({job.currency})</label>
           <input type="number" step="0.001" min="0.001" value={extAmount}
@@ -614,17 +674,21 @@ export default function JobActions({ job, onUpdate, autoOpenPayment, onAutoOpenC
         </div>
       )}
 
-      {/* Reconnect Agent — either party, active jobs (not paused) */}
-      {['in_progress', 'delivered'].includes(job.status) && (
+      {/* Reconnect Agent — either party, active or paused jobs */}
+      {['in_progress', 'delivered', 'paused'].includes(job.status) && (
         <button
           onClick={async () => {
             setLoading(true);
+            setError(null);
             try {
               const res = await fetch(`${API_BASE}/v1/jobs/${job.id}/reconnect`, {
                 method: 'POST',
                 credentials: 'include',
               });
-              if (!res.ok) {
+              if (res.ok) {
+                setError(null);
+                onUpdate?.();
+              } else {
                 const data = await res.json();
                 setError(data.error?.message || 'Failed to reconnect');
               }

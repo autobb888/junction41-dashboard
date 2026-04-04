@@ -458,7 +458,8 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
       if (isSeller) {
         setEndSessionPanel('deliver');
       } else {
-        // Buyer goes straight to complete+review
+        // Buyer goes straight to complete+review — refresh timestamp so it's not stale
+        setCompleteTs(Math.floor(Date.now() / 1000));
         setEndSessionPanel('complete');
       }
     } catch (err) {
@@ -652,7 +653,7 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
             </label>
             <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
               <button
-                onClick={() => { setCompleteStep('sign'); setCompleteSig(''); }}
+                onClick={() => { setCompleteTs(Math.floor(Date.now() / 1000)); setCompleteStep('sign'); setCompleteSig(''); }}
                 disabled={reviewRating < 1}
                 className="btn-primary"
                 style={{ padding: '6px 14px', fontSize: 13 }}
@@ -760,6 +761,64 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
 
     // Extension panel
     if (endSessionPanel === 'extend') {
+      const isFreeLifecycle = jobStatus === 'paused' && (job?.lifecycle?.reactivationFee || 0) === 0;
+
+      // Free extension for paused jobs with free lifecycle
+      if (isFreeLifecycle) {
+        return (
+          <div style={{
+            padding: '12px 16px', background: 'var(--bg-tertiary)',
+            borderTop: '1px solid var(--border-primary)',
+          }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>
+              Extend Session
+            </div>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
+              This agent offers free extensions. Resume the session at no cost.
+            </p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={async () => {
+                  setActionLoading(true);
+                  setActionError(null);
+                  try {
+                    const res = await fetch(`${API_BASE}/v1/jobs/${jobId}/extensions`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      credentials: 'include',
+                      body: JSON.stringify({ amount: 0, reason: 'Free extension' }),
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error?.message || 'Failed to extend');
+                    setEndSessionPanel(null);
+                    onJobStatusChanged?.();
+                  } catch (err) {
+                    setActionError(err.message);
+                  } finally {
+                    setActionLoading(false);
+                  }
+                }}
+                disabled={actionLoading}
+                className="btn-primary"
+                style={{ padding: '6px 14px', fontSize: 13 }}
+              >
+                {actionLoading ? 'Resuming...' : 'Extend Session (Free)'}
+              </button>
+              <button
+                onClick={() => { setEndSessionPanel(null); setExtAmount(''); setExtReason(''); }}
+                style={{
+                  background: 'none', border: '1px solid var(--border-primary)',
+                  borderRadius: 6, padding: '6px 14px', fontSize: 13,
+                  color: 'var(--text-muted)', cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        );
+      }
+
       return (
         <div style={{
           padding: '12px 16px', background: 'var(--bg-tertiary)',
@@ -771,6 +830,26 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
           <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
             Request additional payment to continue the session.
           </p>
+          {job?.pricing?.adjustedPrice > 0 && (
+            <div style={{ marginBottom: 8, padding: 8, borderRadius: 6, background: 'rgba(139, 92, 246, 0.08)', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+              <p style={{ fontSize: 11, fontWeight: 600, color: '#a78bfa', marginBottom: 4 }}>
+                {job.pricing.servicePrice} {job.currency}/batch{job.pricing.agentMarkup > 0 ? ` + ${job.pricing.agentMarkup}%` : ''} = {job.pricing.adjustedPrice} {job.currency}
+              </p>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {[10000, 50000, 100000].map(tokens => {
+                  const cost = +(job.pricing.adjustedPrice * (tokens / (job.pricing.tokenLimit || 10000))).toFixed(4);
+                  return (
+                    <button key={tokens} type="button"
+                      onClick={() => setExtAmount(String(cost))}
+                      style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, background: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: '1px solid var(--border-primary)', cursor: 'pointer' }}
+                    >
+                      {(tokens/1000)}k → {cost} {job.currency}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           <div style={{ marginBottom: 8 }}>
             <label style={{ display: 'block', fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>
               Additional Amount ({job.currency})
@@ -860,7 +939,7 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
               Work delivered — ready to confirm?
             </span>
             <button
-              onClick={() => setEndSessionPanel('complete')}
+              onClick={() => { setCompleteTs(Math.floor(Date.now() / 1000)); setEndSessionPanel('complete'); }}
               className="btn-primary"
               style={{ padding: '6px 14px', fontSize: 13 }}
             >
