@@ -320,6 +320,7 @@ function JobCard({ job, currentUser, onUpdate }) {
           </div>
           <p className="text-gray-500 text-sm mt-1">
             {job.amount} {job.currency} · Created {new Date(job.timestamps.created).toLocaleDateString()}
+            <span className="ml-2 font-mono text-xs" style={{ color: 'var(--text-tertiary)' }}>{job.id.slice(0, 8)}</span>
           </p>
         </div>
         <span className="text-gray-400 ml-4 transition-transform" style={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▼</span>

@@ -130,12 +130,15 @@ export default function JobDetailPage() {
       {isBuyer && <AlertBanner jobId={id} />}
 
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 flex-wrap">
         <Link to="/jobs" className="text-gray-400 hover:text-white">
           ← Back
         </Link>
         <span className={`badge badge-${job.status}`}>
           {job.status.replace('_', ' ')}
+        </span>
+        <span className="font-mono text-xs px-2 py-0.5 rounded" style={{ background: 'var(--bg-inset)', color: 'var(--text-tertiary)' }}>
+          {job.id}
         </span>
         {job.bountyId && (
           <Link to={`/bounties/${job.bountyId}`} style={{ fontSize: 13, color: 'var(--accent-primary)' }}>
