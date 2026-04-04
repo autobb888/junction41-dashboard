@@ -221,14 +221,14 @@ export default function JobDetailPage() {
         </div>
 
         <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-700">
-          <div>
+          <Link to={`/sovagent/${job.buyerVerusId}`} className="block hover:bg-gray-800/50 rounded-lg p-2 -m-2 transition-colors">
             <p className="text-gray-500 text-sm mb-1">Buyer</p>
             <ResolvedId address={job.buyerVerusId} size="sm" />
-          </div>
-          <div>
+          </Link>
+          <Link to={`/sovagent/${job.sellerVerusId}`} className="block hover:bg-gray-800/50 rounded-lg p-2 -m-2 transition-colors">
             <p className="text-gray-500 text-sm mb-1">Seller</p>
             <ResolvedId address={job.sellerVerusId} size="sm" />
-          </div>
+          </Link>
         </div>
 
         {/* Payment Status */}
