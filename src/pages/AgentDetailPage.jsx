@@ -12,7 +12,8 @@ import usePageTitle from '../hooks/usePageTitle';
 // Qualified name built from agent name
 import {
   Globe, ExternalLink, Tag, Calendar, Shield, Zap,
-  Server, Star, Clock, ChevronRight, Copy, Check, Terminal
+  Server, Star, Clock, ChevronRight, Copy, Check, Terminal,
+  Wallet, Percent, Link2, BadgeCheck
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -338,6 +339,35 @@ export default function AgentDetailPage() {
               <CopyButton text={agent.authorities.recovery} />
             </div>
           )}
+          {agent.markup != null && agent.markup > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Percent size={14} style={{ color: 'var(--text-muted)' }} />
+              <span style={{ color: 'var(--text-muted)' }}>Markup:</span>
+              <span style={{ fontWeight: 600, color: '#fbbf24' }}>+{agent.markup}%</span>
+            </div>
+          )}
+          {agent.payaddress && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Wallet size={14} style={{ color: 'var(--text-muted)' }} />
+              <span style={{ color: 'var(--text-muted)' }}>Pay address:</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}>{agent.payaddress.slice(0, 16)}...</span>
+              <CopyButton text={agent.payaddress} />
+            </div>
+          )}
+          {agent.chainVerifiedAt && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <BadgeCheck size={14} style={{ color: '#22c55e' }} />
+              <span style={{ color: 'var(--text-muted)' }}>Chain verified:</span>
+              <span>{new Date(agent.chainVerifiedAt).toLocaleDateString()}</span>
+            </div>
+          )}
+          {agent.chainReviewCount != null && agent.chainReviewCount > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Link2 size={14} style={{ color: 'var(--text-muted)' }} />
+              <span style={{ color: 'var(--text-muted)' }}>On-chain reviews:</span>
+              <span style={{ fontWeight: 600 }}>{agent.chainReviewCount}</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -397,55 +427,103 @@ export default function AgentDetailPage() {
                             </span>
                           )}
                         </div>
-                        {service.sessionParams && Object.keys(service.sessionParams).length > 0 && (
-                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
-                            {service.sessionParams.duration != null && (
-                              <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'rgba(255,255,255,0.04)', padding: '2px 6px', borderRadius: 4 }}>
-                                {formatDuration(service.sessionParams.duration)} session
-                              </span>
-                            )}
-                            {service.sessionParams.tokenLimit != null && (
-                              <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'rgba(255,255,255,0.04)', padding: '2px 6px', borderRadius: 4 }}>
-                                {service.sessionParams.tokenLimit.toLocaleString()} tokens
-                              </span>
-                            )}
-                            {service.sessionParams.imageLimit != null && (
-                              <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'rgba(255,255,255,0.04)', padding: '2px 6px', borderRadius: 4 }}>
-                                {service.sessionParams.imageLimit.toLocaleString()} images
-                              </span>
-                            )}
-                            {service.sessionParams.messageLimit != null && (
-                              <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'rgba(255,255,255,0.04)', padding: '2px 6px', borderRadius: 4 }}>
-                                {service.sessionParams.messageLimit.toLocaleString()} msgs
-                              </span>
-                            )}
-                            {service.sessionParams.maxFileSize != null && (
-                              <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'rgba(255,255,255,0.04)', padding: '2px 6px', borderRadius: 4 }}>
-                                {formatBytes(service.sessionParams.maxFileSize)} max file
-                              </span>
-                            )}
-                            {service.sessionParams.allowedFileTypes && (
-                              <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'rgba(255,255,255,0.04)', padding: '2px 6px', borderRadius: 4 }}>
-                                {Array.isArray(service.sessionParams.allowedFileTypes)
-                                  ? service.sessionParams.allowedFileTypes.map(t => t.split('/')[1] || t).join(', ')
-                                  : service.sessionParams.allowedFileTypes}
-                              </span>
-                            )}
+                        {/* Session Limits */}
+                        {service.sessionParams && (() => {
+                          const sp = service.sessionParams;
+                          const hasLimits = sp.duration != null || sp.tokenLimit != null || sp.imageLimit != null || sp.messageLimit != null || sp.maxFileSize != null || sp.allowedFileTypes;
+                          if (!hasLimits) return null;
+                          return (
+                            <div style={{ marginTop: 10, padding: '10px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-subtle)' }}>
+                              <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Session Limits</div>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '6px 12px' }}>
+                                {sp.duration != null && (
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                                    <span style={{ color: 'var(--text-muted)' }}>Duration</span>
+                                    <span style={{ fontWeight: 500 }}>{formatDuration(sp.duration)}</span>
+                                  </div>
+                                )}
+                                {sp.tokenLimit != null && (
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                                    <span style={{ color: 'var(--text-muted)' }}>Tokens</span>
+                                    <span style={{ fontWeight: 500 }}>{sp.tokenLimit.toLocaleString()}</span>
+                                  </div>
+                                )}
+                                {sp.imageLimit != null && (
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                                    <span style={{ color: 'var(--text-muted)' }}>Images</span>
+                                    <span style={{ fontWeight: 500 }}>{sp.imageLimit.toLocaleString()}</span>
+                                  </div>
+                                )}
+                                {sp.messageLimit != null && (
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                                    <span style={{ color: 'var(--text-muted)' }}>Messages</span>
+                                    <span style={{ fontWeight: 500 }}>{sp.messageLimit.toLocaleString()}</span>
+                                  </div>
+                                )}
+                                {sp.maxFileSize != null && (
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                                    <span style={{ color: 'var(--text-muted)' }}>Max file</span>
+                                    <span style={{ fontWeight: 500 }}>{formatBytes(sp.maxFileSize)}</span>
+                                  </div>
+                                )}
+                                {sp.allowedFileTypes && (
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, gridColumn: 'span 2' }}>
+                                    <span style={{ color: 'var(--text-muted)' }}>File types</span>
+                                    <span style={{ fontWeight: 500, textAlign: 'right' }}>
+                                      {Array.isArray(sp.allowedFileTypes)
+                                        ? sp.allowedFileTypes.map(t => t.split('/')[1] || t).join(', ')
+                                        : sp.allowedFileTypes}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })()}
+                        {/* Lifecycle Config */}
+                        {(service.idleTimeout || service.pauseTTL || service.reactivationFee > 0) && (
+                          <div style={{ marginTop: 6, padding: '10px 12px', borderRadius: 8, background: 'rgba(251,191,36,0.03)', border: '1px solid rgba(251,191,36,0.08)' }}>
+                            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Lifecycle</div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '6px 12px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                                <span style={{ color: 'var(--text-muted)' }}>Idle timeout</span>
+                                <span style={{ fontWeight: 500 }}>{service.idleTimeout || 10} min</span>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                                <span style={{ color: 'var(--text-muted)' }}>Pause TTL</span>
+                                <span style={{ fontWeight: 500 }}>{service.pauseTTL || 60} min</span>
+                              </div>
+                              {service.reactivationFee > 0 && (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                                  <span style={{ color: 'var(--text-muted)' }}>Reactivation</span>
+                                  <span style={{ fontWeight: 500, color: '#FBBF24' }}>{service.reactivationFee} {service.currency}</span>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )}
-                        {(service.idleTimeout || service.pauseTTL || service.reactivationFee > 0) && (
-                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
-                            <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'rgba(251,191,36,0.08)', padding: '2px 6px', borderRadius: 4 }}>
-                              Idle: {service.idleTimeout || 10}min
-                            </span>
-                            <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'rgba(251,191,36,0.08)', padding: '2px 6px', borderRadius: 4 }}>
-                              Pause TTL: {service.pauseTTL || 60}min
-                            </span>
-                            {service.reactivationFee > 0 && (
-                              <span style={{ fontSize: 11, color: '#FBBF24', background: 'rgba(251,191,36,0.12)', padding: '2px 6px', borderRadius: 4 }}>
-                                Reactivation: {service.reactivationFee} {service.currency}
-                              </span>
-                            )}
+                        {/* Dispute Terms */}
+                        {service.sessionParams && (service.sessionParams.resolutionWindow != null || service.sessionParams.refundPolicy) && (
+                          <div style={{ marginTop: 6, padding: '10px 12px', borderRadius: 8, background: 'rgba(167,139,250,0.03)', border: '1px solid rgba(167,139,250,0.1)' }}>
+                            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Dispute Terms</div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '6px 12px' }}>
+                              {service.sessionParams.resolutionWindow != null && (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                                  <span style={{ color: 'var(--text-muted)' }}>Resolution</span>
+                                  <span style={{ fontWeight: 500 }}>
+                                    {service.sessionParams.resolutionWindow >= 1440
+                                      ? `${Math.round(service.sessionParams.resolutionWindow / 1440)} day${service.sessionParams.resolutionWindow >= 2880 ? 's' : ''}`
+                                      : `${service.sessionParams.resolutionWindow} hr${service.sessionParams.resolutionWindow !== 1 ? 's' : ''}`}
+                                  </span>
+                                </div>
+                              )}
+                              {service.sessionParams.refundPolicy && (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, gridColumn: service.sessionParams.resolutionWindow != null ? 'auto' : 'span 2' }}>
+                                  <span style={{ color: 'var(--text-muted)' }}>Refund</span>
+                                  <span style={{ fontWeight: 500 }}>{service.sessionParams.refundPolicy}</span>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -456,6 +534,12 @@ export default function AgentDetailPage() {
                         }}>
                           {service.price} <span style={{ fontSize: 12, fontWeight: 500, opacity: 0.7 }}>{service.currency}</span>
                         </div>
+                        {service.markup != null && service.markup > 0 && (
+                          <span style={{
+                            fontSize: 10, fontWeight: 500, color: '#fbbf24', background: 'rgba(251,191,36,0.08)',
+                            padding: '1px 6px', borderRadius: 4,
+                          }}>+{service.markup}% markup</span>
+                        )}
                         <button
                           onClick={() => {
                             if (!user) { requireAuth(); return; }
@@ -759,6 +843,40 @@ export default function AgentDetailPage() {
                     <span style={{ color: 'var(--text-muted)' }}>Reviews</span>
                     <span style={{ fontWeight: 600 }}>{reputation.totalReviews}</span>
                   </div>
+                </>
+              )}
+              {(agent.markup != null || agent.chainReviewCount > 0 || agent.chainVerifiedAt || agent.payaddress) && (
+                <>
+                  <div style={{ borderTop: '1px solid var(--border-subtle)', margin: '4px 0' }} />
+                  {agent.markup != null && agent.markup > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Markup</span>
+                      <span style={{ fontWeight: 600, color: '#fbbf24' }}>+{agent.markup}%</span>
+                    </div>
+                  )}
+                  {agent.chainReviewCount > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
+                      <span style={{ color: 'var(--text-muted)' }}>On-chain reviews</span>
+                      <span style={{ fontWeight: 600 }}>{agent.chainReviewCount}</span>
+                    </div>
+                  )}
+                  {agent.chainVerifiedAt && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Chain verified</span>
+                      <span style={{ fontWeight: 500, color: '#22c55e', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <BadgeCheck size={12} /> {new Date(agent.chainVerifiedAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  )}
+                  {agent.payaddress && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Pay address</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}>{agent.payaddress.slice(0, 10)}...</span>
+                        <CopyButton text={agent.payaddress} />
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </div>
