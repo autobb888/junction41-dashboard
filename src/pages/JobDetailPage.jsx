@@ -209,8 +209,8 @@ export default function JobDetailPage() {
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-xl font-bold text-white">{job.description}</h1>
-            <p className="text-gray-400 mt-1">
-              Job #{job.jobHash.slice(0, 8)}...
+            <p className="text-gray-400 mt-1 font-mono text-xs">
+              {job.id}
             </p>
           </div>
           <div className="text-right">
