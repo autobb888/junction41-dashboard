@@ -122,11 +122,28 @@ function ReviewsSection({ agentId, reviews: initialReviews, setReviews: setParen
     : '0.0';
   const totalPages = Math.ceil(total / REVIEWS_PER_PAGE);
 
-  if (totalReviews === 0 && reviews.length === 0) return null;
+  if (totalReviews === 0 && reviews.length === 0 && !reputation) return null;
 
   return (
     <div className="card" style={{ marginBottom: 20 }}>
-      <SectionHeader icon={Star} title="Reviews" count={totalReviews} />
+      <SectionHeader icon={Star} title="Reviews & Reputation" count={totalReviews} />
+
+      {/* Reputation Stats Row */}
+      {reputation && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 16 }}>
+          {[
+            { value: reputation.score ? reputation.score.toFixed(1) : '--', label: 'Score', color: '#fbbf24' },
+            { value: reputation.uniqueReviewers ?? 0, label: 'Reviewers', color: 'var(--text-primary)' },
+            { value: reputation.trending === 'up' ? '↑' : reputation.trending === 'down' ? '↓' : '—', label: 'Trend', color: reputation.trending === 'up' ? '#00e6a7' : reputation.trending === 'down' ? '#ef4444' : 'var(--text-muted)' },
+            { value: reputation.recentReviews ?? 0, label: 'Last 30d', color: 'var(--text-primary)' },
+          ].map(({ value, label, color }) => (
+            <div key={label} style={{ background: 'var(--bg-elevated)', borderRadius: 8, padding: '10px 8px', textAlign: 'center', border: '1px solid var(--border-subtle)' }}>
+              <div style={{ fontSize: 22, fontWeight: 700, color, fontFamily: 'var(--font-display)' }}>{value}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{label}</div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Rating Summary + Distribution Bars */}
       <div style={{ display: 'flex', gap: 20, marginBottom: 16 }}>
@@ -167,14 +184,39 @@ function ReviewsSection({ agentId, reviews: initialReviews, setReviews: setParen
         </div>
       </div>
 
-      {ratingFilter && (
-        <button
-          onClick={() => { setRatingFilter(null); setPage(0); fetchReviews(null, 0); }}
-          style={{ fontSize: 12, color: 'var(--accent-primary)', background: 'none', border: 'none', cursor: 'pointer', marginBottom: 12, padding: 0 }}
-        >
-          Showing {ratingFilter}-star reviews — clear filter
-        </button>
+      {/* Sybil Flags */}
+      {reputation?.sybilFlags?.length > 0 && (
+        <div style={{
+          padding: '10px 14px', borderRadius: 8, marginBottom: 12,
+          background: 'rgba(239, 68, 68, 0.06)', border: '1px solid rgba(239, 68, 68, 0.15)',
+        }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#ef4444', marginBottom: 4 }}>Suspicious Patterns Detected</div>
+          {reputation.sybilFlags.map((flag, i) => (
+            <div key={i} style={{ fontSize: 11, color: 'rgba(239, 68, 68, 0.8)' }}>
+              [{flag.severity}] {flag.description}
+            </div>
+          ))}
+        </div>
       )}
+
+      {/* Confidence + Filter */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        {reputation?.confidence && (
+          <span className={`badge ${
+            reputation.confidence === 'high' ? 'badge-completed' :
+            reputation.confidence === 'medium' ? 'badge-requested' :
+            reputation.confidence === 'low' ? 'badge-disputed' : 'badge-cancelled'
+          }`}>{reputation.confidence} confidence</span>
+        )}
+        {ratingFilter && (
+          <button
+            onClick={() => { setRatingFilter(null); setPage(0); fetchReviews(null, 0); }}
+            style={{ fontSize: 12, color: 'var(--accent-primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+          >
+            Showing {ratingFilter}-star — clear filter
+          </button>
+        )}
+      </div>
 
       {/* Review Cards */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, opacity: loading ? 0.6 : 1, transition: 'opacity 0.15s' }}>
@@ -842,113 +884,7 @@ export default function AgentDetailPage() {
             </div>
           )}
 
-          {/* Reputation (full) */}
-          {reputation && (
-            <div className="card" style={{ marginBottom: 20 }}>
-              <SectionHeader icon={Star} title="Reputation" />
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>
-                <div style={{
-                  background: 'var(--bg-elevated)', borderRadius: 10, padding: 16, textAlign: 'center',
-                  border: '1px solid var(--border-subtle)',
-                }}>
-                  <div style={{ fontSize: 28, fontWeight: 700, color: '#fbbf24', fontFamily: 'var(--font-display)' }}>
-                    {reputation.score ? reputation.score.toFixed(1) : '--'}
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                    <Star size={12} fill="#fbbf24" stroke="#fbbf24" /> Score
-                  </div>
-                </div>
-                <div style={{
-                  background: 'var(--bg-elevated)', borderRadius: 10, padding: 16, textAlign: 'center',
-                  border: '1px solid var(--border-subtle)',
-                }}>
-                  <div style={{ fontSize: 28, fontWeight: 700, fontFamily: 'var(--font-display)' }}>{reputation.totalReviews}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Reviews</div>
-                </div>
-                <div style={{
-                  background: 'var(--bg-elevated)', borderRadius: 10, padding: 16, textAlign: 'center',
-                  border: '1px solid var(--border-subtle)',
-                }}>
-                  <div style={{ fontSize: 28, fontWeight: 700, fontFamily: 'var(--font-display)' }}>{reputation.uniqueReviewers}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Reviewers</div>
-                </div>
-                <div style={{
-                  background: 'var(--bg-elevated)', borderRadius: 10, padding: 16, textAlign: 'center',
-                  border: '1px solid var(--border-subtle)',
-                }}>
-                  <div style={{
-                    fontSize: 28, fontWeight: 700, fontFamily: 'var(--font-display)',
-                    color: reputation.trending === 'up' ? '#00e6a7' : reputation.trending === 'down' ? '#ef4444' : 'var(--text-muted)',
-                  }}>
-                    {reputation.trending === 'up' ? '+' : reputation.trending === 'down' ? '-' : '--'}
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Trend</div>
-                </div>
-              </div>
-
-              {/* Rating Distribution */}
-              {reputation.transparency?.reviewDistribution && (
-                <div style={{
-                  background: 'var(--bg-elevated)', borderRadius: 10, padding: 16,
-                  border: '1px solid var(--border-subtle)', marginBottom: 12,
-                }}>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>{reputation.transparency.note}</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {[5, 4, 3, 2, 1].map((rating) => {
-                      const dist = reputation.transparency.reviewDistribution.find(d => d.rating === rating);
-                      const count = dist?.count || 0;
-                      const pct = reputation.totalReviews > 0 ? (count / reputation.totalReviews) * 100 : 0;
-                      return (
-                        <div key={rating} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ fontSize: 12, color: 'var(--text-muted)', width: 24, textAlign: 'right' }}>{rating}</span>
-                          <Star size={12} fill="#fbbf24" stroke="#fbbf24" />
-                          <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'var(--bg-overlay)', overflow: 'hidden' }}>
-                            <div style={{
-                              height: '100%', borderRadius: 3, width: `${pct}%`,
-                              background: 'linear-gradient(90deg, #fbbf24, #f59e0b)',
-                              transition: 'width 0.5s ease',
-                            }} />
-                          </div>
-                          <span style={{ fontSize: 11, color: 'var(--text-muted)', width: 20, textAlign: 'right' }}>{count}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Sybil Flags */}
-              {reputation.sybilFlags?.length > 0 && (
-                <div style={{
-                  padding: '10px 14px', borderRadius: 8, marginBottom: 12,
-                  background: 'rgba(239, 68, 68, 0.06)', border: '1px solid rgba(239, 68, 68, 0.15)',
-                }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: '#ef4444', marginBottom: 4 }}>Suspicious Patterns Detected</div>
-                  {reputation.sybilFlags.map((flag, i) => (
-                    <div key={i} style={{ fontSize: 11, color: 'rgba(239, 68, 68, 0.8)' }}>
-                      [{flag.severity}] {flag.description}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                paddingTop: 12, borderTop: '1px solid var(--border-subtle)',
-              }}>
-                <span className={`badge ${
-                  reputation.confidence === 'high' ? 'badge-completed' :
-                  reputation.confidence === 'medium' ? 'badge-requested' :
-                  reputation.confidence === 'low' ? 'badge-disputed' : 'badge-cancelled'
-                }`}>{reputation.confidence} confidence</span>
-                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                  {reputation.recentReviews} reviews in last 30 days
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Reviews Section — Amazon-style with rating bars + pagination */}
+          {/* Reviews & Reputation — combined section */}
           <ReviewsSection agentId={id} reviews={reviews} setReviews={setReviews} reputation={reputation} />
         </div>
 
