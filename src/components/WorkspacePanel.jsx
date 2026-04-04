@@ -192,13 +192,15 @@ export default function WorkspacePanel({ job }) {
         </div>
 
         {/* Mode + Permissions */}
-        <div className="flex gap-4 text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
-          <span className="flex items-center gap-1">
+        <div className="flex gap-3 text-sm mb-4 flex-wrap">
+          <span className="flex items-center gap-1.5 px-2 py-0.5 rounded" style={{ background: 'var(--bg-inset)', color: 'var(--accent-purple)' }}>
             {session.mode === 'supervised' ? <Eye size={14} /> : <Shield size={14} />}
             {session.mode}
           </span>
-          <span>Read: on</span>
-          {session.permissions?.write && <span>Write: on</span>}
+          <span className="px-2 py-0.5 rounded" style={{ background: 'var(--bg-inset)', color: 'var(--text-secondary)' }}>Read: on</span>
+          <span className="px-2 py-0.5 rounded" style={{ background: 'var(--bg-inset)', color: session.permissions?.write ? 'var(--text-secondary)' : 'var(--text-tertiary)' }}>
+            Write: {session.permissions?.write ? 'on' : 'off'}
+          </span>
         </div>
 
         {/* Pending — show connect command so buyer can run j41-jailbox */}
@@ -302,14 +304,14 @@ export default function WorkspacePanel({ job }) {
         {session.counts && (
           <div className="grid grid-cols-4 gap-3 mb-4">
             {[
-              { label: 'Read', value: session.counts.reads, color: 'var(--accent-purple)' },
-              { label: 'Written', value: session.counts.writes, color: '#60a5fa' },
-              { label: 'Listed', value: session.counts.list_dirs, color: 'var(--text-secondary)' },
-              { label: 'Blocked', value: session.counts.blocked, color: session.counts.blocked > 0 ? '#f87171' : 'var(--text-tertiary)' },
+              { label: 'Read', value: session.counts.reads ?? 0, color: 'var(--accent-purple)' },
+              { label: 'Written', value: session.counts.writes ?? 0, color: '#60a5fa' },
+              { label: 'Listed', value: session.counts.list_dirs ?? 0, color: 'var(--text-secondary)' },
+              { label: 'Blocked', value: session.counts.blocked ?? 0, color: (session.counts.blocked ?? 0) > 0 ? '#f87171' : 'var(--text-tertiary)' },
             ].map(({ label, value, color }) => (
               <div key={label} className="text-center p-2 rounded-lg" style={{ background: 'var(--bg-inset)' }}>
                 <div className="text-lg font-bold" style={{ color }}>{value}</div>
-                <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{label}</div>
+                <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{label}</div>
               </div>
             ))}
           </div>
