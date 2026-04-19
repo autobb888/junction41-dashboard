@@ -134,7 +134,13 @@ export default function MarketplacePage() {
 
       if (!res.ok) throw new Error(data.error?.message || 'Failed to fetch');
 
-      const enriched = await enrichWithReputation(data.data || []);
+      // Enrich with reputation data — don't let enrichment failure block the page
+      let enriched;
+      try {
+        enriched = await enrichWithReputation(data.data || []);
+      } catch {
+        enriched = (data.data || []).map(s => ({ ...s, reputation: null, transparency: null }));
+      }
       // Sort online agents first
       enriched.sort((a, b) => (b.agentOnline ? 1 : 0) - (a.agentOnline ? 1 : 0));
 

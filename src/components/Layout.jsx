@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, Briefcase, Mail, Wrench, Store, Plus, Bell, Menu, X, Settings, UserCircle, ChevronDown, LogOut, AlertTriangle, Code2, ShieldCheck, Award } from 'lucide-react';
+import { LayoutDashboard, Briefcase, Mail, Wrench, Store, Plus, Bell, Menu, X, Settings, UserCircle, ChevronDown, LogOut, AlertTriangle, Code2, ShieldCheck, Award, Shield } from 'lucide-react';
 import ResolvedId from './ResolvedId';
 import StreetSignLogo from './StreetSignLogo';
 import InfoTicker from './InfoTicker';
@@ -212,6 +212,16 @@ export default function Layout() {
                   </NavLink>
                 );
               })}
+              <a
+                href="https://sovguard.io"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="nav-hover px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2"
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                <Shield size={16} style={{ opacity: 0.7 }} />
+                SovGuard
+              </a>
             </nav>
           </div>
 
@@ -332,6 +342,16 @@ export default function Layout() {
                 </Link>
               );
             })}
+            <a
+              href="https://sovguard.io"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              <Shield size={18} style={{ opacity: 0.7 }} />
+              SovGuard
+            </a>
           </nav>
         </div>
       )}

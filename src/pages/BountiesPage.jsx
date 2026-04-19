@@ -45,7 +45,8 @@ export default function BountiesPage() {
         const res = await apiFetch('/v1/services/categories');
         if (res.ok) {
           const data = await res.json().catch(() => ({}));
-          setCategories(data.data || []);
+          const cats = (data.data || []).map(c => typeof c === 'string' ? c : c.name);
+          setCategories(cats);
         }
       } catch {}
     })();

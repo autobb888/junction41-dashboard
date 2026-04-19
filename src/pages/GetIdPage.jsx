@@ -8,7 +8,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 
 const STEPS = [
   { num: 1, title: 'Get a Verus Wallet', desc: 'Download a wallet to hold your identity' },
-  { num: 2, title: 'Choose a Name', desc: 'Pick your unique SovAgent@ identity' },
+  { num: 2, title: 'Choose a Name', desc: 'Pick your unique agentplatform@ identity' },
   { num: 3, title: 'Enter Your Address', desc: 'Paste your R-address from your Verus wallet' },
   { num: 4, title: 'Done!', desc: 'Your identity is ready to use' },
 ];
@@ -125,7 +125,7 @@ export default function GetIdPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white">Get Your Free Identity</h1>
         <p className="text-gray-400 mt-1">
-          Register a free <span className="text-verus-blue font-mono">yourname.SovAgent@</span> identity on the Verus blockchain
+          Register a free <span className="text-verus-blue font-mono">yourname.agentplatform@</span> identity on the Verus blockchain
         </p>
       </div>
 
@@ -163,7 +163,7 @@ export default function GetIdPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <a href="https://apps.apple.com/app/verus-mobile/id1528675517" target="_blank" rel="noopener"
               className="flex items-center gap-3 p-4 bg-[#0d0e14] rounded-lg hover:bg-white/[0.06] transition">
-              <span className="text-2xl">🍎</span>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
               <div>
                 <div className="text-white font-medium">App Store</div>
                 <div className="text-gray-400 text-sm">iOS</div>
@@ -171,7 +171,7 @@ export default function GetIdPage() {
             </a>
             <a href="https://play.google.com/store/apps/details?id=org.ArtisticCompass.VerusMobile" target="_blank" rel="noopener"
               className="flex items-center gap-3 p-4 bg-[#0d0e14] rounded-lg hover:bg-white/[0.06] transition">
-              <span className="text-2xl">🤖</span>
+              <svg width="24" height="24" viewBox="0 0 512 512" fill="white"><path d="M48 59.49v393a4.33 4.33 0 007.37 3.07L260 256 55.37 56.42A4.33 4.33 0 0048 59.49zM345.8 174L89.22 32.64l-.16-.09c-4.42-2.4-8.62 3.58-5 7.06l201.13 192.32zM84.08 472.39c-3.64 3.48.56 9.46 5 7.06l.16-.09L345.8 338l-60.61-57.95zM449.38 231l-71.65-39.46L310.36 256l67.37 64.43 71.65-39.46c18.2-10.05 18.2-39.92 0-49.97z"/></svg>
               <div>
                 <div className="text-white font-medium">Google Play</div>
                 <div className="text-gray-400 text-sm">Android</div>
@@ -211,7 +211,7 @@ export default function GetIdPage() {
         <div className="card !p-8">
           <h2 className="text-xl font-semibold text-white mb-4">✨ Step 2: Choose Your Name</h2>
           <p className="text-gray-300 mb-6">
-            Your identity will be <span className="font-mono text-verus-blue">{name || 'yourname'}.SovAgent@</span>
+            Your identity will be <span className="font-mono text-verus-blue">{name || 'yourname'}.agentplatform@</span>
           </p>
 
           <form onSubmit={(e) => { e.preventDefault(); if (name.trim()) setStep(3); }}>
@@ -227,7 +227,7 @@ export default function GetIdPage() {
                   maxLength={32}
                   autoFocus
                 />
-                <span className="px-3 text-gray-500 font-mono text-sm">.SovAgent@</span>
+                <span className="px-3 text-gray-500 font-mono text-sm">.agentplatform@</span>
               </div>
               <p className="text-xs text-gray-400 mt-1">Lowercase letters and numbers only. 3-32 characters.</p>
             </div>
@@ -250,7 +250,7 @@ export default function GetIdPage() {
           <h2 className="text-xl font-semibold text-white mb-4">🔑 Step 3: Your Wallet Address</h2>
           <p className="text-gray-300 mb-6">
             Paste your R-address from your Verus wallet.
-            This connects your new <span className="font-mono text-verus-blue">{name}.SovAgent@</span> identity to your wallet.
+            This connects your new <span className="font-mono text-verus-blue">{name}.agentplatform@</span> identity to your wallet.
           </p>
 
           <form onSubmit={handleRegister}>
@@ -415,7 +415,7 @@ export default function GetIdPage() {
       <div className="mt-8 bg-white/[0.02] border border-white/10 rounded-lg p-4">
         <h3 className="text-sm font-medium text-gray-300 mb-2">ℹ️ About VerusIDs</h3>
         <p className="text-xs text-gray-400">
-          Your <span className="text-verus-blue">SovAgent@</span> identity is a real VerusID on the Verus blockchain.
+          Your <span className="text-verus-blue">agentplatform@</span> identity is a real VerusID on the Verus blockchain.
           You own it — not us. It travels with you if you leave the platform.
           Registration costs are covered by the platform. You receive a small amount of VRSCTEST
           to get started updating your identity.

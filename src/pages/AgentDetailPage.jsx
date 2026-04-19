@@ -15,8 +15,6 @@ import {
   Server, Star, Clock, ChevronRight, Copy, Check, Terminal,
   Wallet, Percent, Link2, BadgeCheck, ChevronLeft
 } from 'lucide-react';
-import { apiFetch } from '../utils/api';
-
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
 function formatDuration(seconds) {
@@ -72,7 +70,7 @@ function SectionHeader({ icon: Icon, title, count }) {
 
 const REVIEWS_PER_PAGE = 5;
 
-function ReviewsSection({ agentId, reviews: initialReviews, setReviews: setParentReviews, reputation }) {
+function ReviewsSection({ agentId, reviews: initialReviews, reputation }) {
   const [reviews, setReviews] = useState(initialReviews || []);
   const [distribution, setDistribution] = useState({ 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 });
   const [ratingFilter, setRatingFilter] = useState(null); // null = all, 1-5 = filter
@@ -365,6 +363,33 @@ export default function AgentDetailPage() {
   }
 
   if (error) {
+    const notAgent = /not found/i.test(error);
+    if (notAgent) {
+      return (
+        <div className="max-w-2xl mx-auto py-12">
+          <div className="card text-center" style={{ padding: '32px 24px' }}>
+            <h1 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>
+              Not a registered SovAgent
+            </h1>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>
+              This VerusID exists but hasn't published a SovAgent profile. It may be a human
+              user who hired a SovAgent, or an identity that hasn't registered yet.
+            </p>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+              <ResolvedId address={id} size="sm" />
+            </div>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+              <button onClick={() => navigate(-1)} className="btn-secondary" style={{ padding: '6px 14px', fontSize: 13 }}>
+                Go back
+              </button>
+              <Link to="/sovagents" className="btn-primary" style={{ padding: '6px 14px', fontSize: 13 }}>
+                Browse SovAgents
+              </Link>
+            </div>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="text-center py-12">
         <div className="text-red-400 mb-4">{error}</div>
@@ -378,7 +403,7 @@ export default function AgentDetailPage() {
   const tags = agent.tags || [];
 
   return (
-    <div className="page-content" style={{ maxWidth: 1100, margin: '0 auto' }}>
+    <div className="page-content" style={{ maxWidth: 1100, margin: '0 auto', overflowX: 'hidden' }}>
       {/* Breadcrumb */}
       <div className="mb-4">
         <Link to="/sovagents" style={{ color: 'var(--text-muted)', fontSize: 13 }} className="hover:text-white transition-colors">
@@ -389,7 +414,7 @@ export default function AgentDetailPage() {
       </div>
 
       {/* ═══════ HERO CARD ═══════ */}
-      <div className="card" style={{ marginBottom: 24, padding: '28px 32px', position: 'relative', overflow: 'hidden' }}>
+      <div className="card" style={{ marginBottom: 24, padding: 'clamp(16px, 4vw, 32px)', position: 'relative', overflow: 'hidden' }}>
         {/* Subtle gradient accent at top */}
         <div style={{
           position: 'absolute', top: 0, left: 0, right: 0, height: 3,
@@ -447,8 +472,8 @@ export default function AgentDetailPage() {
                 </span>
                 <CopyButton text={qualifiedName || `${agent.name}@`} />
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-tertiary)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {agent.id}
                 </span>
                 <CopyButton text={agent.id} />
@@ -526,9 +551,9 @@ export default function AgentDetailPage() {
 
         {/* Meta row */}
         <div style={{
-          display: 'flex', gap: 24, marginTop: 20, paddingTop: 16,
+          display: 'flex', gap: '12px 24px', marginTop: 20, paddingTop: 16,
           borderTop: '1px solid var(--border-subtle)', fontSize: 13, color: 'var(--text-secondary)',
-          flexWrap: 'wrap',
+          flexWrap: 'wrap', overflowWrap: 'anywhere',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <Shield size={14} style={{ color: 'var(--text-muted)' }} />
@@ -606,7 +631,7 @@ export default function AgentDetailPage() {
       </div>
 
       {/* ═══════ TWO-COLUMN LAYOUT ═══════ */}
-      <div className="agent-detail-grid grid gap-5 items-start" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
+      <div className="agent-detail-grid grid gap-5 items-start" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))' }}>
 
         {/* LEFT COLUMN — Main content */}
         <div>
@@ -885,7 +910,7 @@ export default function AgentDetailPage() {
           )}
 
           {/* Reviews & Reputation — combined section */}
-          <ReviewsSection agentId={id} reviews={reviews} setReviews={setReviews} reputation={reputation} />
+          <ReviewsSection key={id} agentId={id} reviews={reviews} reputation={reputation} />
         </div>
 
         {/* RIGHT COLUMN — Sidebar */}

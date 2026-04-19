@@ -569,16 +569,47 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
 
     // Paused state
     if (jobStatus === 'paused') {
+      const freeReactivation = isBuyer && (job?.lifecycle?.reactivationFee || 0) === 0;
       return (
         <div style={{
           padding: '10px 16px', background: 'rgba(245, 158, 11, 0.1)',
           borderTop: '1px solid rgba(245, 158, 11, 0.3)',
-          display: 'flex', alignItems: 'center', gap: 8,
+          display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
         }}>
           <span style={{ color: '#f59e0b', fontSize: 14 }}>||</span>
-          <span style={{ color: '#f59e0b', fontWeight: 600, fontSize: 13 }}>
-            Session paused — {isBuyer ? 'go to job details to reactivate' : 'buyer needs to reactivate the session'}
+          <span style={{ color: '#f59e0b', fontWeight: 600, fontSize: 13, flex: 1 }}>
+            Session paused — {isBuyer
+              ? (freeReactivation ? 'resume at no cost' : 'go to job details to reactivate')
+              : 'buyer needs to reactivate the session'}
           </span>
+          {freeReactivation && (
+            <button
+              onClick={async () => {
+                setActionLoading(true);
+                setActionError(null);
+                try {
+                  const res = await fetch(`${API_BASE}/v1/jobs/${jobId}/extensions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ amount: 0, reason: 'Free extension' }),
+                  });
+                  const data = await res.json();
+                  if (!res.ok) throw new Error(data.error?.message || 'Failed to extend');
+                  onJobStatusChanged?.();
+                } catch (err) {
+                  setActionError(err.message);
+                } finally {
+                  setActionLoading(false);
+                }
+              }}
+              disabled={actionLoading}
+              className="btn-primary"
+              style={{ padding: '4px 12px', fontSize: 12 }}
+            >
+              {actionLoading ? 'Resuming...' : 'Resume Session (Free)'}
+            </button>
+          )}
         </div>
       );
     }
@@ -759,66 +790,8 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
       );
     }
 
-    // Extension panel
+    // Extension panel (paid/budget path — free reactivation handled in paused banner)
     if (endSessionPanel === 'extend') {
-      const isFreeLifecycle = jobStatus === 'paused' && (job?.lifecycle?.reactivationFee || 0) === 0;
-
-      // Free extension for paused jobs with free lifecycle
-      if (isFreeLifecycle) {
-        return (
-          <div style={{
-            padding: '12px 16px', background: 'var(--bg-tertiary)',
-            borderTop: '1px solid var(--border-primary)',
-          }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>
-              Extend Session
-            </div>
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
-              This agent offers free extensions. Resume the session at no cost.
-            </p>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                onClick={async () => {
-                  setActionLoading(true);
-                  setActionError(null);
-                  try {
-                    const res = await fetch(`${API_BASE}/v1/jobs/${jobId}/extensions`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      credentials: 'include',
-                      body: JSON.stringify({ amount: 0, reason: 'Free extension' }),
-                    });
-                    const data = await res.json();
-                    if (!res.ok) throw new Error(data.error?.message || 'Failed to extend');
-                    setEndSessionPanel(null);
-                    onJobStatusChanged?.();
-                  } catch (err) {
-                    setActionError(err.message);
-                  } finally {
-                    setActionLoading(false);
-                  }
-                }}
-                disabled={actionLoading}
-                className="btn-primary"
-                style={{ padding: '6px 14px', fontSize: 13 }}
-              >
-                {actionLoading ? 'Resuming...' : 'Extend Session (Free)'}
-              </button>
-              <button
-                onClick={() => { setEndSessionPanel(null); setExtAmount(''); setExtReason(''); }}
-                style={{
-                  background: 'none', border: '1px solid var(--border-primary)',
-                  borderRadius: 6, padding: '6px 14px', fontSize: 13,
-                  color: 'var(--text-muted)', cursor: 'pointer',
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        );
-      }
-
       return (
         <div style={{
           padding: '12px 16px', background: 'var(--bg-tertiary)',

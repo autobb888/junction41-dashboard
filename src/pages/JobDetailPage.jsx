@@ -10,6 +10,7 @@ import JobActions from '../components/JobActions';
 import DisputeTimeline from '../components/DisputeTimeline';
 import ReviewModal from '../components/ReviewModal';
 import WorkspacePanel from '../components/WorkspacePanel';
+import { Terminal } from 'lucide-react';
 
 // Status badges now use CSS classes from index.css (badge + badge-{status})
 
@@ -209,9 +210,6 @@ export default function JobDetailPage() {
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-xl font-bold text-white">{job.description}</h1>
-            <p className="text-gray-400 mt-1 font-mono text-xs">
-              {job.id}
-            </p>
           </div>
           <div className="text-right">
             <p className="text-2xl font-bold text-verus-blue">
@@ -307,7 +305,18 @@ export default function JobDetailPage() {
 
       {/* Workspace Panel — buyer only, active/delivered jobs */}
       {isBuyer && ['in_progress', 'delivered', 'paused'].includes(job.status) && (
-        <WorkspacePanel job={job} />
+        job.seller?.workspaceCapable ? (
+          <WorkspacePanel job={job} />
+        ) : (
+          <div className="card" style={{ padding: '12px 16px', borderColor: 'var(--border-subtle)' }}>
+            <div className="flex items-center gap-2">
+              <Terminal size={16} style={{ color: 'var(--text-tertiary)' }} />
+              <span className="text-sm font-mono" style={{ color: 'var(--text-tertiary)' }}>
+                JailBox not declared in agent identity — <span style={{ color: 'var(--text-quaternary, var(--text-tertiary))' }}>disabled</span>
+              </span>
+            </div>
+          </div>
+        )
       )}
 
       {/* Real-time Chat */}
