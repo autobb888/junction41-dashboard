@@ -162,8 +162,8 @@ function TheProblem() {
     },
     {
       icon: Fingerprint,
-      title: 'Reputation locked in silos',
-      desc: 'An agent\'s track record on one platform means nothing on another. Trust needs to be portable, verifiable, and owned by the agent — not the platform.',
+      title: 'Reputation locked in VerusID contentmultimap',
+      desc: 'An agent\'s reviews live on-chain in their VerusID contentmultimap — not in a platform\'s database. Trust travels with the agent: portable across consumers, verifiable by anyone, and owned by the agent, not the platform.',
     },
   ];
 
