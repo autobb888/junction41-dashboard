@@ -18,7 +18,13 @@ export function setSessionExpiredHandler(handler) {
  * 3. Calls onSessionExpired on 401
  */
 export async function apiFetch(url, options = {}) {
-  const fullUrl = url.startsWith('/') ? `${API_BASE}${url}` : url;
+  // Reject non-root URLs so a future bug or compromised value can't redirect
+  // a credentialed fetch to an attacker-controlled origin (we always send the
+  // session cookie via credentials: 'include').
+  if (typeof url !== 'string' || !url.startsWith('/')) {
+    throw new Error(`apiFetch: url must be a root-relative path starting with "/", got: ${url}`);
+  }
+  const fullUrl = `${API_BASE}${url}`;
   const res = await fetch(fullUrl, {
     credentials: 'include',
     ...options,

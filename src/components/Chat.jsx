@@ -1,7 +1,23 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import Markdown from 'react-markdown';
-import rehypeSanitize from 'rehype-sanitize';
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
+
+// Stable plugin reference + tightened schema. The default rehype-sanitize
+// schema preserves `style` attributes, which lets a crafted message render
+// off-screen background-images that beacon to attacker hosts. We strip
+// `style` (and lock the array reference so react-markdown doesn't rebuild
+// the unified processor on every chat re-render).
+const SANITIZE_SCHEMA = {
+  ...defaultSchema,
+  attributes: Object.fromEntries(
+    Object.entries(defaultSchema.attributes || {}).map(([tag, attrs]) => [
+      tag,
+      (attrs || []).filter((a) => (Array.isArray(a) ? a[0] !== 'style' : a !== 'style')),
+    ])
+  ),
+};
+const REHYPE_PLUGINS = [[rehypeSanitize, SANITIZE_SCHEMA]];
 import ResolvedId from './ResolvedId';
 import CopyButton from './CopyButton';
 import SignCopyButtons from './SignCopyButtons';
@@ -1134,7 +1150,7 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
                   ) : msg.content?.startsWith('\uD83D\uDCCE Uploaded file:') ? (
                     <FileMessage content={msg.content} jobId={jobId} messageId={msg.id} />
                   ) : (
-                    <Markdown rehypePlugins={[rehypeSanitize]}>{msg.content}</Markdown>
+                    <Markdown rehypePlugins={REHYPE_PLUGINS}>{msg.content}</Markdown>
                   )}
                 </div>
               </div>

@@ -313,29 +313,46 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
           )}
 
           {/* QR / Mobile Tab */}
-          {!loading && challenge && tab === 'qr' && (
+          {!loading && challenge && tab === 'qr' && (() => {
+            // Defensive: only render values that match the expected schemes.
+            // A compromised or buggy server returning `javascript:...` here
+            // would otherwise become an XSS sink when the user clicks/scans.
+            const safeDeeplink = typeof challenge.deeplink === 'string' && challenge.deeplink.startsWith('verus://')
+              ? challenge.deeplink : null;
+            const safeQrDataUrl = typeof challenge.qrDataUrl === 'string' && challenge.qrDataUrl.startsWith('data:image/')
+              ? challenge.qrDataUrl : null;
+            return (
             <div className="text-center">
               <div className="hidden md:block">
                 <p className="text-gray-300 mb-4">Scan with Verus Mobile:</p>
                 <div className="bg-white p-4 rounded-lg inline-block mb-4">
-                  <img src={challenge.qrDataUrl} alt="Login QR" className="w-56 h-56" />
+                  {safeQrDataUrl ? (
+                    <img src={safeQrDataUrl} alt="Login QR" className="w-56 h-56" />
+                  ) : (
+                    <div className="w-56 h-56 flex items-center justify-center text-red-600 text-sm">QR unavailable</div>
+                  )}
                 </div>
               </div>
               <div className="md:hidden">
                 <p className="text-gray-300 mb-4">Tap to open Verus Mobile:</p>
-                <a
-                  href={challenge.deeplink}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition-colors mb-4"
-                >
-                  Open Verus Mobile
-                </a>
+                {safeDeeplink ? (
+                  <a
+                    href={safeDeeplink}
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition-colors mb-4"
+                  >
+                    Open Verus Mobile
+                  </a>
+                ) : (
+                  <div className="text-red-400 text-sm mb-4">Deep link unavailable</div>
+                )}
               </div>
               <p className="text-xs text-gray-400 mb-3">
                 Expires: {new Date(challenge.expiresAt).toLocaleTimeString()}
               </p>
               <div className="animate-pulse text-gray-400 text-sm">Waiting for signature...</div>
             </div>
-          )}
+            );
+          })()}
 
           {error && (
             <div id="auth-form-error" role="alert" className="mt-4 p-3 bg-red-900/30 border border-red-800 rounded-lg text-red-400 text-sm">
