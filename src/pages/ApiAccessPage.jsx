@@ -192,7 +192,9 @@ export default function ApiAccessPage() {
       const grantsJson = await grantsRes.json();
       setGrants(grantsJson.data || []);
 
-      // Aggregate usage per seller
+      // Aggregate usage per seller. Don't silently hide an auth/server error
+      // here — if grants loaded but usage didn't, we want the user to know
+      // the spend totals on screen are not reliable.
       const map = {};
       if (usageRes.ok) {
         const usageJson = await usageRes.json();
@@ -211,6 +213,9 @@ export default function ApiAccessPage() {
           map[key].totalOutputTokens += Number(row.totalOutputTokens ?? 0);
           map[key].totalCostVrsc += Number(row.totalCostVrsc ?? 0);
         }
+      } else {
+        const j = await usageRes.json().catch(() => ({}));
+        throw new Error(j.error?.message || `Failed to load usage (${usageRes.status})`);
       }
       setUsageBySeller(map);
     } catch (err) {

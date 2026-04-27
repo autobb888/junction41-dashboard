@@ -42,6 +42,17 @@ export default function MarketplacePage() {
     }
     return 'agent';
   });
+
+  function selectServiceType(type) {
+    setServiceType(type);
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (type === 'api-endpoint') params.set('serviceType', 'api-endpoint');
+    else params.delete('serviceType');
+    const search = params.toString();
+    const url = window.location.pathname + (search ? `?${search}` : '');
+    window.history.replaceState(null, '', url);
+  }
   const [filters, setFilters] = useState({
     minPrice: '',
     maxPrice: '',
@@ -296,7 +307,7 @@ export default function MarketplacePage() {
         {/* Service-type tabs: SovAgents vs API Providers */}
         <div className="flex items-center gap-2 mb-6">
           <button
-            onClick={() => setServiceType('agent')}
+            onClick={() => selectServiceType('agent')}
             className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
             style={serviceType === 'agent'
               ? { background: 'rgba(52, 211, 153, 0.12)', color: 'var(--accent)', border: '1px solid rgba(52, 211, 153, 0.25)' }
@@ -305,7 +316,7 @@ export default function MarketplacePage() {
             SovAgents
           </button>
           <button
-            onClick={() => setServiceType('api-endpoint')}
+            onClick={() => selectServiceType('api-endpoint')}
             className="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2"
             style={serviceType === 'api-endpoint'
               ? { background: 'rgba(56,189,248,0.12)', color: '#38BDF8', border: '1px solid rgba(56,189,248,0.25)' }

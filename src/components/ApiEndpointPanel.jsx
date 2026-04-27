@@ -20,6 +20,11 @@ export default function ApiEndpointPanel({ service, sellerVerusId }) {
     }).catch(() => {});
   }
 
+  // JSON.stringify keeps untrusted seller-supplied values (model name, verusId)
+  // from breaking out of the embedded JS string literal when the snippet is
+  // copied to the clipboard.
+  const sellerLit = JSON.stringify(sellerVerusId);
+  const modelLit = JSON.stringify(models[0]?.model || 'gpt-4o-mini');
   const sdkSnippet = `import { Junction41Client } from '@junction41/sovagent-sdk';
 
 const client = new Junction41Client({
@@ -31,15 +36,15 @@ const client = new Junction41Client({
 // 1) Request access — generates an ephemeral keypair, sends a signed
 //    request, receives an encrypted envelope back from the seller's
 //    dispatcher and decrypts it locally.
-const grant = await client.requestApiAccess('${sellerVerusId}');
+const grant = await client.requestApiAccess(${sellerLit});
 
 // 2) Send VRSC to grant.payAddress, then report the deposit so your
 //    credit meter is funded.
-await client.reportDeposit('${sellerVerusId}', { txid: '<deposit-txid>' });
+await client.reportDeposit(${sellerLit}, { txid: '<deposit-txid>' });
 
 // 3) Use the OpenAI-compatible proxy.
-const completion = await client.proxyChat('${sellerVerusId}', {
-  model: '${models[0]?.model || 'gpt-4o-mini'}',
+const completion = await client.proxyChat(${sellerLit}, {
+  model: ${modelLit},
   messages: [{ role: 'user', content: 'Hello' }],
 });`;
 
