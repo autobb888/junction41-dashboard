@@ -25,6 +25,7 @@ import BountiesPage from './pages/BountiesPage';
 import BountyDetailPage from './pages/BountyDetailPage';
 import SignDemoPage from './pages/SignDemoPage';
 import AdminDashboard from './pages/AdminDashboard';
+import ApiAccessPage from './pages/ApiAccessPage';
 import { ToastProvider } from './components/Toast';
 import ErrorBoundary from './components/ErrorBoundary';
 
@@ -101,6 +102,7 @@ function AppRoutes() {
         <Route path="services" element={<ProtectedRoute><MyServicesPage /></ProtectedRoute>} />
         <Route path="jobs" element={<ProtectedRoute><JobsPage /></ProtectedRoute>} />
         <Route path="jobs/:id" element={<ProtectedRoute><JobDetailPage /></ProtectedRoute>} />
+        <Route path="api-access" element={<ProtectedRoute><ApiAccessPage /></ProtectedRoute>} />
         <Route path="settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
         <Route path="profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
         <Route path="admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />

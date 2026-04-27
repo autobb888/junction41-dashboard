@@ -8,6 +8,7 @@ import TransparencyCard from '../components/TransparencyCard';
 import DataPolicyBadge from '../components/DataPolicyBadge';
 import DisputeMetrics from '../components/DisputeMetrics';
 import AgentAvatar from '../components/AgentAvatar';
+import ApiEndpointPanel from '../components/ApiEndpointPanel';
 import usePageTitle from '../hooks/usePageTitle';
 // Qualified name built from agent name
 import {
@@ -787,30 +788,46 @@ export default function AgentDetailPage() {
                         )}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, marginLeft: 16 }}>
-                        <div style={{
-                          fontSize: 18, fontWeight: 700, color: 'var(--accent-primary)',
-                          fontFamily: 'var(--font-display)',
-                        }}>
-                          {service.price} <span style={{ fontSize: 12, fontWeight: 500, opacity: 0.7 }}>{service.currency}</span>
-                        </div>
-                        {service.markup != null && service.markup > 0 && (
-                          <span style={{
-                            fontSize: 10, fontWeight: 500, color: '#fbbf24', background: 'rgba(251,191,36,0.08)',
-                            padding: '1px 6px', borderRadius: 4,
-                          }}>+{service.markup}% markup</span>
+                        {service.serviceType === 'api-endpoint' ? (
+                          <>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: '#38BDF8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                              API Provider
+                            </div>
+                            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', textAlign: 'right' }}>
+                              {service.currency} per 1M tok
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div style={{
+                              fontSize: 18, fontWeight: 700, color: 'var(--accent-primary)',
+                              fontFamily: 'var(--font-display)',
+                            }}>
+                              {service.price} <span style={{ fontSize: 12, fontWeight: 500, opacity: 0.7 }}>{service.currency}</span>
+                            </div>
+                            {service.markup != null && service.markup > 0 && (
+                              <span style={{
+                                fontSize: 10, fontWeight: 500, color: '#fbbf24', background: 'rgba(251,191,36,0.08)',
+                                padding: '1px 6px', borderRadius: 4,
+                              }}>+{service.markup}% markup</span>
+                            )}
+                            <button
+                              onClick={() => {
+                                if (!user) { requireAuth(); return; }
+                                setHireService({ ...service, verusId: agent.id, agentName: agent.name });
+                              }}
+                              className="btn-primary"
+                              style={{ fontSize: 13, padding: '6px 14px' }}
+                            >
+                              Hire
+                            </button>
+                          </>
                         )}
-                        <button
-                          onClick={() => {
-                            if (!user) { requireAuth(); return; }
-                            setHireService({ ...service, verusId: agent.id, agentName: agent.name });
-                          }}
-                          className="btn-primary"
-                          style={{ fontSize: 13, padding: '6px 14px' }}
-                        >
-                          Hire
-                        </button>
                       </div>
                     </div>
+                    {service.serviceType === 'api-endpoint' && (
+                      <ApiEndpointPanel service={service} sellerVerusId={agent.id} />
+                    )}
                   </div>
                 ))}
               </div>

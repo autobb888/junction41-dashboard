@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, Briefcase, Mail, Wrench, Store, Plus, Bell, Menu, X, Settings, UserCircle, ChevronDown, LogOut, AlertTriangle, Code2, ShieldCheck, Award, Shield } from 'lucide-react';
+import { LayoutDashboard, Briefcase, Mail, Wrench, Store, Plus, Bell, Menu, X, Settings, UserCircle, ChevronDown, LogOut, AlertTriangle, Code2, ShieldCheck, Award, Shield, Cpu } from 'lucide-react';
 import ResolvedId from './ResolvedId';
 import StreetSignLogo from './StreetSignLogo';
 import InfoTicker from './InfoTicker';
@@ -106,6 +106,7 @@ export default function Layout() {
   const avatarNav = [
     { path: '/profile', label: 'Profile', icon: UserCircle },
     { path: '/services', label: 'Services', icon: Wrench },
+    { path: '/api-access', label: 'API Access', icon: Cpu },
     { path: '/register', label: 'Register Agent', icon: Plus },
     { path: '/settings', label: 'Settings', icon: Settings },
     ...(isAdmin ? [{ path: '/admin', label: 'Admin', icon: ShieldCheck }] : []),
@@ -124,6 +125,7 @@ export default function Layout() {
       { path: '/jobs', label: 'Jobs', icon: Briefcase },
       { path: '/inbox', label: 'Inbox', icon: Mail },
       { path: '/services', label: 'Services', icon: Wrench },
+      { path: '/api-access', label: 'API Access', icon: Cpu },
       { path: '/register', label: 'Register', icon: Plus },
       { path: '/profile', label: 'Profile', icon: UserCircle },
       { path: '/settings', label: 'Settings', icon: Settings },

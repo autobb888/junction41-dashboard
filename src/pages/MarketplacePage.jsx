@@ -35,6 +35,13 @@ export default function MarketplacePage() {
   const [sortBy, setSortBy] = useState('created_at');
   const [viewMode, setViewMode] = useState('grid');
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const [serviceType, setServiceType] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('serviceType') === 'api-endpoint' ? 'api-endpoint' : 'agent';
+    }
+    return 'agent';
+  });
   const [filters, setFilters] = useState({
     minPrice: '',
     maxPrice: '',
@@ -88,8 +95,9 @@ export default function MarketplacePage() {
     if (filters.sovguard) params.set('sovguard', 'true');
     if (filters.privateMode) params.set('privateMode', 'true');
     if (filters.paymentTerms.length > 0) params.set('paymentTerms', filters.paymentTerms[0]);
+    if (serviceType === 'api-endpoint') params.set('serviceType', 'api-endpoint');
     return params;
-  }, [selectedCategory, selectedSub, debouncedSearch, sortBy, filters]);
+  }, [selectedCategory, selectedSub, debouncedSearch, sortBy, filters, serviceType]);
 
   // Enrich services with reputation/transparency data
   async function enrichWithReputation(serviceList) {
@@ -206,7 +214,7 @@ export default function MarketplacePage() {
   // Re-fetch on filter/sort/search/category change
   useEffect(() => {
     fetchServices(false);
-  }, [selectedCategory, selectedSub, debouncedSearch, sortBy, filters.minPrice, filters.maxPrice, filters.minRating, filters.onlineOnly, filters.protocols.length, filters.sovguard, filters.paymentTerms.length, filters.privateMode]);
+  }, [selectedCategory, selectedSub, debouncedSearch, sortBy, filters.minPrice, filters.maxPrice, filters.minRating, filters.onlineOnly, filters.protocols.length, filters.sovguard, filters.paymentTerms.length, filters.privateMode, serviceType]);
 
   // Fetch subcategory counts when a category is expanded
   useEffect(() => {
@@ -285,6 +293,34 @@ export default function MarketplacePage() {
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-6">
 
+        {/* Service-type tabs: SovAgents vs API Providers */}
+        <div className="flex items-center gap-2 mb-6">
+          <button
+            onClick={() => setServiceType('agent')}
+            className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
+            style={serviceType === 'agent'
+              ? { background: 'rgba(52, 211, 153, 0.12)', color: 'var(--accent)', border: '1px solid rgba(52, 211, 153, 0.25)' }
+              : { background: 'transparent', color: 'var(--text-tertiary)', border: '1px solid var(--border-default)' }}
+          >
+            SovAgents
+          </button>
+          <button
+            onClick={() => setServiceType('api-endpoint')}
+            className="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2"
+            style={serviceType === 'api-endpoint'
+              ? { background: 'rgba(56,189,248,0.12)', color: '#38BDF8', border: '1px solid rgba(56,189,248,0.25)' }
+              : { background: 'transparent', color: 'var(--text-tertiary)', border: '1px solid var(--border-default)' }}
+          >
+            API Providers
+            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+              style={serviceType === 'api-endpoint'
+                ? { background: 'rgba(56,189,248,0.2)' }
+                : { background: 'rgba(255,255,255,0.05)' }}>
+              new
+            </span>
+          </button>
+        </div>
+
         {/* Search + controls */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-8">
           <MarketplaceSearchBar value={search} onChange={setSearch} agentCount={totalCount || services.length} />
@@ -348,8 +384,8 @@ export default function MarketplacePage() {
           </div>
         )}
 
-        {/* Trending carousel (hide when category selected) */}
-        {!selectedCategory && trending.length > 0 && (
+        {/* Trending carousel (hide when category selected or API tab) */}
+        {!selectedCategory && serviceType !== 'api-endpoint' && trending.length > 0 && (
           <div className="mb-10">
             <HorizontalScroll label="Trending Now" sublabel="Most active this week">
               {trending.map(a => <FeaturedCard key={a.id} agent={a} />)}
@@ -360,10 +396,14 @@ export default function MarketplacePage() {
         {/* Divider + browse heading */}
         <div className="mb-8 pt-2" style={{ borderTop: '1px solid var(--border-subtle)' }}>
           <h2 className="text-lg font-bold text-white mt-6" style={{ fontFamily: 'var(--font-display)' }}>
-            {getCategoryById(selectedCategory)?.name || 'Browse SovAgents'}
+            {getCategoryById(selectedCategory)?.name
+              || (serviceType === 'api-endpoint' ? 'Browse API Providers' : 'Browse SovAgents')}
           </h2>
           <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
-            {totalCount} {totalCount === 1 ? 'service' : 'services'} {getCategoryById(selectedCategory)?.name ? `in ${getCategoryById(selectedCategory)?.name}` : 'available'}
+            {totalCount} {totalCount === 1 ? (serviceType === 'api-endpoint' ? 'provider' : 'service') : (serviceType === 'api-endpoint' ? 'providers' : 'services')} {getCategoryById(selectedCategory)?.name ? `in ${getCategoryById(selectedCategory)?.name}` : 'available'}
+            {serviceType === 'api-endpoint' && (
+              <> — OpenAI-compatible endpoints, on-chain access grants, per-token billing</>
+            )}
           </p>
         </div>
 

@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import AgentAvatar from '../AgentAvatar';
 import TrustScore from '../TrustScore';
-import { Shield, Terminal, Star } from 'lucide-react';
+import { Shield, Terminal, Star, Cpu } from 'lucide-react';
 
 export default function MarketplaceCard({ service, variant = 'grid' }) {
   const navigate = useNavigate();
@@ -13,8 +13,20 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
   const desc = service.description || '';
   const category = service.category || '';
   const jobs = service.reputation?.completedJobs || 0;
-  const models = service.models || [];
+  const isApiEndpoint = service.serviceType === 'api-endpoint';
+  const proxyModels = isApiEndpoint && Array.isArray(service.modelPricing)
+    ? service.modelPricing
+    : [];
+  const models = isApiEndpoint
+    ? proxyModels.map((m) => m.model).filter(Boolean)
+    : (service.models || []);
   const agentUrl = `/sovagent/${encodeURIComponent(service.verusId || service.id)}`;
+  const cheapestRate = isApiEndpoint && proxyModels.length > 0
+    ? proxyModels.reduce((min, m) => {
+        const r = Number(m.inputTokenRate);
+        return Number.isFinite(r) && (min == null || r < min) ? r : min;
+      }, null)
+    : null;
 
   if (variant === 'list') {
     return (
@@ -76,13 +88,19 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
         {(service.trustTier || service.transparency?.computed?.trustLevel) && (
           <TrustScore tier={service.trustTier || service.transparency?.computed?.trustLevel} />
         )}
+        {isApiEndpoint && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium"
+            style={{ background: 'rgba(56,189,248,0.1)', color: '#38BDF8', border: '1px solid rgba(56,189,248,0.2)' }}>
+            <Cpu size={10} /> API
+          </span>
+        )}
         {service.sovguard && (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium"
             style={{ background: 'rgba(52,211,153,0.08)', color: 'var(--accent)', border: '1px solid rgba(52,211,153,0.15)' }}>
             <Shield size={10} /> SovGuard
           </span>
         )}
-        {service.workspaceCapable && (
+        {service.workspaceCapable && !isApiEndpoint && (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium"
             style={{ background: 'rgba(167,139,250,0.08)', color: '#A78BFA', border: '1px solid rgba(167,139,250,0.15)' }}>
             <Terminal size={10} /> JailBox
@@ -120,11 +138,25 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
 
       {/* Footer: price + block */}
       <div className="flex items-center justify-between pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-        <span className="text-sm font-semibold" style={{ color: 'var(--accent)' }}>
-          {service.price} {service.currency}
-        </span>
+        {isApiEndpoint ? (
+          <span className="text-sm font-semibold" style={{ color: '#38BDF8' }}>
+            {cheapestRate != null
+              ? <>from {cheapestRate} <span className="text-[10px] font-normal" style={{ color: 'var(--text-tertiary)' }}>{service.currency} / 1M tok</span></>
+              : <>{service.price} <span className="text-[10px] font-normal" style={{ color: 'var(--text-tertiary)' }}>{service.currency}</span></>
+            }
+          </span>
+        ) : (
+          <span className="text-sm font-semibold" style={{ color: 'var(--accent)' }}>
+            {service.price} {service.currency}
+          </span>
+        )}
         <div className="flex items-center gap-2">
-          {service.acceptedCurrencies?.length > 1 && (
+          {isApiEndpoint && proxyModels.length > 1 && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(56,189,248,0.08)', color: '#38BDF8' }}>
+              {proxyModels.length} models
+            </span>
+          )}
+          {!isApiEndpoint && service.acceptedCurrencies?.length > 1 && (
             <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(52, 211, 153, 0.08)', color: 'var(--text-tertiary)' }}>
               +{service.acceptedCurrencies.length - 1} currencies
             </span>
