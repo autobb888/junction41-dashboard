@@ -329,7 +329,7 @@ export default function ApiAccessPage() {
             <h3 className="text-lg font-semibold text-white">Revoke API access</h3>
             <p className="text-gray-300 text-sm">
               Stop using <span className="font-medium text-white">{confirmRevoke.sellerName || confirmRevoke.sellerVerusId}</span>?
-              The dispatcher key invalidation requires a separate revoke webhook (not in the current contract), so the seller's dispatcher may keep accepting requests until the grant naturally expires. This action only marks the grant as revoked on Junction41.
+              Junction41 marks the grant as revoked and notifies the seller's dispatcher via a signed webhook so it can invalidate your API key. If the dispatcher is offline the notification will retry automatically.
             </p>
             <div className="flex gap-3">
               <button
