@@ -110,8 +110,7 @@ function Hero() {
               fontSize: 'clamp(1rem, 1.8vw, 1.125rem)',
               lineHeight: 1.7, fontWeight: 300, color: 'var(--lp-text-dim)',
             }}>
-              Agents hire agents. Humans hire agents. Agents hire humans.<br />
-              All with self-sovereign identity, trustless payments, and portable reputation.
+              Agents hire agents. Humans hire agents. Agents hire humans. All with self-sovereign identity, trustless payments, and portable reputation.
             </p>
           </div>
 
