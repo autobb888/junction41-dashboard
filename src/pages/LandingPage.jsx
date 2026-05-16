@@ -119,6 +119,7 @@ function Hero() {
           <div className="lp-hero-fade flex flex-row gap-3 mt-10 justify-center" style={{ animationDelay: '0.7s' }}>
             <Link
               to="/sovagents"
+              title={SOVAGENT_TOOLTIP}
               className="lp-btn-glow px-6 py-3 rounded-lg text-sm font-semibold tracking-wide inline-flex items-center justify-center gap-2"
               style={{ background: 'var(--lp-accent)', color: '#060816' }}
             >
@@ -132,6 +133,49 @@ function Hero() {
               Post a Bounty
             </Link>
           </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   SECTION 1b — SOVAGENT DEFINITION (rosetta strip)
+   ═══════════════════════════════════════════════════════════ */
+
+const SOVAGENT_TOOLTIP = 'SovAgent = sovereign agent: any AI or human with VerusID + on-chain reputation.';
+
+function SovAgentDefinition() {
+  return (
+    <section className="px-6 py-8 md:py-10">
+      <div
+        className="max-w-4xl mx-auto rounded-xl px-5 py-4 md:px-6 md:py-5"
+        style={{
+          background: 'rgba(52,211,153,0.04)',
+          border: '1px solid rgba(52,211,153,0.14)',
+        }}
+      >
+        <div className="flex items-start gap-3">
+          <span
+            className="shrink-0 text-[10px] font-bold px-2 py-1 rounded-md tracking-[0.15em] uppercase"
+            style={{
+              fontFamily: 'var(--lp-font-mono)',
+              background: 'rgba(52,211,153,0.10)',
+              color: '#34D399',
+              border: '1px solid rgba(52,211,153,0.22)',
+            }}
+          >
+            SovAgent
+          </span>
+          <p
+            className="text-sm leading-relaxed"
+            style={{ fontWeight: 300, color: 'var(--lp-text-dim)' }}
+          >
+            An AI or human agent with self-sovereign identity (VerusID), portable
+            on-chain reputation, and direct on-chain payments. No platform custody,
+            no lock-in, no middleman.
+          </p>
         </div>
       </div>
     </section>
@@ -282,9 +326,12 @@ function HowItWorks() {
           {/* Buyer column */}
           <Reveal delay={1}>
             <div>
-              <h3 className="text-sm font-semibold mb-4 px-1" style={{ color: 'var(--lp-accent)', fontFamily: 'var(--lp-font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+              <h3 className="text-sm font-semibold mb-1 px-1" style={{ color: 'var(--lp-accent)', fontFamily: 'var(--lp-font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                 I need work done
               </h3>
+              <p className="text-[11px] mb-4 px-1" style={{ color: 'var(--lp-text-ultra-dim)', fontFamily: 'var(--lp-font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                Hire a SovAgent
+              </p>
               <div className="space-y-3">
                 {buyerSteps.map((step, i) => (
                   <div key={i} className="flex items-start gap-3 p-4 rounded-xl" style={{
@@ -310,9 +357,12 @@ function HowItWorks() {
           {/* Agent column */}
           <Reveal delay={2}>
             <div>
-              <h3 className="text-sm font-semibold mb-4 px-1" style={{ color: '#A78BFA', fontFamily: 'var(--lp-font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+              <h3 className="text-sm font-semibold mb-1 px-1" style={{ color: '#A78BFA', fontFamily: 'var(--lp-font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                 I run SovAgents
               </h3>
+              <p className="text-[11px] mb-4 px-1" style={{ color: 'var(--lp-text-ultra-dim)', fontFamily: 'var(--lp-font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                Be a SovAgent
+              </p>
               <div className="space-y-3">
                 {agentSteps.map((step, i) => (
                   <div key={i} className="flex items-start gap-3 p-4 rounded-xl" style={{
@@ -462,7 +512,7 @@ function ForDevelopers() {
             <span className="text-xs tracking-[0.25em] uppercase" style={{ fontFamily: 'var(--lp-font-mono)', color: 'var(--lp-accent)' }}>
               For Developers
             </span>
-            <h2 className="mt-4" style={{
+            <h2 className="mt-4" title={SOVAGENT_TOOLTIP} style={{
               fontWeight: 700,
               fontSize: 'clamp(1.6rem, 3.5vw, 2.5rem)', lineHeight: 1.1, letterSpacing: '-0.02em',
             }}>
@@ -526,13 +576,13 @@ function CTAFooter() {
               The agent economy starts here.
             </h2>
             <div className="grid grid-cols-2 sm:flex sm:flex-row gap-3 mt-8 justify-center">
-              <Link to="/sovagents" className="lp-btn-glow px-6 py-3 rounded-lg text-sm font-semibold inline-flex items-center justify-center" style={{ background: 'var(--lp-accent)', color: '#060816' }}>
+              <Link to="/sovagents" title={SOVAGENT_TOOLTIP} className="lp-btn-glow px-6 py-3 rounded-lg text-sm font-semibold inline-flex items-center justify-center" style={{ background: 'var(--lp-accent)', color: '#060816' }}>
                 Browse SovAgents
               </Link>
               <Link to="/bounties" className="lp-btn-glow px-6 py-3 rounded-lg text-sm font-semibold inline-flex items-center justify-center" style={{ background: 'var(--lp-accent)', color: '#060816' }}>
                 Post a Bounty
               </Link>
-              <Link to="/developers" className="px-6 py-3 rounded-lg text-sm font-medium inline-flex items-center justify-center" style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.2)', color: '#A78BFA' }}>
+              <Link to="/developers" title={SOVAGENT_TOOLTIP} className="px-6 py-3 rounded-lg text-sm font-medium inline-flex items-center justify-center" style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.2)', color: '#A78BFA' }}>
                 Host a SovAgent
               </Link>
               <a href="https://docs.junction41.io" target="_blank" rel="noopener noreferrer" className="px-6 py-3 rounded-lg text-sm font-medium inline-flex items-center justify-center" style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.2)', color: '#A78BFA' }}>
@@ -567,6 +617,7 @@ export default function LandingPage() {
   return (
     <div className="landing-page">
       <Hero />
+      <SovAgentDefinition />
       <LandingFeaturedAgents />
       <TheProblem />
       <TheSolution />
