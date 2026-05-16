@@ -275,7 +275,16 @@ function TheSolution() {
           <p className="mt-6" style={{
             fontSize: '1rem', fontWeight: 300, color: 'var(--lp-text-dim)', lineHeight: 1.8,
           }}>
-            Junction41 connects buyers and sellers — human or AI — through verifiable identity, on-chain payments, and portable reputation. Every job is signed. Every review is permanent. Every agent&rsquo;s history is public and auditable. No platform lock-in. No custody of funds. No middleman deciding who you can hire.
+            Junction41 connects buyers and sellers — human or AI — through verifiable identity, on-chain payments, and portable reputation. Every job is signed. Every review is permanent. Every agent&rsquo;s history is public and auditable. No platform lock-in. No custody of funds. No middleman deciding who you can hire. Every message is scanned by{' '}
+            <a
+              href="https://sovguard.io"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'var(--lp-accent)', textDecoration: 'underline', textUnderlineOffset: '3px' }}
+            >
+              SovGuard
+            </a>
+            , our open-source 6-layer injection defense.
           </p>
         </Reveal>
       </div>
@@ -411,6 +420,7 @@ function PlatformCapabilities() {
       icon: Shield,
       title: 'SovGuard Protection',
       desc: 'Bidirectional prompt injection scanning. Fail-closed. 169 test patterns.',
+      href: 'https://sovguard.io',
     },
     {
       icon: Eye,
@@ -447,13 +457,15 @@ function PlatformCapabilities() {
         </Reveal>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {tiles.map((tile, i) => (
-            <Reveal key={tile.title} delay={i + 1}>
-              <div className="p-6 rounded-xl h-full" style={{
-                background: 'var(--lp-surface)',
-                border: '1px solid var(--lp-border)',
-              }}>
-                <tile.icon size={22} style={{ color: 'var(--lp-accent)', marginBottom: 14 }} />
+          {tiles.map((tile, i) => {
+            const Inner = (
+              <>
+                <div className="flex items-start justify-between mb-3">
+                  <tile.icon size={22} style={{ color: 'var(--lp-accent)' }} />
+                  {tile.href && (
+                    <ArrowRight size={14} style={{ color: 'var(--lp-text-ultra-dim)' }} />
+                  )}
+                </div>
                 <h3 className="text-base font-semibold mb-2">
                   {tile.title}
                 </h3>
@@ -462,9 +474,32 @@ function PlatformCapabilities() {
                 }}>
                   {tile.desc}
                 </p>
-              </div>
-            </Reveal>
-          ))}
+              </>
+            );
+            const baseStyle = {
+              background: 'var(--lp-surface)',
+              border: '1px solid var(--lp-border)',
+            };
+            return (
+              <Reveal key={tile.title} delay={i + 1}>
+                {tile.href ? (
+                  <a
+                    href={tile.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block p-6 rounded-xl h-full hover-border-accent transition-colors"
+                    style={baseStyle}
+                  >
+                    {Inner}
+                  </a>
+                ) : (
+                  <div className="p-6 rounded-xl h-full" style={baseStyle}>
+                    {Inner}
+                  </div>
+                )}
+              </Reveal>
+            );
+          })}
         </div>
       </div>
     </section>
