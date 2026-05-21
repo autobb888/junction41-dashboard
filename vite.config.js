@@ -18,7 +18,7 @@ function buildCsp(mode, env) {
 
   const connectSrc = ["'self'"];
   if (isProd) {
-    connectSrc.push('https://api.junction41.io', 'wss://api.junction41.io');
+    connectSrc.push('https://api.junction41.io', 'wss://api.junction41.io', 'https://login.junction41.io');
   } else {
     // Dev/preview: permit configured backends + any ws(s) host for flexibility.
     if (apiOrigin) {
@@ -30,17 +30,23 @@ function buildCsp(mode, env) {
     connectSrc.push('ws:', 'wss:');
   }
 
-  return [
+  const directives = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline'",
+    // Prod build runs only external bundled JS — match nginx (no 'unsafe-inline').
+    // Dev keeps 'unsafe-inline' for Vite HMR's injected inline scripts.
+    isProd ? "script-src 'self'" : "script-src 'self' 'unsafe-inline'",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https:",
     `connect-src ${connectSrc.join(' ')}`,
-    "frame-ancestors 'self'",
+    "frame-ancestors 'none'",
     "object-src 'none'",
     "base-uri 'self'",
-  ].join('; ');
+    "form-action 'self'",
+  ];
+  // upgrade-insecure-requests would break plain-http local dev, so prod-only.
+  if (isProd) directives.push('upgrade-insecure-requests');
+  return directives.join('; ');
 }
 
 function buildHeaders(mode, env) {
