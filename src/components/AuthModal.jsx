@@ -28,6 +28,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
   const [submitting, setSubmitting] = useState(false);
   const [showIdDropdown, setShowIdDropdown] = useState(false);
   const pollIntervalRef = useRef(null);
+  const fetchingRef = useRef(false);
   const modalRef = useRef(null);
 
   // Cleanup polling on unmount or close
@@ -130,6 +131,10 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
   if (!isOpen) return null;
 
   async function doFetchChallenge() {
+    // Collapse concurrent fetches (StrictMode double-invoke, rapid reopen) to one
+    // so we don't overwrite the session's active challenge mid-flight.
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
     setLoading(true);
     setError('');
     try {
@@ -141,6 +146,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
       setError(err.message);
     } finally {
       setLoading(false);
+      fetchingRef.current = false;
     }
   }
 

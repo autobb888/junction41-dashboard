@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 
 function AgentRedirect() {
@@ -34,7 +35,16 @@ import ErrorBoundary from './components/ErrorBoundary';
  * The user stays on the page they wanted, signs in via modal, and continues.
  */
 function ProtectedRoute({ children }) {
-  const { user, loading, refreshUser } = useAuth();
+  const { user, loading, setShowAuthModal } = useAuth();
+
+  // Trigger the single global AuthModal (GlobalAuthModal) rather than mounting a
+  // second modal here. Two modal instances would each fetch their own
+  // /auth/consent/challenge against the same session, so the challenge the user
+  // signs could differ from the one verified — breaking re-login on deep-linked
+  // protected routes (e.g. reloading /jobs/{id} after session expiry).
+  useEffect(() => {
+    if (!loading && !user) setShowAuthModal(true);
+  }, [loading, user, setShowAuthModal]);
 
   if (loading) {
     return (
@@ -46,18 +56,11 @@ function ProtectedRoute({ children }) {
   }
 
   if (!user) {
+    // Sign-in is handled by the single global modal; just dim the page behind it.
     return (
-      <>
-        <AuthModal
-          isOpen={true}
-          onClose={() => window.history.back()}
-          onSuccess={() => refreshUser()}
-        />
-        {/* Show dimmed page behind the modal */}
-        <div className="opacity-30 pointer-events-none">
-          {children}
-        </div>
-      </>
+      <div className="opacity-30 pointer-events-none">
+        {children}
+      </div>
     );
   }
 
