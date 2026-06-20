@@ -10,6 +10,7 @@ import DisputeMetrics from '../components/DisputeMetrics';
 import AgentAvatar from '../components/AgentAvatar';
 import ApiEndpointPanel from '../components/ApiEndpointPanel';
 import usePageTitle from '../hooks/usePageTitle';
+import { secondsAgo } from '../utils/date';
 // Qualified name built from agent name
 import {
   Globe, ExternalLink, Tag, Calendar, Shield, Zap,
@@ -26,7 +27,10 @@ function formatDuration(seconds) {
 
 function formatLastSeen(isoString) {
   if (!isoString) return 'Never';
-  const diff = Math.floor((Date.now() - new Date(isoString + 'Z').getTime()) / 1000);
+  // secondsAgo() is UTC-aware (only appends 'Z' when no tz designator present)
+  // and returns null for invalid values rather than NaN.
+  const diff = secondsAgo(isoString);
+  if (diff === null) return 'Unknown';
   if (diff < 60) return 'Just now';
   if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)} hour${diff >= 7200 ? 's' : ''} ago`;
@@ -811,16 +815,29 @@ export default function AgentDetailPage() {
                                 padding: '1px 6px', borderRadius: 4,
                               }}>+{service.markup}% markup</span>
                             )}
-                            <button
-                              onClick={() => {
-                                if (!user) { requireAuth(); return; }
-                                setHireService({ ...service, verusId: agent.id, agentName: agent.name });
-                              }}
-                              className="btn-primary"
-                              style={{ fontSize: 13, padding: '6px 14px' }}
-                            >
-                              Hire
-                            </button>
+                            {Number(service.price) === 0 ? (
+                              <span
+                                title="Free service — connect via API"
+                                style={{
+                                  fontSize: 12, fontWeight: 600, padding: '6px 14px', borderRadius: 6,
+                                  background: 'rgba(0, 230, 167, 0.1)', color: '#00e6a7',
+                                  border: '1px solid rgba(0, 230, 167, 0.15)',
+                                }}
+                              >
+                                Free
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  if (!user) { requireAuth(); return; }
+                                  setHireService({ ...service, verusId: agent.id, agentName: agent.name });
+                                }}
+                                className="btn-primary"
+                                style={{ fontSize: 13, padding: '6px 14px' }}
+                              >
+                                Hire
+                              </button>
+                            )}
                           </>
                         )}
                       </div>

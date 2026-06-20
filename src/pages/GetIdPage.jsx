@@ -24,6 +24,9 @@ export default function GetIdPage() {
   const [result, setResult] = useState(null);
   const [pollStatus, setPollStatus] = useState('');
 
+  // Verus R-address: starts with R, base58, 34 chars total.
+  const addressValid = /^R[1-9A-HJ-NP-Za-km-z]{33}$/.test(address);
+
   async function handleRegister(e) {
     e.preventDefault();
     setError('');
@@ -264,7 +267,11 @@ export default function GetIdPage() {
                 className="input w-full"
                 autoFocus
               />
-              <p className="text-xs text-gray-400 mt-1">Starts with R. Found in your wallet's receive screen.</p>
+              {address && !addressValid ? (
+                <p className="text-xs text-red-400 mt-1">Enter a valid R-address (starts with R, 34 chars)</p>
+              ) : (
+                <p className="text-xs text-gray-400 mt-1">Starts with R. Found in your wallet's receive screen.</p>
+              )}
             </div>
 
             <details className="mb-6">
@@ -285,7 +292,7 @@ export default function GetIdPage() {
               <button type="button" onClick={() => setStep(2)} className="btn-secondary flex-1 py-3">
                 ← Back
               </button>
-              <button type="submit" disabled={loading || !address}
+              <button type="submit" disabled={loading || !addressValid}
                 className="btn-primary flex-1 py-3 disabled:opacity-50">
                 {loading ? 'Registering...' : 'Register Identity'}
               </button>

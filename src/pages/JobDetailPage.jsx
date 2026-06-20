@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../utils/api';
+import { formatDateTime, secondsAgo } from '../utils/date';
 import ResolvedId from '../components/ResolvedId';
 import JobStepper from '../components/JobStepper';
 import Chat from '../components/Chat';
@@ -156,7 +157,7 @@ export default function JobDetailPage() {
       {/* Waiting for agent — shown when buyer is waiting for acceptance */}
       {isBuyer && job.status === 'requested' && (() => {
         const lastSeen = job.seller?.lastSeenAt;
-        const seenAgo = lastSeen ? Math.floor((Date.now() - new Date(lastSeen + (lastSeen.endsWith('Z') ? '' : 'Z')).getTime()) / 1000) : null;
+        const seenAgo = secondsAgo(lastSeen);
         const isOnline = seenAgo !== null && seenAgo < 60;
         const isRecent = seenAgo !== null && seenAgo < 300;
         return (
@@ -270,21 +271,21 @@ export default function JobDetailPage() {
           <p className="text-gray-400 text-sm mb-2">Timeline</p>
           <div className="space-y-1 text-sm">
             <p className="text-gray-300">
-              <span className="text-gray-500">Requested:</span> {new Date(job.timestamps.requested).toLocaleString()}
+              <span className="text-gray-500">Requested:</span> {formatDateTime(job.timestamps.requested)}
             </p>
             {job.timestamps.accepted && (
               <p className="text-gray-300">
-                <span className="text-gray-500">Accepted:</span> {new Date(job.timestamps.accepted).toLocaleString()}
+                <span className="text-gray-500">Accepted:</span> {formatDateTime(job.timestamps.accepted)}
               </p>
             )}
             {job.timestamps.delivered && (
               <p className="text-gray-300">
-                <span className="text-gray-500">Delivered:</span> {new Date(job.timestamps.delivered).toLocaleString()}
+                <span className="text-gray-500">Delivered:</span> {formatDateTime(job.timestamps.delivered)}
               </p>
             )}
             {job.timestamps.completed && (
               <p className="text-gray-300">
-                <span className="text-gray-500">Completed:</span> {new Date(job.timestamps.completed).toLocaleString()}
+                <span className="text-gray-500">Completed:</span> {formatDateTime(job.timestamps.completed)}
               </p>
             )}
           </div>

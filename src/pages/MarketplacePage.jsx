@@ -15,6 +15,35 @@ import usePageTitle from '../hooks/usePageTitle';
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const PAGE_SIZE = 24;
 
+// Module-level cache + in-flight de-dup for reputation/transparency, keyed by
+// verusId. enrichWithReputation is called once per grid + featured + trending,
+// so an agent appearing in all three would otherwise be fetched 3× → 429.
+// Each entry holds the in-flight (or resolved) Promise so concurrent callers
+// share one request. Persists for the page session.
+const enrichCache = new Map();
+
+function fetchEnrichment(verusId) {
+  if (enrichCache.has(verusId)) return enrichCache.get(verusId);
+  const promise = (async () => {
+    try {
+      const [repRes, transRes] = await Promise.all([
+        fetch(`${API_BASE}/v1/reputation/${encodeURIComponent(verusId)}?quick=true`),
+        fetch(`${API_BASE}/v1/agents/${encodeURIComponent(verusId)}/transparency`),
+      ]);
+      // On a non-ok response (esp. 429) leave the field undefined — the card
+      // renders prior state rather than erroring. No retry.
+      return {
+        reputation: repRes.ok ? (await repRes.json()).data : null,
+        transparency: transRes.ok ? (await transRes.json()).data : null,
+      };
+    } catch {
+      return { reputation: null, transparency: null };
+    }
+  })();
+  enrichCache.set(verusId, promise);
+  return promise;
+}
+
 function useDebounce(value, delay) {
   const [debounced, setDebounced] = useState(value);
   useEffect(() => {
@@ -110,29 +139,19 @@ export default function MarketplacePage() {
     return params;
   }, [selectedCategory, selectedSub, debouncedSearch, sortBy, filters, serviceType]);
 
-  // Enrich services with reputation/transparency data
+  // Enrich services with reputation/transparency data.
+  // Uses a shared module-level cache so each agent is fetched at most once per
+  // page session, even across the grid + featured + trending callers.
   async function enrichWithReputation(serviceList) {
     const agentIds = [...new Set(serviceList.map(s => s.verusId))];
-    const repMap = {};
-    const transMap = {};
-
-    await Promise.all(
-      agentIds.map(async (verusId) => {
-        try {
-          const [repRes, transRes] = await Promise.all([
-            fetch(`${API_BASE}/v1/reputation/${encodeURIComponent(verusId)}?quick=true`),
-            fetch(`${API_BASE}/v1/agents/${encodeURIComponent(verusId)}/transparency`),
-          ]);
-          if (repRes.ok) repMap[verusId] = (await repRes.json()).data;
-          if (transRes.ok) transMap[verusId] = (await transRes.json()).data;
-        } catch { /* ignore */ }
-      })
-    );
+    const results = await Promise.all(agentIds.map(id => fetchEnrichment(id)));
+    const byId = {};
+    agentIds.forEach((id, i) => { byId[id] = results[i]; });
 
     return serviceList.map(s => ({
       ...s,
-      reputation: repMap[s.verusId] || null,
-      transparency: transMap[s.verusId] || null,
+      reputation: byId[s.verusId]?.reputation || null,
+      transparency: byId[s.verusId]?.transparency || null,
     }));
   }
 

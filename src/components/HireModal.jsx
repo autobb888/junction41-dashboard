@@ -4,6 +4,7 @@ import { useToast } from './Toast';
 import TimePicker from './TimePicker';
 import CopyButton from './CopyButton';
 import SignCopyButtons from './SignCopyButtons';
+import { parseLocalDate } from '../utils/date';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -110,7 +111,11 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
   // Format deadline for display
   const deadlineDisplay = useMemo(() => {
     if (!deadlineDate) return 'None specified';
-    const date = new Date(deadlineDate);
+    // Parse the "YYYY-MM-DD" as LOCAL so toLocaleDateString doesn't shift the
+    // day (plain new Date("YYYY-MM-DD") is UTC midnight → off-by-one). The
+    // submitted `deadline` value is untouched — this is display-only.
+    const date = parseLocalDate(deadlineDate);
+    if (!date) return deadlineDate;
     const dateStr = date.toLocaleDateString('en-US', {
       weekday: 'short',
       year: 'numeric',
@@ -174,6 +179,13 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
 
     if (!description.trim()) {
       setError('Job description is required.');
+      return;
+    }
+
+    // Guard: backend rejects amount <= 0. A free (0-priced) service is not
+    // hireable — connect via its API instead.
+    if (!(agentAmount > 0)) {
+      setError('This is a free service and cannot be hired. Connect via its API instead.');
       return;
     }
 
