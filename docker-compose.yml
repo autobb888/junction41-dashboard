@@ -16,7 +16,8 @@ services:
           memory: 256M
           cpus: '0.5'
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5173/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      # Runtime image is nginx-alpine (no node). Use busybox wget, which is present.
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:5173/ || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
