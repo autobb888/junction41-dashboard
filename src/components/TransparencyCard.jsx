@@ -7,6 +7,20 @@ import TrustBadge from './TrustBadge';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
+function formatResponseTime(seconds) {
+  if (seconds == null) return '—';
+  if (seconds < 60) return `${Math.round(seconds)}s`;
+  if (seconds < 3600) return `${Math.round(seconds / 60)} min`;
+  return `${(seconds / 3600).toFixed(1)} hr`;
+}
+
+function formatIdentityAge(days) {
+  if (days == null) return '—';
+  if (days < 1) return 'today';
+  if (days < 365) return `${Math.round(days)} day${days >= 2 ? 's' : ''}`;
+  return `${(days / 365).toFixed(1)} years`;
+}
+
 function StatRow({ icon: Icon, label, value, muted }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0' }}>
@@ -64,8 +78,11 @@ export default function TransparencyCard({ verusId }) {
 
   const v = data.verified || {};
   const d = data.declared || {};
-  const trustLevel = data.trustLevel || 'new';
-  const trustScore = data.trustScore ?? 0;
+  // trust fields live under `computed` in the API response (#2 — were read flat,
+  // so the badge always showed "new"/0).
+  const c = data.computed || {};
+  const trustLevel = c.trustLevel || 'new';
+  const trustScore = c.trustScore ?? 0;
 
   return (
     <div className="card" style={{ padding: '20px 24px' }}>
@@ -88,7 +105,7 @@ export default function TransparencyCard({ verusId }) {
       </div>
 
       {/* Staleness warning */}
-      {data.declarationStale && (
+      {c.declarationStale && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', marginBottom: 16,
           borderRadius: 8, background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.15)',
@@ -103,15 +120,18 @@ export default function TransparencyCard({ verusId }) {
         <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 8 }}>
           Verified
         </div>
+        {/* Field names match the /transparency API (verified.*): avgResponseTimeSeconds,
+            identityAgeDays, reviewCount, averageRating — were previously mis-read
+            (avgResponseTime/identityAge/reviews/rating) so all showed "—" (#2). */}
         <StatRow icon={Briefcase} label="Jobs completed" value={v.jobsCompleted ?? '—'} />
         <StatRow icon={AlertTriangle} label="Dispute rate" value={v.disputeRate != null ? `${(v.disputeRate * 100).toFixed(1)}%` : '—'} />
-        <StatRow icon={Clock} label="Avg response" value={v.avgResponseTime || '—'} />
-        <StatRow icon={Calendar} label="Identity age" value={v.identityAge || '—'} />
-        <StatRow icon={MessageSquare} label="Reviews" value={v.reviews ?? '—'} />
+        <StatRow icon={Clock} label="Avg response" value={formatResponseTime(v.avgResponseTimeSeconds)} />
+        <StatRow icon={Calendar} label="Identity age" value={formatIdentityAge(v.identityAgeDays)} />
+        <StatRow icon={MessageSquare} label="Reviews" value={v.reviewCount ?? '—'} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0' }}>
           <Star size={14} style={{ color: 'var(--text-muted)' }} />
           <span style={{ fontSize: 13, color: 'var(--text-secondary)', flex: 1 }}>Rating</span>
-          <StarRating rating={v.rating} />
+          <StarRating rating={v.averageRating} />
         </div>
       </div>
 
