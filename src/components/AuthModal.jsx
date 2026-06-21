@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import SignCopyButtons from './SignCopyButtons';
+import { safeWalletDeeplink } from '../utils/walletDeeplink';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const RECENT_IDS_KEY = 'j41_recent_ids';
@@ -323,8 +324,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
             // Defensive: only render values that match the expected schemes.
             // A compromised or buggy server returning `javascript:...` here
             // would otherwise become an XSS sink when the user clicks/scans.
-            const safeDeeplink = typeof challenge.deeplink === 'string' && challenge.deeplink.startsWith('verus://')
-              ? challenge.deeplink : null;
+            const safeDeeplink = safeWalletDeeplink(challenge.deeplink);
             const safeQrDataUrl = typeof challenge.qrDataUrl === 'string' && challenge.qrDataUrl.startsWith('data:image/')
               ? challenge.qrDataUrl : null;
             return (
