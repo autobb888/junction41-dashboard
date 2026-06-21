@@ -20,7 +20,7 @@ function saveRecentId(id) {
 
 export default function AuthModal({ isOpen, onClose, onSuccess }) {
   const { login } = useAuth();
-  const [tab, setTab] = useState('cli');
+  const [tab, setTab] = useState('wallet');
   const [challenge, setChallenge] = useState(null);
   const [verusId, setVerusId] = useState('');
   const [signature, setSignature] = useState('');
@@ -42,7 +42,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
   // On mobile, re-poll immediately when user returns from Verus Mobile
   useEffect(() => {
     function onVisibilityChange() {
-      if (document.visibilityState === 'visible' && challenge?.challengeId && tab === 'qr') {
+      if (document.visibilityState === 'visible' && challenge?.challengeId && tab === 'wallet') {
         (async () => {
           try {
             const res = await fetch(`${API_BASE}/auth/consent/status/${challenge.challengeId}`, { credentials: 'include' });
@@ -66,7 +66,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
   // Fetch challenge + reset state when modal opens
   useEffect(() => {
     if (isOpen) {
-      setTab('cli');
+      setTab('wallet');
       setChallenge(null);
       setVerusId('');
       setSignature('');
@@ -110,7 +110,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
   // QR polling — MUST be before conditional return to keep hook count stable
   useEffect(() => {
     if (!isOpen) return;
-    if (tab === 'qr' && challenge?.challengeId) {
+    if (tab === 'wallet' && challenge?.challengeId) {
       pollIntervalRef.current = setInterval(async () => {
         try {
           const res = await fetch(`${API_BASE}/auth/consent/status/${challenge.challengeId}`, { credentials: 'include' });
@@ -214,16 +214,16 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
         {challenge && (
           <div className="flex border-b border-gray-700">
             <button
+              onClick={() => setTab('wallet')}
+              className={`flex-1 py-3 text-sm font-medium transition-colors ${tab === 'wallet' ? 'text-verus-blue border-b-2 border-verus-blue' : 'text-gray-400 hover:text-gray-300'}`}
+            >
+              Verus Wallet
+            </button>
+            <button
               onClick={() => setTab('cli')}
               className={`flex-1 py-3 text-sm font-medium transition-colors ${tab === 'cli' ? 'text-verus-blue border-b-2 border-verus-blue' : 'text-gray-400 hover:text-gray-300'}`}
             >
-              CLI / Desktop Wallet
-            </button>
-            <button
-              onClick={() => setTab('qr')}
-              className={`flex-1 py-3 text-sm font-medium transition-colors ${tab === 'qr' ? 'text-verus-blue border-b-2 border-verus-blue' : 'text-gray-400 hover:text-gray-300'}`}
-            >
-              Verus Mobile
+              Advanced (CLI)
             </button>
           </div>
         )}
@@ -319,8 +319,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
             </form>
           )}
 
-          {/* QR / Mobile Tab */}
-          {!loading && challenge && tab === 'qr' && (() => {
+          {/* Wallet Tab — desktop click-to-open + mobile QR/deeplink */}
+          {!loading && challenge && tab === 'wallet' && (() => {
             // Defensive: only render values that match the expected schemes.
             // A compromised or buggy server returning `javascript:...` here
             // would otherwise become an XSS sink when the user clicks/scans.
@@ -329,8 +329,17 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
               ? challenge.qrDataUrl : null;
             return (
             <div className="text-center">
+              {/* Desktop: open the local Verus Desktop app + scan-with-mobile QR */}
               <div className="hidden md:block">
-                <p className="text-gray-300 mb-4">Scan with Verus Mobile:</p>
+                {safeDeeplink && (
+                  <a
+                    href={safeDeeplink}
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition-colors mb-4"
+                  >
+                    Open in Verus Desktop
+                  </a>
+                )}
+                <p className="text-gray-400 text-xs mb-4">or scan with Verus Mobile:</p>
                 <div className="bg-white p-4 rounded-lg inline-block mb-4">
                   {safeQrDataUrl ? (
                     <img src={safeQrDataUrl} alt="Login QR" className="w-56 h-56" />
@@ -339,6 +348,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
                   )}
                 </div>
               </div>
+              {/* Mobile browser: open Verus Mobile directly */}
               <div className="md:hidden">
                 <p className="text-gray-300 mb-4">Tap to open Verus Mobile:</p>
                 {safeDeeplink ? (
@@ -355,7 +365,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
               <p className="text-xs text-gray-400 mb-3">
                 Expires: {new Date(challenge.expiresAt).toLocaleTimeString()}
               </p>
-              <div className="animate-pulse text-gray-400 text-sm">Waiting for signature...</div>
+              <div className="animate-pulse text-gray-400 text-sm">Waiting for approval…</div>
             </div>
             );
           })()}
