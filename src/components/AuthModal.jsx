@@ -28,6 +28,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [showIdDropdown, setShowIdDropdown] = useState(false);
+  const [pendingConfirm, setPendingConfirm] = useState(null); // { verusId, identityName } when wallet has signed, awaiting user confirm
+  const [confirming, setConfirming] = useState(false);
   const pollIntervalRef = useRef(null);
   const fetchingRef = useRef(false);
   const modalRef = useRef(null);
@@ -47,9 +49,9 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
           try {
             const res = await fetch(`${API_BASE}/auth/consent/status/${challenge.challengeId}`, { credentials: 'include' });
             const data = await res.json();
-            if (data.data?.status === 'completed') {
+            if (data.data?.status === 'awaiting_confirm') {
               if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-              onSuccess?.();
+              setPendingConfirm({ verusId: data.data.verusId, identityName: data.data.identityName });
             } else if (data.data?.status === 'expired') {
               if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
               setError('Challenge expired.');
@@ -72,6 +74,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
       setSignature('');
       setError('');
       setSubmitting(false);
+      setPendingConfirm(null);
+      setConfirming(false);
       doFetchChallenge();
     } else {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
@@ -115,9 +119,9 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
         try {
           const res = await fetch(`${API_BASE}/auth/consent/status/${challenge.challengeId}`, { credentials: 'include' });
           const data = await res.json();
-          if (data.data?.status === 'completed') {
+          if (data.data?.status === 'awaiting_confirm') {
             clearInterval(pollIntervalRef.current);
-            onSuccess?.();
+            setPendingConfirm({ verusId: data.data.verusId, identityName: data.data.identityName });
           } else if (data.data?.status === 'expired') {
             clearInterval(pollIntervalRef.current);
             setError('Challenge expired.');
@@ -165,6 +169,25 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
       setSignature('');
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleConfirm() {
+    if (!challenge?.challengeId) return;
+    setConfirming(true);
+    setError('');
+    try {
+      const res = await fetch(`${API_BASE}/auth/consent/confirm/${challenge.challengeId}`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error?.message || 'Could not complete sign-in');
+      onSuccess?.();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setConfirming(false);
     }
   }
 
@@ -331,43 +354,60 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
               ? challenge.qrDataUrl : null;
             return (
             <div className="text-center">
-              {/* Desktop: open the local Verus Desktop app + scan-with-mobile QR */}
-              <div className="hidden md:block">
-                {safeDeeplink && (
-                  <a
-                    href={safeDeeplink}
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition-colors mb-4"
+              {pendingConfirm ? (
+                <div className="py-4">
+                  <p className="text-gray-300 mb-1">Wallet signed. Confirm sign-in as:</p>
+                  <p className="text-verus-blue font-semibold text-lg mb-4">{pendingConfirm.identityName || pendingConfirm.verusId}</p>
+                  <button
+                    onClick={handleConfirm}
+                    disabled={confirming}
+                    className="w-full py-3 bg-verus-blue hover:bg-blue-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
                   >
-                    Open in Verus Desktop
-                  </a>
-                )}
-                <p className="text-gray-400 text-xs mb-4">or scan with Verus Mobile:</p>
-                <div className="bg-white p-4 rounded-lg inline-block mb-4">
-                  {safeQrDataUrl ? (
-                    <img src={safeQrDataUrl} alt="Login QR" className="w-56 h-56" />
-                  ) : (
-                    <div className="w-56 h-56 flex items-center justify-center text-red-600 text-sm">QR unavailable</div>
-                  )}
+                    {confirming ? 'Signing in…' : `Continue as ${pendingConfirm.identityName || pendingConfirm.verusId}`}
+                  </button>
+                  <p className="text-xs text-gray-500 mt-3">Not you? Close this dialog and start over.</p>
                 </div>
-              </div>
-              {/* Mobile browser: open Verus Mobile directly */}
-              <div className="md:hidden">
-                <p className="text-gray-300 mb-4">Tap to open Verus Mobile:</p>
-                {safeDeeplink ? (
-                  <a
-                    href={safeDeeplink}
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition-colors mb-4"
-                  >
-                    Open Verus Mobile
-                  </a>
-                ) : (
-                  <div className="text-red-400 text-sm mb-4">Deep link unavailable</div>
-                )}
-              </div>
-              <p className="text-xs text-gray-400 mb-3">
-                Expires: {new Date(challenge.expiresAt).toLocaleTimeString()}
-              </p>
-              <div className="animate-pulse text-gray-400 text-sm">Waiting for approval…</div>
+              ) : (
+                <>
+                  {/* Desktop: open the local Verus Desktop app + scan-with-mobile QR */}
+                  <div className="hidden md:block">
+                    {safeDeeplink && (
+                      <a
+                        href={safeDeeplink}
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition-colors mb-4"
+                      >
+                        Open in Verus Desktop
+                      </a>
+                    )}
+                    <p className="text-gray-400 text-xs mb-4">or scan with Verus Mobile:</p>
+                    <div className="bg-white p-4 rounded-lg inline-block mb-4">
+                      {safeQrDataUrl ? (
+                        <img src={safeQrDataUrl} alt="Login QR" className="w-56 h-56" />
+                      ) : (
+                        <div className="w-56 h-56 flex items-center justify-center text-red-600 text-sm">QR unavailable</div>
+                      )}
+                    </div>
+                  </div>
+                  {/* Mobile browser: open Verus Mobile directly */}
+                  <div className="md:hidden">
+                    <p className="text-gray-300 mb-4">Tap to open Verus Mobile:</p>
+                    {safeDeeplink ? (
+                      <a
+                        href={safeDeeplink}
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition-colors mb-4"
+                      >
+                        Open Verus Mobile
+                      </a>
+                    ) : (
+                      <div className="text-red-400 text-sm mb-4">Deep link unavailable</div>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400 mb-3">
+                    Expires: {new Date(challenge.expiresAt).toLocaleTimeString()}
+                  </p>
+                  <div className="animate-pulse text-gray-400 text-sm">Waiting for approval…</div>
+                </>
+              )}
             </div>
             );
           })()}
