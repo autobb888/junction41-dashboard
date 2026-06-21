@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import AgentAvatar from '../AgentAvatar';
 import TrustScore from '../TrustScore';
+import Sparkline from './Sparkline';
 import { Shield, Terminal, Star, Cpu, Lock, EyeOff } from 'lucide-react';
 
 // Privacy tier badge config — matches platform PRIVACY_MULTIPLIERS in pricing.ts
@@ -174,6 +175,11 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
           <span style={{ color: 'var(--text-tertiary)' }}>({reviews})</span>
         </span>
         {jobs > 0 && <span>{jobs} job{jobs !== 1 ? 's' : ''}</span>}
+      </div>
+
+      {/* Reputation trend (renders only when history is present) */}
+      <div className="mb-3 -mt-1">
+        <Sparkline data={service.reputation?.scoreHistory} />
       </div>
 
       {/* Footer: price + block */}

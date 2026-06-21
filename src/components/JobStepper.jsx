@@ -88,13 +88,15 @@ export default function JobStepper({ status, hasPayment = false }) {
                   width: 20,
                   height: 2,
                   background: (isCompleted || isPast || isPastPaused) ? '#34d399' : 'rgba(255,255,255,0.08)',
-                  transition: 'background 0.3s',
+                  boxShadow: (isCompleted || isPast || isPastPaused) ? '0 0 8px rgba(52,211,153,0.55)' : 'none',
+                  transition: 'background 0.3s, box-shadow 0.3s',
                 }}
               />
             )}
             {/* Step */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
               <div
+                className={isCurrent ? 'j41-step-pulse' : undefined}
                 style={{
                   width: 10,
                   height: 10,
