@@ -1,17 +1,19 @@
-import { Store, Award, Database } from 'lucide-react';
+import { Store, Award, Zap, Database } from 'lucide-react';
 
 /**
  * Marketplace verticals — single source of truth.
  * status: 'live' = has a working route; 'soon' = announced, non-navigable.
  * Adding a vertical later is one entry here (+ its route/shell wiring).
  *
- * NOTE: SovCompute lands in the next slice once the shell can render
- * /sovcompute — it already exists today as the `api-endpoint` service type
- * inside /sovagents, so it's intentionally not a separate tab yet.
+ * NOTE: SovCompute is the `api-endpoint` service type (prepaid AI proxy). It's
+ * built, but there are 0 live provider listings right now, so it shows as
+ * 'soon' (dark) rather than an empty grid — flip to status:'live' + add a
+ * /sovcompute route the moment a provider lists.
  */
 export const VERTICALS = [
   { key: 'agents',   label: 'SovAgents',   route: '/sovagents',   icon: Store,    status: 'live' },
   { key: 'bounties', label: 'SovBounties', route: '/sovbounties', icon: Award,    status: 'live' },
+  { key: 'compute',  label: 'SovCompute',  route: '/sovcompute',  icon: Zap,      status: 'soon' },
   { key: 'data',     label: 'SovData',     route: '/sovdata',     icon: Database, status: 'soon' },
 ];
 

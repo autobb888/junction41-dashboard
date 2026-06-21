@@ -65,24 +65,9 @@ export default function MarketplacePage() {
   const [sortBy, setSortBy] = useState('created_at');
   const [viewMode, setViewMode] = useState('grid');
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
-  const [serviceType, setServiceType] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      return params.get('serviceType') === 'api-endpoint' ? 'api-endpoint' : 'agent';
-    }
-    return 'agent';
-  });
-
-  function selectServiceType(type) {
-    setServiceType(type);
-    if (typeof window === 'undefined') return;
-    const params = new URLSearchParams(window.location.search);
-    if (type === 'api-endpoint') params.set('serviceType', 'api-endpoint');
-    else params.delete('serviceType');
-    const search = params.toString();
-    const url = window.location.pathname + (search ? `?${search}` : '');
-    window.history.replaceState(null, '', url);
-  }
+  // This page is the SovAgents vertical. Compute (api-endpoint) is its own
+  // vertical in the switcher now — the old in-page serviceType toggle is gone.
+  const serviceType = 'agent';
   const [filters, setFilters] = useState({
     minPrice: '',
     maxPrice: '',
@@ -136,7 +121,7 @@ export default function MarketplacePage() {
     if (filters.sovguard) params.set('sovguard', 'true');
     if (filters.privateMode) params.set('privateMode', 'true');
     if (filters.paymentTerms.length > 0) params.set('paymentTerms', filters.paymentTerms[0]);
-    if (serviceType === 'api-endpoint') params.set('serviceType', 'api-endpoint');
+    params.set('serviceType', serviceType);
     return params;
   }, [selectedCategory, selectedSub, debouncedSearch, sortBy, filters, serviceType]);
 
@@ -325,35 +310,7 @@ export default function MarketplacePage() {
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-6">
 
         {/* Marketplace vertical switcher (sovagents / sovbounties / …) */}
-        <VerticalSwitcher className="mb-5" />
-
-        {/* Service-type tabs: SovAgents vs API Providers */}
-        <div className="flex items-center gap-2 mb-6">
-          <button
-            onClick={() => selectServiceType('agent')}
-            className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
-            style={serviceType === 'agent'
-              ? { background: 'rgba(52, 211, 153, 0.12)', color: 'var(--accent)', border: '1px solid rgba(52, 211, 153, 0.25)' }
-              : { background: 'transparent', color: 'var(--text-tertiary)', border: '1px solid var(--border-default)' }}
-          >
-            SovAgents
-          </button>
-          <button
-            onClick={() => selectServiceType('api-endpoint')}
-            className="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2"
-            style={serviceType === 'api-endpoint'
-              ? { background: 'rgba(56,189,248,0.12)', color: '#38BDF8', border: '1px solid rgba(56,189,248,0.25)' }
-              : { background: 'transparent', color: 'var(--text-tertiary)', border: '1px solid var(--border-default)' }}
-          >
-            API Providers
-            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-              style={serviceType === 'api-endpoint'
-                ? { background: 'rgba(56,189,248,0.2)' }
-                : { background: 'rgba(255,255,255,0.05)' }}>
-              new
-            </span>
-          </button>
-        </div>
+        <VerticalSwitcher className="mb-6" />
 
         {/* Search + controls */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-8">
