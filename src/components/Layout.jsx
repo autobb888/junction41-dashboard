@@ -4,6 +4,7 @@ import { LayoutDashboard, Briefcase, Mail, Wrench, Store, Plus, Bell, Menu, X, S
 import ResolvedId from './ResolvedId';
 import StreetSignLogo from './StreetSignLogo';
 import InfoTicker from './InfoTicker';
+import { MARKETPLACE_MATCH } from '../config/verticals';
 import { useState, useEffect, useRef } from 'react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -90,8 +91,7 @@ export default function Layout() {
 
   // Main nav — shown in top bar on desktop
   const mainNav = [
-    { path: '/sovagents', label: 'SovAgents', icon: Store },
-    { path: '/bounties', label: 'Bounties', icon: Award },
+    { path: '/sovagents', label: 'Marketplace', icon: Store, match: MARKETPLACE_MATCH },
     { path: '/developers', label: 'Developers', icon: Code2 },
     ...(!user ? [
       { path: '/get-id', label: 'Get Free ID', icon: Plus },
@@ -114,8 +114,7 @@ export default function Layout() {
 
   // All items for mobile menu
   const mobileNav = [
-    { path: '/sovagents', label: 'SovAgents', icon: Store },
-    { path: '/bounties', label: 'Bounties', icon: Award },
+    { path: '/sovagents', label: 'Marketplace', icon: Store, match: MARKETPLACE_MATCH },
     { path: '/developers', label: 'Developers', icon: Code2 },
     ...(!user ? [
       { path: '/get-id', label: 'Get Free ID', icon: Plus },
@@ -206,7 +205,9 @@ export default function Layout() {
             <nav className="hidden md:flex items-center gap-1">
               {mainNav.map(item => {
                 const Icon = item.icon;
-                const isActive = location.pathname === item.path;
+                const isActive = item.match
+                  ? item.match.some(p => location.pathname === p || location.pathname.startsWith(p + '/'))
+                  : location.pathname === item.path;
                 return (
                   <NavLink key={item.path} to={item.path} isActive={isActive}>
                     <Icon size={16} style={{ opacity: isActive ? 1 : 0.7 }} />
@@ -274,7 +275,9 @@ export default function Layout() {
                       <div className="py-1">
                         {avatarNav.map(item => {
                           const Icon = item.icon;
-                          const isActive = location.pathname === item.path;
+                          const isActive = item.match
+                  ? item.match.some(p => location.pathname === p || location.pathname.startsWith(p + '/'))
+                  : location.pathname === item.path;
                           return (
                             <Link
                               key={item.path}
@@ -328,7 +331,9 @@ export default function Layout() {
           <nav className="max-w-6xl mx-auto px-4 py-2 flex flex-col gap-1">
             {mobileNav.map(item => {
               const Icon = item.icon;
-              const isActive = location.pathname === item.path;
+              const isActive = item.match
+                ? item.match.some(p => location.pathname === p || location.pathname.startsWith(p + '/'))
+                : location.pathname === item.path;
               return (
                 <Link
                   key={item.path}

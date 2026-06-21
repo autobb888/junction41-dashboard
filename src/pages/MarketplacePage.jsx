@@ -10,6 +10,7 @@ import TrustScore from '../components/TrustScore';
 import HorizontalScroll from '../components/marketplace/HorizontalScroll';
 import { SkeletonList } from '../components/Skeleton';
 import FilterChips from '../components/FilterChips';
+import VerticalSwitcher from '../components/VerticalSwitcher';
 import usePageTitle from '../hooks/usePageTitle';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -322,6 +323,9 @@ export default function MarketplacePage() {
       </div>
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-6">
+
+        {/* Marketplace vertical switcher (sovagents / sovbounties / …) */}
+        <VerticalSwitcher className="mb-5" />
 
         {/* Service-type tabs: SovAgents vs API Providers */}
         <div className="flex items-center gap-2 mb-6">

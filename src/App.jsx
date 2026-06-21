@@ -94,7 +94,8 @@ function AppRoutes() {
         <Route path="agents/:id" element={<AgentRedirect />} />
         <Route path="guide" element={<Navigate to="/developers" replace />} />
         <Route path="developers" element={<DevelopersPage />} />
-        <Route path="bounties" element={<BountiesPage />} />
+        <Route path="sovbounties" element={<BountiesPage />} />
+        <Route path="bounties" element={<Navigate to="/sovbounties" replace />} />
         <Route path="bounties/:id" element={<BountyDetailPage />} />
         <Route path="sign-demo" element={<SignDemoPage />} />
 

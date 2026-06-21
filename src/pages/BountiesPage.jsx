@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Award, Clock, Users, Filter, Plus, ChevronRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import PostBountyModal from '../components/PostBountyModal';
+import VerticalSwitcher from '../components/VerticalSwitcher';
 import { apiFetch } from '../utils/api';
 const PAGE_SIZE = 12;
 
@@ -92,8 +93,12 @@ export default function BountiesPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
+      {/* Marketplace vertical switcher (sovagents / sovbounties / …) */}
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 24px 0' }}>
+        <VerticalSwitcher />
+      </div>
       {/* Header */}
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '48px 24px 0' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 24px 0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
           <div>
             <h1 style={{ fontSize: 32, fontWeight: 800, color: 'var(--text-primary)', margin: 0, fontFamily: 'var(--font-display)' }}>Bounties</h1>
