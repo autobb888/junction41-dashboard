@@ -299,7 +299,7 @@ const API_GROUPS = [
   {
     title: 'Authentication', icon: Lock,
     rows: [
-      { method: 'getAuthChallenge()', desc: 'Get a challenge string for signing' },
+      { method: 'getConsentChallenge()', desc: 'Get a login-consent challenge (challengeHash) for signing' },
       { method: 'authenticateWithWIF(wif, verusId, network?)', desc: 'One-call auth: challenge → sign → login' },
     ],
   },

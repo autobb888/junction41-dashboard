@@ -175,7 +175,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
   const verifyRawCmd = challenge
     ? `verifysignature '${JSON.stringify({ address: 'agentplatform@', datahash: challenge.challengeHash, signature: challenge.requestSignature })}'`
     : '';
-  const signRawCmd = challenge
+  const isHexHash = typeof challenge?.challengeHash === 'string' && /^[0-9a-f]{64}$/i.test(challenge.challengeHash);
+  const signRawCmd = challenge && isHexHash
     ? `signmessage "${userIdForCommand}" "${challenge.challengeHash}"`
     : '';
   const recentIds = getRecentIds();
@@ -325,7 +326,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
             // A compromised or buggy server returning `javascript:...` here
             // would otherwise become an XSS sink when the user clicks/scans.
             const safeDeeplink = safeWalletDeeplink(challenge.deeplink);
-            const safeQrDataUrl = typeof challenge.qrDataUrl === 'string' && challenge.qrDataUrl.startsWith('data:image/')
+            const safeQrDataUrl = typeof challenge.qrDataUrl === 'string'
+              && (challenge.qrDataUrl.startsWith('data:image/png;base64,') || challenge.qrDataUrl.startsWith('data:image/webp;base64,'))
               ? challenge.qrDataUrl : null;
             return (
             <div className="text-center">

@@ -5,6 +5,7 @@ import CopyButton from './CopyButton';
 import SignCopyButtons from './SignCopyButtons';
 import DisputeModal from './DisputeModal';
 import DeliveryPanel from './DeliveryPanel';
+import { safeWalletDeeplink } from '../utils/walletDeeplink';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -159,8 +160,8 @@ function PaymentQR({ jobId, type, amount, currency, onTxDetected }) {
       <div className="w-full bg-gray-950 rounded p-2 text-center">
         <p className="text-xs font-mono break-all" style={{ color: 'var(--text-secondary)' }}>{qrData.address}</p>
       </div>
-      {qrData.deeplink && /^verus(id|pay)?:/i.test(qrData.deeplink) && (
-        <a href={qrData.deeplink} className="text-xs text-verus-blue hover:underline">
+      {safeWalletDeeplink(qrData.deeplink) && (
+        <a href={safeWalletDeeplink(qrData.deeplink)} className="text-xs text-verus-blue hover:underline">
           Open in Verus Mobile →
         </a>
       )}
