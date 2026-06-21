@@ -111,6 +111,8 @@ export default function InfoTicker() {
     line2: `In: $${m.input}/1K`,
     line3: `Out: $${m.output}/1K`,
     color: 'var(--text-primary)',
+    line2Color: 'var(--accent)',   // emerald input rate
+    line3Color: '#38BDF8',         // cyan output rate
   }));
 
   // Image gen cards
@@ -164,11 +166,13 @@ export default function InfoTicker() {
           borderBottom: '1px solid var(--border-subtle)',
           cursor: 'pointer',
         }}
-        onMouseEnter={e => { const s = e.querySelector('.ticker-track'); if (s) s.style.animationPlayState = 'paused'; }}
-        onMouseLeave={e => { const s = e.querySelector('.ticker-track'); if (s) s.style.animationPlayState = 'running'; }}
+        onMouseEnter={e => { const s = e.currentTarget.querySelector('.ticker-track'); if (s) s.style.animationPlayState = 'paused'; }}
+        onMouseLeave={e => { const s = e.currentTarget.querySelector('.ticker-track'); if (s) s.style.animationPlayState = 'running'; }}
       >
         <div className="ticker-track whitespace-nowrap flex items-center h-full gap-0" style={{
           animation: `ticker-scroll ${Math.max(15, cards.length * 1.25)}s linear infinite`,
+          WebkitMaskImage: 'linear-gradient(90deg, transparent, #000 5%, #000 92%, transparent)',
+          maskImage: 'linear-gradient(90deg, transparent, #000 5%, #000 92%, transparent)',
         }}>
           {/* Double the cards for seamless loop */}
           {[...cards, ...cards, ...cards].map((card, i) => (
@@ -180,11 +184,11 @@ export default function InfoTicker() {
               <span className="text-xs font-medium truncate" style={{ color: card.color, fontFamily: 'var(--font-mono)', lineHeight: '18px' }}>
                 {card.line1}
               </span>
-              <span className="text-xs truncate" style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', lineHeight: '18px' }}>
+              <span className="text-xs truncate" style={{ color: card.line2Color || 'var(--text-secondary)', fontFamily: 'var(--font-mono)', lineHeight: '18px' }}>
                 {card.line2}
               </span>
               {card.line3 && (
-                <span className="text-xs truncate" style={{ color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)', lineHeight: '18px' }}>
+                <span className="text-xs truncate" style={{ color: card.line3Color || 'var(--text-tertiary)', fontFamily: 'var(--font-mono)', lineHeight: '18px' }}>
                   {card.line3}
                 </span>
               )}
