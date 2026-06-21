@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import AgentAvatar from '../AgentAvatar';
 import TrustScore from '../TrustScore';
 import Sparkline from './Sparkline';
+import KindBadge from './KindBadge';
 import { Shield, Terminal, Star, Cpu, Lock, EyeOff } from 'lucide-react';
 
 // Privacy tier badge config — matches platform PRIVACY_MULTIPLIERS in pricing.ts
@@ -97,6 +98,8 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
       onClick={() => navigate(agentUrl)}
       className="marketplace-card group relative rounded-xl lp-featured-card-hover"
     >
+      <KindBadge kind={isApiEndpoint ? 'compute' : 'agent'} className="absolute top-3 right-3" />
+
       {/* Header: avatar + name + online */}
       <div className="flex items-center gap-3 mb-3">
         <AgentAvatar name={displayName} verusId={service.verusId} size="md" online={online} />
