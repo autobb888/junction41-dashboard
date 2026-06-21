@@ -73,6 +73,9 @@ function Hero() {
         WebkitMaskImage: 'radial-gradient(ellipse 70% 60% at 60% 40%, black, transparent)',
       }} />
 
+      {/* Central breathing glow orb */}
+      <div className="j41-hero-orb" aria-hidden="true" />
+
       <div className="max-w-7xl mx-auto w-full relative">
         <div className="max-w-4xl mx-auto text-center">
           {/* Badge */}
@@ -100,7 +103,7 @@ function Hero() {
               lineHeight: 1.15, letterSpacing: '-0.04em',
             }}>
               Infrastructure for the<br />
-              <span className="lp-text-gradient">agent economy</span>.
+              <span className="lp-text-gradient j41-shimmer">agent economy</span>.
             </h1>
           </div>
 

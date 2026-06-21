@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   Briefcase, AlertTriangle, Clock, Calendar, MessageSquare, Star,
-  Database, Share2, Cpu, Server, Info
+  Database, Share2, Cpu, Server
 } from 'lucide-react';
 import TrustBadge from './TrustBadge';
 
@@ -21,6 +21,54 @@ function formatIdentityAge(days) {
   return `${(days / 365).toFixed(1)} years`;
 }
 
+function RadialGauge({ value }) {
+  const r = 46;
+  const circ = 2 * Math.PI * r;
+  const pct = Math.max(0, Math.min(100, Number(value) || 0));
+  const [offset, setOffset] = useState(circ);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setOffset(circ - (circ * pct) / 100));
+    return () => cancelAnimationFrame(id);
+  }, [pct, circ]);
+  return (
+    <div style={{ position: 'relative', width: 132, height: 132, margin: '0 auto' }}>
+      <svg width="132" height="132" viewBox="0 0 120 120">
+        <defs>
+          <linearGradient id="j41GaugeGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#34D399" />
+            <stop offset="1" stopColor="#38BDF8" />
+          </linearGradient>
+        </defs>
+        <circle cx="60" cy="60" r={r} fill="none" stroke="var(--bg-overlay)" strokeWidth="9" />
+        <circle
+          cx="60" cy="60" r={r} fill="none" stroke="url(#j41GaugeGrad)" strokeWidth="9"
+          strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={offset}
+          transform="rotate(-90 60 60)"
+          style={{
+            transition: 'stroke-dashoffset 1.4s cubic-bezier(0.2,0.8,0.2,1)',
+            filter: 'drop-shadow(0 0 5px rgba(52,211,153,0.6))',
+          }}
+        />
+      </svg>
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 28, fontWeight: 700, color: 'var(--accent)' }}>{Math.round(pct)}</span>
+        <span style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)' }}>Trust</span>
+      </div>
+    </div>
+  );
+}
+
+function MetricTile({ icon: Icon, label, value }) {
+  return (
+    <div style={{ background: 'var(--bg-overlay)', borderRadius: 8, padding: '12px 14px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        <Icon size={12} /> {label}
+      </div>
+      <div style={{ fontSize: 18, fontWeight: 600, marginTop: 4, color: 'var(--text-primary)' }}>{value}</div>
+    </div>
+  );
+}
+
 function StatRow({ icon: Icon, label, value, muted }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0' }}>
@@ -30,23 +78,6 @@ function StatRow({ icon: Icon, label, value, muted }) {
         {value}
       </span>
     </div>
-  );
-}
-
-function StarRating({ rating }) {
-  if (rating == null) return <span style={{ color: 'var(--text-muted)' }}>—</span>;
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-      {[1, 2, 3, 4, 5].map(i => (
-        <Star
-          key={i}
-          size={12}
-          fill={i <= Math.round(rating) ? '#fbbf24' : 'none'}
-          stroke={i <= Math.round(rating) ? '#fbbf24' : 'var(--text-muted)'}
-        />
-      ))}
-      <span style={{ fontSize: 12, color: 'var(--text-secondary)', marginLeft: 4 }}>{rating.toFixed(1)}</span>
-    </span>
   );
 }
 
@@ -78,11 +109,10 @@ export default function TransparencyCard({ verusId }) {
 
   const v = data.verified || {};
   const d = data.declared || {};
-  // trust fields live under `computed` in the API response (#2 — were read flat,
-  // so the badge always showed "new"/0).
   const c = data.computed || {};
   const trustLevel = c.trustLevel || 'new';
   const trustScore = c.trustScore ?? 0;
+  const ratingValue = v.averageRating != null ? `${v.averageRating.toFixed(1)} ★` : '—';
 
   return (
     <div className="card" style={{ padding: '20px 24px' }}>
@@ -91,23 +121,13 @@ export default function TransparencyCard({ verusId }) {
         <TrustBadge level={trustLevel} score={trustScore} />
       </div>
 
-      {/* Trust score bar */}
-      <div style={{ marginBottom: 20 }}>
-        <div style={{
-          height: 4, borderRadius: 2, background: 'var(--bg-overlay)', overflow: 'hidden',
-        }}>
-          <div style={{
-            height: '100%', borderRadius: 2, width: `${trustScore}%`,
-            background: trustScore >= 70 ? '#34d399' : trustScore >= 40 ? '#34D399' : '#8b8fa3',
-            transition: 'width 0.5s ease',
-          }} />
-        </div>
-      </div>
+      {/* Radial trust gauge */}
+      <RadialGauge value={trustScore} />
 
       {/* Staleness warning */}
       {c.declarationStale && (
         <div style={{
-          display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', marginBottom: 16,
+          display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', margin: '16px 0',
           borderRadius: 8, background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.15)',
           fontSize: 12, color: '#fbbf24',
         }}>
@@ -115,23 +135,18 @@ export default function TransparencyCard({ verusId }) {
         </div>
       )}
 
-      {/* Verified */}
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 8 }}>
+      {/* Verified — metric tiles */}
+      <div style={{ marginTop: 18, marginBottom: 16 }}>
+        <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 10 }}>
           Verified
         </div>
-        {/* Field names match the /transparency API (verified.*): avgResponseTimeSeconds,
-            identityAgeDays, reviewCount, averageRating — were previously mis-read
-            (avgResponseTime/identityAge/reviews/rating) so all showed "—" (#2). */}
-        <StatRow icon={Briefcase} label="Jobs completed" value={v.jobsCompleted ?? '—'} />
-        <StatRow icon={AlertTriangle} label="Dispute rate" value={v.disputeRate != null ? `${(v.disputeRate * 100).toFixed(1)}%` : '—'} />
-        <StatRow icon={Clock} label="Avg response" value={formatResponseTime(v.avgResponseTimeSeconds)} />
-        <StatRow icon={Calendar} label="Identity age" value={formatIdentityAge(v.identityAgeDays)} />
-        <StatRow icon={MessageSquare} label="Reviews" value={v.reviewCount ?? '—'} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0' }}>
-          <Star size={14} style={{ color: 'var(--text-muted)' }} />
-          <span style={{ fontSize: 13, color: 'var(--text-secondary)', flex: 1 }}>Rating</span>
-          <StarRating rating={v.averageRating} />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <MetricTile icon={Briefcase} label="Jobs done" value={v.jobsCompleted ?? '—'} />
+          <MetricTile icon={AlertTriangle} label="Dispute rate" value={v.disputeRate != null ? `${(v.disputeRate * 100).toFixed(1)}%` : '—'} />
+          <MetricTile icon={Clock} label="Avg response" value={formatResponseTime(v.avgResponseTimeSeconds)} />
+          <MetricTile icon={Calendar} label="Identity age" value={formatIdentityAge(v.identityAgeDays)} />
+          <MetricTile icon={MessageSquare} label="Reviews" value={v.reviewCount ?? '—'} />
+          <MetricTile icon={Star} label="Rating" value={ratingValue} />
         </div>
       </div>
 
