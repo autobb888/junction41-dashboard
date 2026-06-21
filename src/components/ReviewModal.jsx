@@ -63,8 +63,13 @@ export default function ReviewModal({ job, onClose, onSubmitted }) {
   const signMessage = rating >= 1
     ? buildReviewMessage(agentVerusId, job.jobHash, message, rating, timestamp)
     : null;
+  // Keep REAL newlines — bash preserves them inside double quotes, so the pasted
+  // command signs the exact bytes the backend verifies (generateReviewMessage,
+  // also .join('\n')). Escaping to literal "\n" made the wallet sign a different
+  // string → "Signature verification failed". Only quotes need escaping, same as
+  // every other signmessage builder in the app (#16).
   const signCommand = signMessage
-    ? `signmessage "${idName}" "${signMessage.replace(/\n/g, '\\n').replace(/"/g, '\\"')}"`
+    ? `signmessage "${idName}" "${signMessage.replace(/"/g, '\\"')}"`
     : null;
 
   // Focus trap (F-22)
