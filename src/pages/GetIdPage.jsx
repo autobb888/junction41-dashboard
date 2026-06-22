@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import CopyButton from '../components/CopyButton';
@@ -9,7 +9,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 const STEPS = [
   { num: 1, title: 'Get a Verus Wallet', desc: 'Download a wallet to hold your identity' },
   { num: 2, title: 'Choose a Name', desc: 'Pick your unique agentplatform@ identity' },
-  { num: 3, title: 'Enter Your Address', desc: 'Paste your R-address from your Verus wallet' },
+  { num: 3, title: 'Scan to Claim', desc: 'Approve the request in Verus Mobile' },
   { num: 4, title: 'Done!', desc: 'Your identity is ready to use' },
 ];
 
@@ -17,44 +17,90 @@ export default function GetIdPage() {
   const { setShowAuthModal } = useAuth();
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
-  const [address, setAddress] = useState('');
-  const [pubkey, setPubkey] = useState(''); // Optional — not required for mobile users
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
+
+  // Primary (Verus Mobile) flow: signed provisioning QR + on-chain poll.
+  const [prov, setProv] = useState(null); // { challengeId, name, identity, deeplink, qrDataUrl, expiresAt }
+  const [result, setResult] = useState(null); // { status, identity, iAddress, funded? }
+
+  // Manual (CLI / Desktop) fallback — the legacy /v1/onboard challenge-sign flow.
+  const [manualMode, setManualMode] = useState(false);
+  const [manualPhase, setManualPhase] = useState('address'); // 'address' | 'sign'
+  const [address, setAddress] = useState('');
+  const [pubkey, setPubkey] = useState('');
   const [pollStatus, setPollStatus] = useState('');
 
-  // Verus R-address: starts with R, base58, 34 chars total.
   const addressValid = /^R[1-9A-HJ-NP-Za-km-z]{33}$/.test(address);
 
+  // ---- Primary flow: request a signed provisioning QR ------------------
+  async function requestChallenge(chosenName) {
+    setError('');
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/v1/onboard/provision/challenge`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: chosenName.toLowerCase().trim() }),
+      });
+      const data = await res.json();
+      if (data?.data?.qrDataUrl) {
+        setProv(data.data);
+        setManualMode(false);
+        setStep(3);
+      } else {
+        setError(data?.error?.message || 'Could not create your QR code. Try a different name.');
+      }
+    } catch {
+      setError('Failed to connect to the platform');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Poll the chain for the minted identity while the QR step is showing.
+  useEffect(() => {
+    if (step !== 3 || manualMode || !prov?.name) return;
+    let cancelled = false;
+    let timer;
+    const tick = async () => {
+      if (cancelled) return;
+      try {
+        const res = await fetch(`${API_BASE}/v1/onboard/provision/status?name=${encodeURIComponent(prov.name)}`);
+        const data = await res.json();
+        if (!cancelled && data?.data?.status === 'registered') {
+          setResult({ status: 'registered', identity: data.data.identity, iAddress: data.data.iAddress });
+          setStep(4);
+          return;
+        }
+      } catch { /* keep polling */ }
+      if (!cancelled) timer = setTimeout(tick, 5000);
+    };
+    timer = setTimeout(tick, 5000);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [step, manualMode, prov?.name]);
+
+  const provExpired = prov?.expiresAt ? Date.now() > new Date(prov.expiresAt).getTime() : false;
+
+  // ---- Manual fallback: legacy /v1/onboard challenge + signmessage -----
   async function handleRegister(e) {
     e.preventDefault();
     setError('');
     setLoading(true);
-
     try {
-      // Step 1: Get challenge
       const challengeRes = await fetch(`${API_BASE}/v1/onboard`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: name.toLowerCase().trim(), address: address.trim(), pubkey: pubkey.trim() }),
       });
       const challengeData = await challengeRes.json();
-
       if (challengeData.status === 'challenge') {
-        // For humans: they need to sign the challenge in Verus Mobile
-        // For now, show the challenge and let them sign manually
-        setResult({
-          status: 'challenge',
-          challenge: challengeData.challenge,
-          token: challengeData.token,
-          onboardId: challengeData.onboardId,
-        });
-        setStep(3.5); // intermediate step
+        setResult({ status: 'challenge', challenge: challengeData.challenge, token: challengeData.token, onboardId: challengeData.onboardId });
+        setManualPhase('sign');
       } else if (challengeData.error) {
         setError(challengeData.error.message || 'Registration failed');
       }
-    } catch (err) {
+    } catch {
       setError('Failed to connect to the platform');
     } finally {
       setLoading(false);
@@ -64,7 +110,6 @@ export default function GetIdPage() {
   async function handleSubmitSignature(signature) {
     setError('');
     setLoading(true);
-
     try {
       const res = await fetch(`${API_BASE}/v1/onboard`, {
         method: 'POST',
@@ -79,7 +124,6 @@ export default function GetIdPage() {
         }),
       });
       const data = await res.json();
-
       if (data.onboardId) {
         setResult({ ...result, onboardId: data.onboardId, status: 'registering' });
         setStep(4);
@@ -87,7 +131,7 @@ export default function GetIdPage() {
       } else if (data.error) {
         setError(data.error.message || 'Registration failed');
       }
-    } catch (err) {
+    } catch {
       setError('Failed to submit registration');
     } finally {
       setLoading(false);
@@ -102,15 +146,8 @@ export default function GetIdPage() {
         const res = await fetch(`${API_BASE}/v1/onboard/status/${onboardId}`);
         const data = await res.json();
         setPollStatus(data.status);
-
         if (data.status === 'registered') {
-          setResult(prev => ({
-            ...prev,
-            status: 'registered',
-            identity: data.identity,
-            iAddress: data.iAddress,
-            funded: data.funded,
-          }));
+          setResult(prev => ({ ...prev, status: 'registered', identity: data.identity, iAddress: data.iAddress, funded: data.funded }));
           return;
         }
         if (data.status === 'failed') {
@@ -120,6 +157,12 @@ export default function GetIdPage() {
       } catch {}
     }
     setError('Registration timed out — check back later');
+  }
+
+  function startManual() {
+    setError('');
+    setManualMode(true);
+    setManualPhase('address');
   }
 
   return (
@@ -162,7 +205,10 @@ export default function GetIdPage() {
             Your identity lives on the blockchain — not on our platform.
           </p>
 
-          <h3 className="text-sm font-medium text-gray-300 mb-3">📱 Verus Mobile</h3>
+          <h3 className="text-sm font-medium text-gray-300 mb-3">📱 Verus Mobile <span className="text-verus-blue">(recommended)</span></h3>
+          <p className="text-xs text-gray-400 mb-3">
+            Verus Mobile scans the claim QR and provisions your identity for you — no address to copy, nothing to sign by hand.
+          </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <a href="https://apps.apple.com/app/verus-mobile/id1528675517" target="_blank" rel="noopener"
               className="flex items-center gap-3 p-4 bg-[#0d0e14] rounded-lg hover:bg-white/[0.06] transition">
@@ -189,7 +235,7 @@ export default function GetIdPage() {
               <span className="text-2xl">💻</span>
               <div>
                 <div className="text-white font-medium">Verus Desktop</div>
-                <div className="text-gray-400 text-sm">Windows / macOS / Linux</div>
+                <div className="text-gray-400 text-sm">Windows / macOS / Linux — use the manual option in step 3</div>
               </div>
             </a>
           </div>
@@ -199,7 +245,6 @@ export default function GetIdPage() {
             <ol className="text-sm text-gray-400 space-y-1 list-decimal list-inside">
               <li>Create a new wallet (or import existing)</li>
               <li>Switch to <span className="text-verus-blue">VRSCTEST</span> network (Settings → Networks)</li>
-              <li>Find your <span className="text-verus-blue">R-address</span> (receive screen in Mobile, or Debug Console in Desktop)</li>
             </ol>
           </div>
 
@@ -217,7 +262,7 @@ export default function GetIdPage() {
             Your identity will be <span className="font-mono text-verus-blue">{name || 'yourname'}.agentplatform@</span>
           </p>
 
-          <form onSubmit={(e) => { e.preventDefault(); if (name.trim()) setStep(3); }}>
+          <form onSubmit={(e) => { e.preventDefault(); if (name.trim().length >= 3) requestChallenge(name); }}>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-300 mb-2">Identity Name</label>
               <div className="flex items-center bg-[#0d0e14] rounded-lg overflow-hidden border border-white/10 focus-within:border-verus-blue">
@@ -239,21 +284,72 @@ export default function GetIdPage() {
               <button type="button" onClick={() => setStep(1)} className="btn-secondary flex-1 py-3">
                 ← Back
               </button>
-              <button type="submit" disabled={name.trim().length < 3} className="btn-primary flex-1 py-3 disabled:opacity-50">
-                Next →
+              <button type="submit" disabled={loading || name.trim().length < 3} className="btn-primary flex-1 py-3 disabled:opacity-50">
+                {loading ? 'Creating QR...' : 'Continue →'}
               </button>
             </div>
           </form>
         </div>
       )}
 
-      {/* Step 3: Enter R-address + pubkey */}
-      {step === 3 && (
+      {/* Step 3: Scan QR (primary) OR manual fallback */}
+      {step === 3 && !manualMode && (
         <div className="card !p-8">
-          <h2 className="text-xl font-semibold text-white mb-4">🔑 Step 3: Your Wallet Address</h2>
+          <h2 className="text-xl font-semibold text-white mb-2">📲 Step 3: Scan to Claim</h2>
           <p className="text-gray-300 mb-6">
-            Paste your R-address from your Verus wallet.
-            This connects your new <span className="font-mono text-verus-blue">{name}.agentplatform@</span> identity to your wallet.
+            Open <strong>Verus Mobile</strong>, scan this QR, and approve <strong className="text-gray-200">"request ID"</strong>.
+            The platform mints <span className="font-mono text-verus-blue">{prov?.identity}</span> for you — free.
+          </p>
+
+          <div className="flex flex-col items-center mb-6">
+            {prov?.qrDataUrl && (
+              <img alt="Provisioning QR" src={prov.qrDataUrl}
+                className={`w-64 h-64 bg-white rounded-xl p-2 ${provExpired ? 'opacity-30' : ''}`} />
+            )}
+            {provExpired && (
+              <button onClick={() => requestChallenge(name)} disabled={loading} className="btn-primary mt-4 px-5 py-2">
+                {loading ? 'Refreshing...' : 'QR expired — generate a new one'}
+              </button>
+            )}
+
+            {/* Open directly on this device (mobile, or desktop with Verus Desktop) */}
+            {prov?.deeplink && !provExpired && (
+              <a href={prov.deeplink} className="text-sm text-verus-blue hover:underline mt-4">
+                On your phone? Tap to open Verus Mobile →
+              </a>
+            )}
+          </div>
+
+          <div className="flex items-center justify-center gap-3 text-gray-400 mb-6">
+            <div role="status" aria-label="Waiting" className="inline-flex items-center">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-verus-blue"></div>
+            </div>
+            <span className="text-sm">Waiting for you to approve in the app…</span>
+          </div>
+
+          <div className="bg-white/[0.03] rounded-lg p-4 text-xs text-gray-400 mb-6">
+            After you approve, your wallet starts tracking the new ID and the platform registers it on-chain
+            (about a block, ~60s). This page updates automatically when it's live.
+          </div>
+
+          <div className="flex items-center justify-between">
+            <button type="button" onClick={() => { setStep(2); setProv(null); }} className="btn-secondary py-2 px-4">
+              ← Change name
+            </button>
+            <button type="button" onClick={startManual} className="text-sm text-gray-400 hover:text-gray-200">
+              Can't scan? Use CLI / Desktop →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Step 3 (manual fallback): enter R-address */}
+      {step === 3 && manualMode && manualPhase === 'address' && (
+        <div className="card !p-8">
+          <h2 className="text-xl font-semibold text-white mb-4">🔑 Manual: Your Wallet Address</h2>
+          <p className="text-gray-300 mb-6">
+            For CLI / Desktop users. Paste your R-address to link it to your new
+            <span className="font-mono text-verus-blue"> {name}.agentplatform@</span> identity.
           </p>
 
           <form onSubmit={handleRegister}>
@@ -270,7 +366,7 @@ export default function GetIdPage() {
               {address && !addressValid ? (
                 <p className="text-xs text-red-400 mt-1">Enter a valid R-address (starts with R, 34 chars)</p>
               ) : (
-                <p className="text-xs text-gray-400 mt-1">Starts with R. Found in your wallet's receive screen.</p>
+                <p className="text-xs text-gray-400 mt-1">Starts with R. Found in your wallet's receive screen / <code className="text-gray-400">getaddressesbyaccount</code>.</p>
               )}
             </div>
 
@@ -284,13 +380,13 @@ export default function GetIdPage() {
                   placeholder="02 or 03 followed by 64 hex characters"
                   className="input w-full"
                 />
-                <p className="text-xs text-gray-400 mt-1">Only needed for SDK/CLI users. Verus Mobile users can skip this. A future Verus Mobile update will auto-fill this field.</p>
+                <p className="text-xs text-gray-400 mt-1">Only needed for some SDK/CLI setups.</p>
               </div>
             </details>
 
             <div className="flex gap-3">
-              <button type="button" onClick={() => setStep(2)} className="btn-secondary flex-1 py-3">
-                ← Back
+              <button type="button" onClick={() => setManualMode(false)} className="btn-secondary flex-1 py-3">
+                ← Back to QR
               </button>
               <button type="submit" disabled={loading || !addressValid}
                 className="btn-primary flex-1 py-3 disabled:opacity-50">
@@ -301,19 +397,19 @@ export default function GetIdPage() {
         </div>
       )}
 
-      {/* Step 3.5: Sign Challenge */}
-      {step === 3.5 && result?.status === 'challenge' && (
+      {/* Step 3 (manual fallback): sign challenge */}
+      {step === 3 && manualMode && manualPhase === 'sign' && result?.status === 'challenge' && (
         <ChallengeSignStep
           challenge={result.challenge}
           name={name}
           address={address}
           onSubmit={handleSubmitSignature}
-          onBack={() => setStep(3)}
+          onBack={() => setManualPhase('address')}
           loading={loading}
         />
       )}
 
-      {/* Step 4: Success */}
+      {/* Step 4: Success / registering */}
       {step === 4 && (
         <div className="card !p-8">
           <h2 className="text-xl font-semibold text-white mb-4">
@@ -351,15 +447,23 @@ export default function GetIdPage() {
                     <span className="text-gray-400 text-sm">Identity</span>
                     <div className="text-white font-mono">{result.identity}</div>
                   </div>
-                  <div>
-                    <span className="text-gray-400 text-sm">i-Address</span>
-                    <div className="text-white font-mono text-sm">{result.iAddress}</div>
-                  </div>
-                  {result.funded && (
+                  {result.iAddress && (
+                    <div>
+                      <span className="text-gray-400 text-sm">i-Address</span>
+                      <div className="text-white font-mono text-sm">{result.iAddress}</div>
+                    </div>
+                  )}
+                  {result.funded ? (
                     <div>
                       <span className="text-gray-400 text-sm">Startup Funds</span>
                       <div className="text-green-400 font-medium">{result.funded.amount} {result.funded.currency}</div>
                       <div className="text-gray-400 text-xs">Enough for ~30 identity updates</div>
+                    </div>
+                  ) : (
+                    <div>
+                      <span className="text-gray-400 text-sm">Startup Funds</span>
+                      <div className="text-green-400 font-medium">A small amount of VRSCTEST was sent to your wallet</div>
+                      <div className="text-gray-400 text-xs">Covers your first identity updates</div>
                     </div>
                   )}
                 </div>
@@ -441,7 +545,7 @@ function ChallengeSignStep({ challenge, name, address, onSubmit, onBack, loading
       <h2 className="text-xl font-semibold text-white mb-4">✍️ Sign the Challenge</h2>
       <p className="text-gray-300 mb-4">
         To prove you own this wallet, sign the challenge below using your R-address.
-        You can do this in <strong>Verus Mobile</strong> or the <strong>Verus CLI/GUI console</strong>.
+        You can do this in the <strong>Verus CLI / Desktop console</strong>.
       </p>
 
       {/* Method 1: CLI command with copy button */}
@@ -455,25 +559,6 @@ function ChallengeSignStep({ challenge, name, address, onSubmit, onBack, loading
         </div>
         <p className="text-xs text-gray-400 mt-1.5">
           Paste this into the Verus CLI or the Debug Console in Verus Desktop (Help → Debug Window → Console).
-        </p>
-      </div>
-
-      {/* Method 2: Verus Mobile instructions */}
-      <div className="bg-white/[0.03] rounded-lg p-4 mb-5 border border-white/[0.06]">
-        <p className="text-sm font-medium text-gray-300 mb-2">📱 Using Verus Mobile instead?</p>
-        <ol className="text-xs text-gray-400 space-y-1.5 list-decimal list-inside">
-          <li>Open Verus Mobile → go to your identity</li>
-          <li>Tap <strong className="text-gray-300">Sign Message</strong></li>
-          <li>Paste the challenge string below:</li>
-        </ol>
-        <div className="flex items-center gap-2 mt-2">
-          <div className="bg-[#050508] rounded p-2 font-mono text-xs text-gray-300 break-all flex-1">
-            {challenge}
-          </div>
-          <CopyButton text={challenge} label="📋 Copy" variant="pill" />
-        </div>
-        <p className="text-xs text-gray-400 mt-2">
-          <span className="inline-block">4.</span> Copy the resulting signature and paste it below.
         </p>
       </div>
 
