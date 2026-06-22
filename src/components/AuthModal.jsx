@@ -379,6 +379,18 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
                         Open in Verus Desktop
                       </a>
                     )}
+                    {challenge.isTestnet && (
+                      <p className="text-amber-400/90 text-xs mb-4 max-w-xs mx-auto leading-relaxed">
+                        Testnet: if mainnet Verus Desktop is installed, this button may open the wrong chain. Use Verus Mobile (testnet) or{' '}
+                        <button
+                          type="button"
+                          onClick={() => setTab('cli')}
+                          className="underline hover:text-amber-300 font-medium"
+                        >
+                          Advanced (CLI)
+                        </button>.
+                      </p>
+                    )}
                     <p className="text-gray-400 text-xs mb-4">or scan with Verus Mobile:</p>
                     <div className="bg-white p-4 rounded-lg inline-block mb-4">
                       {safeQrDataUrl ? (
