@@ -324,12 +324,14 @@ export default function GetIdPage() {
             <div role="status" aria-label="Waiting" className="inline-flex items-center">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-verus-blue"></div>
             </div>
-            <span className="text-sm">Waiting for you to approve in the app…</span>
+            <span className="text-sm">Waiting for approval, then on-chain confirmation…</span>
           </div>
 
           <div className="bg-white/[0.03] rounded-lg p-4 text-xs text-gray-400 mb-6">
-            After you approve, your wallet starts tracking the new ID and the platform registers it on-chain
-            (about a block, ~60s). This page updates automatically when it's live.
+            After you approve in the app, the platform registers your ID on-chain. The name commitment needs
+            one block to confirm — <strong className="text-gray-300">usually 1–3 minutes, occasionally up to ~5</strong> on
+            testnet. This page updates automatically when it's live, and it's safe to leave it open.
+            You can even close it — your new ID appears in Verus Mobile on its own once it's confirmed.
           </div>
 
           <div className="flex items-center justify-between">
