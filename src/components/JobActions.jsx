@@ -419,8 +419,10 @@ export default function JobActions({ job, onUpdate, autoOpenPayment, onAutoOpenC
   useEffect(() => {
     if (autoOpenPayment && isBuyer && job.status === 'accepted' && !signPanel) {
       if (!job.payment?.txid) {
-        // Default to combined payment (single TX for both agent + fee)
-        setSignPanel({ action: 'payment-combined', type: 'combined-txid' });
+        // Default to the scannable 2-step flow (agent QR first). Mobile-first: a single
+        // QR can't encode the 2-output combined tx, so auto-landing there showed CLI-only.
+        // The combined one-TX option stays available via the "Pay All in One TX" button.
+        setSignPanel({ action: 'payment', type: 'txid' });
         setSignatureInput('');
       } else if (!job.payment?.platformFeeTxid) {
         setSignPanel({ action: 'platform-fee', type: 'fee-txid' });
@@ -502,18 +504,18 @@ export default function JobActions({ job, onUpdate, autoOpenPayment, onAutoOpenC
         {isBuyer && job.status === 'accepted' && !job.payment?.txid && !signPanel && (
           <>
             <button
-              onClick={() => { setSignPanel({ action: 'payment-combined', type: 'combined-txid' }); setSignatureInput(''); }}
+              onClick={() => { setSignPanel({ action: 'payment', type: 'txid' }); setSignatureInput(''); }}
               disabled={loading}
               className="btn-primary text-sm"
             >
-              Pay All in One TX
+              📱 Scan QR to Pay (2 steps)
             </button>
             <button
-              onClick={() => { setSignPanel({ action: 'payment', type: 'txid' }); setSignatureInput(''); }}
+              onClick={() => { setSignPanel({ action: 'payment-combined', type: 'combined-txid' }); setSignatureInput(''); }}
               disabled={loading}
               className="btn-secondary text-sm"
             >
-              Pay in 2 Steps
+              Pay All in One TX (desktop / CLI)
             </button>
           </>
         )}
@@ -903,11 +905,21 @@ export default function JobActions({ job, onUpdate, autoOpenPayment, onAutoOpenC
       {/* Combined Payment Panel (single TX for both agent + fee) */}
       {signPanel && signPanel.type === 'combined-txid' && (
         <div className="bg-gray-900 rounded-lg p-4 space-y-3 border border-gray-700">
-          <h4 className="text-white font-medium text-sm">Combined Payment (Agent + Platform Fee)</h4>
+          <h4 className="text-white font-medium text-sm">Pay in One Transaction (desktop / CLI)</h4>
           <p className="text-gray-400 text-xs">
-            Send a single transaction that pays both the agent and the platform fee.
-            Use the <code>sendcurrency</code> command below to create a multi-output transaction.
+            Pays both the agent and the platform fee in a single multi-output transaction.
+            Use the <code>sendcurrency</code> command below in Verus Desktop / CLI.
           </p>
+
+          {/* Mobile-first escape hatch: a single QR can't encode a 2-output payment,
+              so route scanners to the 2-step flow (one scannable QR per payment). */}
+          <button
+            type="button"
+            onClick={() => { setSignPanel({ action: 'payment', type: 'txid' }); setSignatureInput(''); }}
+            className="btn-secondary text-sm w-full"
+          >
+            📱 On mobile? Scan QR codes to pay in 2 steps →
+          </button>
 
           <PaymentQR
             jobId={job.id}
