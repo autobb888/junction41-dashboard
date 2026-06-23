@@ -5,6 +5,7 @@ import TimePicker from './TimePicker';
 import CopyButton from './CopyButton';
 import SignCopyButtons from './SignCopyButtons';
 import { parseLocalDate } from '../utils/date';
+import { safeWalletDeeplink } from '../utils/walletDeeplink';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -40,6 +41,15 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
   const agentRequiresSovguard = Boolean(service?.sovguard);
   const [sovguardEnabled, setSovguardEnabled] = useState(true);
   const modalRef = useRef(null);
+
+  // Signing method: 'wallet' (scan QR in Verus Mobile) | 'cli' (paste a signmessage).
+  const [signMethod, setSignMethod] = useState('wallet');
+  const [consent, setConsent] = useState(null);        // { challengeId, qrDataUrl, deeplink, expiresAt }
+  const [consentPending, setConsentPending] = useState(null); // { verusId, identityName } once the wallet signed
+  const [consentError, setConsentError] = useState('');
+  const [consentLoading, setConsentLoading] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const pollRef = useRef(null);
 
   // Restore draft from sessionStorage on mount (F-7)
   useEffect(() => {
@@ -156,10 +166,18 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
   const savingsAmount = (amount * dataDiscountRate).toFixed(4);
   const savingsPercent = Math.round(dataDiscountRate * 100);
 
-  // Clear signature when any signed field changes (stale signature protection)
+  // Clear signature AND any in-flight wallet consent when a signed field changes —
+  // both commit to the exact terms, so a stale one must be discarded.
   useEffect(() => {
     setSignature('');
+    setConsent(null);
+    setConsentPending(null);
+    setConsentError('');
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
   }, [description, deadlineDate, deadlineTime, sovguardEnabled, dataRetention, allowTraining, allowThirdParty, requireDeletion, timestamp, selectedCurrencyIdx]);
+
+  // Stop polling on unmount
+  useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
   const paymentTerms = service?.paymentTerms || service?.payment_terms || 'prepay';
   const dataTermsStr = `Retain:${dataRetention}|Train:${allowTraining ? 'yes' : 'no'}|3rdParty:${allowThirdParty ? 'yes' : 'no'}|DelAttest:${requireDeletion ? 'yes' : 'no'}`;
   const paymentCommitment = paymentTerms === 'prepay'
@@ -171,6 +189,8 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    // The wallet (QR) path has its own buttons — Enter in a field must not submit here.
+    if (signMethod === 'wallet') return;
 
     if (!sellerVerusId) {
       setError('Seller identity is missing. Please refresh and reopen this service.');
@@ -240,6 +260,111 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
       setLoading(false);
     }
   }
+
+  // Shared job body for both signing paths. The consent path omits signature +
+  // timestamp (the server stamps the timestamp and the wallet signs the consent).
+  function buildJobBody() {
+    return {
+      sellerVerusId,
+      serviceId: service?.id,
+      description: description.trim(),
+      message: message.trim() || undefined,
+      amount: agentAmount,
+      currency,
+      deadline: deadline || undefined,
+      paymentTerms,
+      sovguardEnabled,
+      dataTerms: {
+        retention: dataRetention,
+        allowTraining,
+        allowThirdParty,
+        requireDeletionAttestation: requireDeletion,
+      },
+      fee: parseFloat(feeAmount),
+    };
+  }
+
+  function startConsentPoll(challengeId) {
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = setInterval(async () => {
+      try {
+        const res = await fetch(`${API_BASE}/v1/jobs/consent/status/${challengeId}`, { credentials: 'include' });
+        const data = await res.json();
+        if (data.data?.status === 'awaiting_confirm') {
+          clearInterval(pollRef.current); pollRef.current = null;
+          setConsentPending({ verusId: data.data.verusId, identityName: data.data.identityName });
+        } else if (data.data?.status === 'expired') {
+          clearInterval(pollRef.current); pollRef.current = null;
+          setConsent(null);
+          setConsentError('This request expired. Generate a new one.');
+        }
+      } catch { /* keep polling */ }
+    }, 2500);
+  }
+
+  // Re-poll the moment the user returns from Verus Mobile (mobile browser).
+  useEffect(() => {
+    function onVis() {
+      if (document.visibilityState === 'visible' && consent?.challengeId && !consentPending) {
+        startConsentPoll(consent.challengeId);
+      }
+    }
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [consent, consentPending]);
+
+  async function requestConsentChallenge() {
+    setConsentError('');
+    if (!sellerVerusId) { setConsentError('Seller identity is missing. Reload and reopen this service.'); return; }
+    if (!description.trim()) { setConsentError('Job description is required.'); return; }
+    if (!(agentAmount > 0)) { setConsentError('This is a free service and cannot be hired. Connect via its API instead.'); return; }
+    setConsentLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/v1/jobs/consent/challenge`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(buildJobBody()),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error?.message || 'Could not create the signing request');
+      setConsentPending(null);
+      setConsent(data.data);
+      startConsentPoll(data.data.challengeId);
+    } catch (err) {
+      setConsentError(err.message);
+    } finally {
+      setConsentLoading(false);
+    }
+  }
+
+  async function confirmConsent() {
+    if (!consent?.challengeId) return;
+    setConfirming(true);
+    setConsentError('');
+    try {
+      const res = await fetch(`${API_BASE}/v1/jobs/consent/confirm/${consent.challengeId}`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error?.message || 'Could not complete the hire');
+      clearDraft();
+      addToast?.('Job created successfully');
+      onSuccess?.(data.data);
+      onClose();
+    } catch (err) {
+      setConsentError(err.message);
+    } finally {
+      setConfirming(false);
+    }
+  }
+
+  const consentExpired = consent?.expiresAt ? Date.now() > new Date(consent.expiresAt).getTime() : false;
+  const safeConsentDeeplink = consent ? safeWalletDeeplink(consent.deeplink) : null;
+  const safeConsentQr = typeof consent?.qrDataUrl === 'string'
+    && (consent.qrDataUrl.startsWith('data:image/png;base64,') || consent.qrDataUrl.startsWith('data:image/webp;base64,'))
+    ? consent.qrDataUrl : null;
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 sm:p-4" onClick={onClose}>
@@ -494,66 +619,120 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
             </p>
           </div>
 
-          {/* Signature section */}
+          {/* Sign Your Request — scan in Verus Mobile (default) or paste a CLI signature */}
           <div className="bg-gray-900 rounded-lg p-4 space-y-4">
             <h3 className="text-white font-medium">Sign Your Request</h3>
-            <p className="text-gray-400 text-sm">
-              Copy the message below and sign it with your VerusID to create a binding job request.
-            </p>
 
-            {/* Timestamp freshness indicator */}
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-400">
-                Timestamp: {new Date(timestamp * 1000).toLocaleTimeString()}
-              </span>
-              <button
-                type="button"
-                onClick={() => setTimestamp(Math.floor(Date.now() / 1000))}
-                className="text-xs text-verus-blue hover:text-blue-400"
-              >
-                Refresh
+            <div className="flex rounded-lg overflow-hidden border border-gray-700">
+              <button type="button" onClick={() => setSignMethod('wallet')}
+                className={`flex-1 py-2 text-sm font-medium transition-colors ${signMethod === 'wallet' ? 'bg-verus-blue text-white' : 'text-gray-400 hover:text-gray-200'}`}>
+                📱 Verus Wallet
+              </button>
+              <button type="button" onClick={() => setSignMethod('cli')}
+                className={`flex-1 py-2 text-sm font-medium transition-colors ${signMethod === 'cli' ? 'bg-verus-blue text-white' : 'text-gray-400 hover:text-gray-200'}`}>
+                Advanced (CLI)
               </button>
             </div>
 
-            <div className="bg-gray-950 rounded p-3">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-xs text-gray-400">Message to sign:</span>
-                <CopyButton text={signMessage} label="Copy" />
-              </div>
-              <div className="font-mono text-xs text-gray-300 whitespace-pre-wrap">
-                {signMessage}
-              </div>
-            </div>
-
-            {!sellerVerusId && (
-              <div className="bg-red-900/40 border border-red-700 rounded p-2 text-xs text-red-300">
-                Seller identity is unresolved (To:undefined). Reload the page and reopen this service before signing.
+            {/* WALLET (QR) */}
+            {signMethod === 'wallet' && (
+              <div className="text-center">
+                {consentPending ? (
+                  <div className="py-2">
+                    <p className="text-gray-300 mb-1">Wallet approved. Confirm your hire as:</p>
+                    <p className="text-verus-blue font-semibold text-lg mb-4">{consentPending.identityName || consentPending.verusId}</p>
+                    <button type="button" onClick={confirmConsent} disabled={confirming}
+                      className="w-full py-3 bg-verus-blue hover:bg-blue-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50">
+                      {confirming ? 'Creating job…' : `Confirm hire as ${consentPending.identityName || consentPending.verusId}`}
+                    </button>
+                    <p className="text-xs text-gray-500 mt-3">Not you? Regenerate the request below.</p>
+                  </div>
+                ) : consent && !consentExpired ? (
+                  <>
+                    <p className="text-gray-300 text-sm mb-3">
+                      Scan with <strong>Verus Mobile</strong> and approve the request to sign this hire.
+                    </p>
+                    <div className="hidden md:block">
+                      <div className="bg-white p-3 rounded-lg inline-block mb-2">
+                        {safeConsentQr
+                          ? <img src={safeConsentQr} alt="Hire QR" className="w-52 h-52" />
+                          : <div className="w-52 h-52 flex items-center justify-center text-red-600 text-sm">QR unavailable</div>}
+                      </div>
+                      {safeConsentDeeplink && (
+                        <p><a href={safeConsentDeeplink} className="text-xs text-verus-blue hover:underline">On your phone? Tap to open Verus Mobile →</a></p>
+                      )}
+                    </div>
+                    <div className="md:hidden mb-2">
+                      {safeConsentDeeplink
+                        ? <a href={safeConsentDeeplink} className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg">Open Verus Mobile</a>
+                        : <div className="text-red-400 text-sm">Deep link unavailable</div>}
+                    </div>
+                    <div className="flex items-center justify-center gap-2 text-gray-400 mt-3">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-verus-blue"></div>
+                      <span className="text-sm">Waiting for you to approve…</span>
+                    </div>
+                    <button type="button" onClick={requestConsentChallenge} disabled={consentLoading}
+                      className="text-xs text-gray-500 hover:text-gray-300 mt-3">Regenerate</button>
+                  </>
+                ) : (
+                  <button type="button" onClick={requestConsentChallenge}
+                    disabled={consentLoading || !sellerVerusId || !description.trim()}
+                    className="w-full py-3 bg-verus-blue hover:bg-verus-blue/80 text-white rounded-lg font-medium transition-colors disabled:opacity-50">
+                    {consentLoading ? 'Generating…' : (consentExpired ? 'Request expired — generate a new QR' : 'Sign with Verus Mobile')}
+                  </button>
+                )}
+                {!sellerVerusId && (
+                  <div className="mt-3 bg-red-900/40 border border-red-700 rounded p-2 text-xs text-red-300">
+                    Seller identity is unresolved. Reload the page and reopen this service.
+                  </div>
+                )}
+                {consentError && <div className="mt-3 p-2 bg-red-900/40 border border-red-700 rounded text-xs text-red-300">{consentError}</div>}
               </div>
             )}
 
-            <div className="bg-gray-950 rounded p-3">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-xs text-gray-400">Run this command (CLI or GUI console):</span>
-                <SignCopyButtons command={`signmessage "${user?.identityName ? `${user.identityName}@` : 'yourID@'}" "${signMessage.replace(/"/g, '\\"')}"`} />
-              </div>
-              <code className="text-xs text-verus-blue break-all">
-                signmessage "{user?.identityName ? `${user.identityName}@` : 'yourID@'}" "{signMessage.replace(/"/g, '\\"')}"
-              </code>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Paste Signature
-              </label>
-              <input
-                type="text"
-                value={signature}
-                onChange={(e) => setSignature(e.target.value)}
-                className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white font-mono text-sm focus:border-verus-blue focus:outline-none"
-                placeholder="AW1B..."
-                required
-              />
-            </div>
+            {/* CLI (copy-paste signmessage) */}
+            {signMethod === 'cli' && (
+              <>
+                <p className="text-gray-400 text-sm">
+                  Copy the message and sign it with your VerusID to create a binding job request.
+                </p>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-400">Timestamp: {new Date(timestamp * 1000).toLocaleTimeString()}</span>
+                  <button type="button" onClick={() => setTimestamp(Math.floor(Date.now() / 1000))} className="text-xs text-verus-blue hover:text-blue-400">Refresh</button>
+                </div>
+                <div className="bg-gray-950 rounded p-3">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-xs text-gray-400">Message to sign:</span>
+                    <CopyButton text={signMessage} label="Copy" />
+                  </div>
+                  <div className="font-mono text-xs text-gray-300 whitespace-pre-wrap">{signMessage}</div>
+                </div>
+                {!sellerVerusId && (
+                  <div className="bg-red-900/40 border border-red-700 rounded p-2 text-xs text-red-300">
+                    Seller identity is unresolved (To:undefined). Reload the page and reopen this service before signing.
+                  </div>
+                )}
+                <div className="bg-gray-950 rounded p-3">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-xs text-gray-400">Run this command (CLI or GUI console):</span>
+                    <SignCopyButtons command={`signmessage "${user?.identityName ? `${user.identityName}@` : 'yourID@'}" "${signMessage.replace(/"/g, '\\"')}"`} />
+                  </div>
+                  <code className="text-xs text-verus-blue break-all">
+                    signmessage "{user?.identityName ? `${user.identityName}@` : 'yourID@'}" "{signMessage.replace(/"/g, '\\"')}"
+                  </code>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Paste Signature</label>
+                  <input
+                    type="text"
+                    value={signature}
+                    onChange={(e) => setSignature(e.target.value)}
+                    className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white font-mono text-sm focus:border-verus-blue focus:outline-none"
+                    placeholder="AW1B..."
+                  />
+                </div>
+              </>
+            )}
           </div>
 
           {error && (
@@ -571,13 +750,15 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
             >
               Cancel
             </button>
-            <button
-              type="submit"
-              disabled={loading || !signature.trim() || !sellerVerusId || !description.trim()}
-              className="px-6 py-2 bg-verus-blue hover:bg-verus-blue/80 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Submitting...' : 'Submit Job Request'}
-            </button>
+            {signMethod === 'cli' && (
+              <button
+                type="submit"
+                disabled={loading || !signature.trim() || !sellerVerusId || !description.trim()}
+                className="px-6 py-2 bg-verus-blue hover:bg-verus-blue/80 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Submitting...' : 'Submit Job Request'}
+              </button>
+            )}
           </div>
         </form>
       </div>
