@@ -30,8 +30,40 @@ export default function GetIdPage() {
   const [address, setAddress] = useState('');
   const [pubkey, setPubkey] = useState('');
   const [pollStatus, setPollStatus] = useState('');
+  // Live name availability for step 2: 'idle' | 'checking' | 'available' | 'taken' | 'invalid' | 'error'
+  const [availability, setAvailability] = useState({ state: 'idle', reason: null });
 
   const addressValid = /^R[1-9A-HJ-NP-Za-km-z]{33}$/.test(address);
+
+  // Debounced availability check — tells the user a name is taken BEFORE they scan,
+  // instead of failing at the callback. Authoritative re-check happens server-side.
+  useEffect(() => {
+    if (step !== 2) return;
+    const n = name.trim().toLowerCase();
+    if (n.length < 3) { setAvailability({ state: 'idle', reason: null }); return; }
+    setAvailability({ state: 'checking', reason: null });
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`${API_BASE}/v1/onboard/provision/available?name=${encodeURIComponent(n)}`);
+        const data = await res.json();
+        if (cancelled) return;
+        if (res.ok && data?.data) {
+          if (data.data.available) setAvailability({ state: 'available', reason: null });
+          else setAvailability({ state: data.data.reason === 'taken' ? 'taken' : 'invalid', reason: data.data.reason });
+        } else {
+          setAvailability({ state: 'error', reason: null });
+        }
+      } catch {
+        if (!cancelled) setAvailability({ state: 'error', reason: null });
+      }
+    }, 400);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [name, step]);
+
+  // Block Continue on a known-bad name; allow on available, or on a check error
+  // (the server re-checks at /challenge, so a flaky check endpoint shouldn't trap the user).
+  const nameUsable = name.trim().length >= 3 && (availability.state === 'available' || availability.state === 'error');
 
   // ---- Primary flow: request a signed provisioning QR ------------------
   async function requestChallenge(chosenName) {
@@ -262,10 +294,13 @@ export default function GetIdPage() {
             Your identity will be <span className="font-mono text-verus-blue">{name || 'yourname'}.agentplatform@</span>
           </p>
 
-          <form onSubmit={(e) => { e.preventDefault(); if (name.trim().length >= 3) requestChallenge(name); }}>
+          <form onSubmit={(e) => { e.preventDefault(); if (nameUsable) requestChallenge(name); }}>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-300 mb-2">Identity Name</label>
-              <div className="flex items-center bg-[#0d0e14] rounded-lg overflow-hidden border border-white/10 focus-within:border-verus-blue">
+              <div className={`flex items-center bg-[#0d0e14] rounded-lg overflow-hidden border focus-within:border-verus-blue ${
+                availability.state === 'taken' || availability.state === 'invalid' ? 'border-red-700' :
+                availability.state === 'available' ? 'border-green-700' : 'border-white/10'
+              }`}>
                 <input
                   type="text"
                   value={name}
@@ -277,14 +312,30 @@ export default function GetIdPage() {
                 />
                 <span className="px-3 text-gray-500 font-mono text-sm">.agentplatform@</span>
               </div>
-              <p className="text-xs text-gray-400 mt-1">Lowercase letters and numbers only. 3-32 characters.</p>
+              {/* Live availability feedback */}
+              {name.trim().length < 3 ? (
+                <p className="text-xs text-gray-400 mt-1">Lowercase letters and numbers only. 3-32 characters.</p>
+              ) : availability.state === 'checking' ? (
+                <p className="text-xs text-gray-400 mt-1 flex items-center gap-1.5">
+                  <span className="inline-block animate-spin rounded-full h-3 w-3 border-b border-gray-400"></span>
+                  Checking availability…
+                </p>
+              ) : availability.state === 'available' ? (
+                <p className="text-xs text-green-400 mt-1">✓ <span className="font-mono">{name}.agentplatform@</span> is available</p>
+              ) : availability.state === 'taken' ? (
+                <p className="text-xs text-red-400 mt-1">✗ That name is already taken — try another</p>
+              ) : availability.state === 'invalid' ? (
+                <p className="text-xs text-red-400 mt-1">✗ That name isn’t allowed (reserved)</p>
+              ) : (
+                <p className="text-xs text-gray-400 mt-1">Couldn’t check availability right now — you can still continue</p>
+              )}
             </div>
 
             <div className="flex gap-3">
               <button type="button" onClick={() => setStep(1)} className="btn-secondary flex-1 py-3">
                 ← Back
               </button>
-              <button type="submit" disabled={loading || name.trim().length < 3} className="btn-primary flex-1 py-3 disabled:opacity-50">
+              <button type="submit" disabled={loading || !nameUsable} className="btn-primary flex-1 py-3 disabled:opacity-50">
                 {loading ? 'Creating QR...' : 'Continue →'}
               </button>
             </div>
