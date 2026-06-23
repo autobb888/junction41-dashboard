@@ -149,10 +149,20 @@ function PaymentQR({ jobId, type, amount, currency, onTxDetected }) {
     );
   }
 
+  // Encode the wallet DEEPLINK (toWalletDeeplinkUri — scheme'd VerusPay invoice that
+  // Verus Mobile parses with amount+recipient), NOT the bare toQrString() base64, which
+  // the app reads as "only an address". Same format the working login/hire QRs use.
+  const payDeeplink = safeWalletDeeplink(qrData.deeplink);
   return (
     <div className="flex flex-col items-center gap-3">
       <div className="bg-white p-3 rounded-lg">
-        <QRCode value={qrData.qrString} size={200} level="M" />
+        {payDeeplink ? (
+          <QRCode value={payDeeplink} size={200} level="M" />
+        ) : (
+          <div className="w-[200px] h-[200px] flex items-center justify-center text-red-600 text-xs text-center px-2">
+            Payment link unavailable — paste the txid manually below
+          </div>
+        )}
       </div>
       <p className="text-xs text-center" style={{ color: 'var(--text-tertiary)' }}>
         Scan with Verus Mobile to pay <span className="text-white font-medium">{qrData.amount?.toFixed?.(4) || amount} {currency}</span>
