@@ -190,6 +190,84 @@ function PaymentQR({ jobId, type, amount, currency, onTxDetected }) {
   );
 }
 
+// Show BOTH payment QRs at once (agent + fee). Pay each in any order, no waiting
+// between them; polls the job and completes when both legs land (mempool-fast for
+// small amounts). Falls back to the step-by-step manual-txid flow via onManual.
+function PayBothPanel({ job, onUpdate, onCancel, onManual }) {
+  const [legs, setLegs] = useState({ agent: !!job.payment?.txid, fee: !!job.payment?.platformFeeTxid });
+  const feeAmount = job.payment?.feeAmount ?? (Number(job.amount) * 0.05);
+  const doneRef = useRef(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const id = setInterval(async () => {
+      try {
+        const res = await fetch(`${API_BASE}/v1/jobs/${job.id}`, { credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+        const j = data.data;
+        if (cancelled) return;
+        setLegs({ agent: !!j?.payment?.txid, fee: !!j?.payment?.platformFeeTxid });
+        if (!doneRef.current && (j?.status === 'in_progress' || (j?.payment?.txid && j?.payment?.platformFeeTxid))) {
+          doneRef.current = true;
+          clearInterval(id);
+          onUpdate?.();
+        }
+      } catch { /* keep polling */ }
+    }, 6000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [job.id]);
+
+  const both = legs.agent && legs.fee;
+
+  return (
+    <div className="bg-gray-900 rounded-lg p-4 space-y-4 border border-gray-700">
+      <div className="flex items-center justify-between">
+        <h4 className="text-white font-medium text-sm">Pay both — scan each in Verus Mobile</h4>
+        <span className="text-xs text-gray-500">2 transactions</span>
+      </div>
+      <p className="text-gray-400 text-xs">
+        Pay both now, in any order — no need to wait between them. This updates on its own
+        when both land (small amounts confirm from the mempool in seconds).
+      </p>
+
+      {/* Agent leg */}
+      <div className="rounded-lg border p-3" style={{ borderColor: legs.agent ? 'rgba(52,211,153,0.4)' : 'rgba(255,255,255,0.08)' }}>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium text-white">1. Agent — {job.amount} {job.currency}</span>
+          {legs.agent ? <span className="text-xs text-green-400">✓ received</span> : <span className="text-xs text-gray-400">waiting…</span>}
+        </div>
+        {!legs.agent && <PaymentQR jobId={job.id} type="agent" amount={job.amount} currency={job.currency} onTxDetected={() => {}} />}
+      </div>
+
+      {/* Fee leg */}
+      <div className="rounded-lg border p-3" style={{ borderColor: legs.fee ? 'rgba(52,211,153,0.4)' : 'rgba(255,255,255,0.08)' }}>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium text-white">2. Platform fee — {feeAmount.toFixed(4)} {job.currency}</span>
+          {legs.fee ? <span className="text-xs text-green-400">✓ received</span> : <span className="text-xs text-gray-400">waiting…</span>}
+        </div>
+        {!legs.fee && <PaymentQR jobId={job.id} type="fee" amount={feeAmount} currency={job.currency} onTxDetected={() => {}} />}
+      </div>
+
+      <div className="flex items-center gap-2 text-xs">
+        {both ? (
+          <span className="text-green-400">✓ Both received — starting job…</span>
+        ) : (
+          <span className="flex items-center gap-2 text-gray-400">
+            <div className="animate-spin rounded-full h-3 w-3 border-b border-verus-blue"></div>
+            Waiting for {(!legs.agent && !legs.fee) ? 'both payments' : !legs.agent ? 'agent payment' : 'platform fee'}…
+          </span>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between">
+        <button type="button" onClick={onManual} className="text-xs text-gray-500 hover:text-gray-300">Can’t scan? Enter txids manually →</button>
+        <button onClick={onCancel} className="btn-secondary text-sm">Close</button>
+      </div>
+    </div>
+  );
+}
+
 function ExtensionPanel({ job, loading, setLoading, setError, onUpdate, onCancel }) {
   const isFreeLifecycle = job.status === 'paused' && (job.lifecycle?.reactivationFee || 0) === 0;
   const [extAmount, setExtAmount] = useState('');
@@ -429,10 +507,10 @@ export default function JobActions({ job, onUpdate, autoOpenPayment, onAutoOpenC
   useEffect(() => {
     if (autoOpenPayment && isBuyer && job.status === 'accepted' && !signPanel) {
       if (!job.payment?.txid) {
-        // Default to the scannable 2-step flow (agent QR first). Mobile-first: a single
-        // QR can't encode the 2-output combined tx, so auto-landing there showed CLI-only.
-        // The combined one-TX option stays available via the "Pay All in One TX" button.
-        setSignPanel({ action: 'payment', type: 'txid' });
+        // Default to the "pay both" view: both QRs at once, pay in any order, no waiting
+        // between them. (A single QR can't encode a 2-output tx, so combined-CLI stays
+        // a secondary option.)
+        setSignPanel({ action: 'pay-both', type: 'pay-both' });
         setSignatureInput('');
       } else if (!job.payment?.platformFeeTxid) {
         setSignPanel({ action: 'platform-fee', type: 'fee-txid' });
@@ -510,15 +588,15 @@ export default function JobActions({ job, onUpdate, autoOpenPayment, onAutoOpenC
           </button>
         )}
 
-        {/* Buyer: Payment options (two-step or combined) */}
+        {/* Buyer: Payment options */}
         {isBuyer && job.status === 'accepted' && !job.payment?.txid && !signPanel && (
           <>
             <button
-              onClick={() => { setSignPanel({ action: 'payment', type: 'txid' }); setSignatureInput(''); }}
+              onClick={() => { setSignPanel({ action: 'pay-both', type: 'pay-both' }); setSignatureInput(''); }}
               disabled={loading}
               className="btn-primary text-sm"
             >
-              📱 Scan QR to Pay (2 steps)
+              📱 Scan QR to Pay
             </button>
             <button
               onClick={() => { setSignPanel({ action: 'payment-combined', type: 'combined-txid' }); setSignatureInput(''); }}
@@ -736,7 +814,17 @@ export default function JobActions({ job, onUpdate, autoOpenPayment, onAutoOpenC
       )}
 
       {/* Sign Panel (accept/complete) */}
-      {signPanel && !['txid', 'delivery', 'fee-txid', 'extension', 'combined-txid', 'reject-delivery'].includes(signPanel.type) && (
+      {/* Pay both QRs at once (default scan-to-pay) */}
+      {signPanel && signPanel.type === 'pay-both' && (
+        <PayBothPanel
+          job={job}
+          onUpdate={() => { setSignPanel(null); onUpdate?.(); }}
+          onCancel={() => { setSignPanel(null); setSignatureInput(''); }}
+          onManual={() => { setSignPanel({ action: 'payment', type: 'txid' }); setSignatureInput(''); }}
+        />
+      )}
+
+      {signPanel && !['txid', 'delivery', 'fee-txid', 'extension', 'combined-txid', 'reject-delivery', 'pay-both'].includes(signPanel.type) && (
         <div className="bg-gray-900 rounded-lg p-4 space-y-3 border border-gray-700">
           <h4 className="text-white font-medium text-sm">Sign to {signPanel.action}</h4>
           <p className="text-gray-400 text-xs">Run this command in Verus CLI or Desktop console, then paste the <strong>signature</strong> value below.</p>
