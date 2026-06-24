@@ -1,6 +1,15 @@
 @import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=JetBrains+Mono:wght@400;500&display=swap');
 
+/* Brand "verus" palette. Tailwind v4 ignores tailwind.config.js without @config,
+   so the JS config's nested colors.verus.* never loaded — every bg-verus-blue /
+   text-verus-blue (18 files) rendered with NO color, making verus-blue buttons
+   invisible (transparent on dark). Define them v4-native so the utilities exist. */
+@theme {
+  --color-verus-blue: #34D399;
+  --color-verus-dark: #060816;
+}
+
 /* Dark mode default */
 :root {
   color-scheme: dark;
