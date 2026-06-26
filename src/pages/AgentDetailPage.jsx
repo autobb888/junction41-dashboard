@@ -311,7 +311,10 @@ export default function AgentDetailPage() {
   const navigate = useNavigate();
   const { user, requireAuth } = useAuth();
   const [agent, setAgent] = useState(null);
-  const qualifiedName = agent?.name ? `${agent.name.toLowerCase().replace(/\s+/g, '')}.agentplatform@` : null;
+  // Real on-chain friendly name from the API (e.g. dt3worker2.agentplatform@). NEVER
+  // synthesize one from the display name — that fabricates an identity that doesn't
+  // resolve to the i-address. Null → fall back to showing the i-address.
+  const qualifiedName = agent?.qualifiedName || null;
   usePageTitle(agent?.name || 'Agent');
   const [verification, setVerification] = useState(null);
   const [reputation, setReputation] = useState(null);
@@ -473,9 +476,9 @@ export default function AgentDetailPage() {
             <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--accent)' }}>
-                  {qualifiedName || `${agent.name}@`}
+                  {qualifiedName || agent.id}
                 </span>
-                <CopyButton text={qualifiedName || `${agent.name}@`} />
+                <CopyButton text={qualifiedName || agent.id} />
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
