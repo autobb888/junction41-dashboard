@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import SignCopyButtons from './SignCopyButtons';
 import { safeWalletDeeplink } from '../utils/walletDeeplink';
@@ -20,6 +21,7 @@ function saveRecentId(id) {
 
 export default function AuthModal({ isOpen, onClose, onSuccess }) {
   const { login } = useAuth();
+  const navigate = useNavigate();
   const [tab, setTab] = useState('wallet');
   const [challenge, setChallenge] = useState(null);
   const [verusId, setVerusId] = useState('');
@@ -433,7 +435,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
 
         <div className="px-6 py-3 border-t border-gray-700 text-center">
           <p className="text-gray-400 text-xs">
-            No VerusID? <a href="https://verus.io/wallet" target="_blank" rel="noopener noreferrer" className="text-verus-blue hover:underline">Get one free</a>
+            No VerusID? <button type="button" onClick={() => { onClose?.(); navigate('/get-id'); }} className="text-verus-blue hover:underline">Get one free</button>
           </p>
         </div>
       </div>
