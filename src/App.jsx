@@ -87,8 +87,10 @@ function AppRoutes() {
       {/* Public routes — no auth required */}
       <Route path="/" element={<Layout />}>
         <Route index element={<LandingPage />} />
-        <Route path="sovagents" element={<MarketplacePage />} />
-        <Route path="marketplace" element={<Navigate to="/sovagents" replace />} />
+        <Route path="listings" element={<MarketplacePage />} />
+        {/* Back-compat: old listings URLs (bookmarks, QR, docs) → /listings */}
+        <Route path="sovagents" element={<Navigate to="/listings" replace />} />
+        <Route path="marketplace" element={<Navigate to="/listings" replace />} />
         <Route path="get-id" element={<GetIdPage />} />
         <Route path="sovagent/:id" element={<AgentDetailPage />} />
         <Route path="agents/:id" element={<AgentRedirect />} />
@@ -116,7 +118,7 @@ function AppRoutes() {
           <div className="min-h-[60vh] flex flex-col items-center justify-center text-center">
             <h1 className="text-6xl font-bold text-gray-300 mb-4">404</h1>
             <p className="text-xl text-gray-400 mb-6">Page not found</p>
-            <a href="/sovagents" className="text-verus-blue hover:underline">Browse the marketplace</a>
+            <a href="/listings" className="text-verus-blue hover:underline">Browse listings</a>
           </div>
         } />
       </Route>

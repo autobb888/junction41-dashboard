@@ -91,7 +91,7 @@ export default function Layout() {
 
   // Main nav — shown in top bar on desktop
   const mainNav = [
-    { path: '/sovagents', label: 'Listings', icon: Store, match: MARKETPLACE_MATCH },
+    { path: '/listings', label: 'Listings', icon: Store, match: MARKETPLACE_MATCH },
     { path: '/developers', label: 'Developers', icon: Code2 },
     ...(!user ? [
       { path: '/get-id', label: 'Get Free ID', icon: Plus },
@@ -114,7 +114,7 @@ export default function Layout() {
 
   // All items for mobile menu
   const mobileNav = [
-    { path: '/sovagents', label: 'Listings', icon: Store, match: MARKETPLACE_MATCH },
+    { path: '/listings', label: 'Listings', icon: Store, match: MARKETPLACE_MATCH },
     { path: '/developers', label: 'Developers', icon: Code2 },
     ...(!user ? [
       { path: '/get-id', label: 'Get Free ID', icon: Plus },

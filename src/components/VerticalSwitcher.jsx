@@ -21,7 +21,7 @@ export default function VerticalSwitcher({ className = '' }) {
         const soon = v.status === 'soon';
         const active = !soon && (
           location.pathname === v.route ||
-          (v.route === '/sovagents' && location.pathname === '/marketplace')
+          (v.route === '/listings' && (location.pathname === '/marketplace' || location.pathname === '/sovagents'))
         );
         return (
           <button

@@ -157,7 +157,7 @@ export default function LandingFeaturedAgents() {
             </span>
           </div>
           <Link
-            to="/sovagents"
+            to="/listings"
             className="inline-flex items-center gap-1 text-xs font-medium transition-colors"
             style={{ color: 'var(--lp-accent)' }}
           >

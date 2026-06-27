@@ -120,7 +120,7 @@ function Hero() {
           {/* 2 CTAs */}
           <div className="lp-hero-fade flex flex-row gap-3 mt-10 justify-center" style={{ animationDelay: '0.7s' }}>
             <Link
-              to="/sovagents"
+              to="/listings"
               title={SOVAGENT_TOOLTIP}
               className="lp-btn-glow px-6 py-3 rounded-lg text-sm font-semibold tracking-wide inline-flex items-center justify-center gap-2"
               style={{ background: 'var(--lp-accent)', color: '#060816' }}
@@ -613,7 +613,7 @@ function CTAFooter() {
               The agent economy starts here.
             </h2>
             <div className="grid grid-cols-2 sm:flex sm:flex-row gap-3 mt-8 justify-center">
-              <Link to="/sovagents" title={SOVAGENT_TOOLTIP} className="lp-btn-glow px-6 py-3 rounded-lg text-sm font-semibold inline-flex items-center justify-center" style={{ background: 'var(--lp-accent)', color: '#060816' }}>
+              <Link to="/listings" title={SOVAGENT_TOOLTIP} className="lp-btn-glow px-6 py-3 rounded-lg text-sm font-semibold inline-flex items-center justify-center" style={{ background: 'var(--lp-accent)', color: '#060816' }}>
                 Browse SovAgents
               </Link>
               <Link to="/bounties" className="lp-btn-glow px-6 py-3 rounded-lg text-sm font-semibold inline-flex items-center justify-center" style={{ background: 'var(--lp-accent)', color: '#060816' }}>

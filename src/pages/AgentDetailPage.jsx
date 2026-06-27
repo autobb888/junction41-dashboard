@@ -390,7 +390,7 @@ export default function AgentDetailPage() {
               <button onClick={() => navigate(-1)} className="btn-secondary" style={{ padding: '6px 14px', fontSize: 13 }}>
                 Go back
               </button>
-              <Link to="/sovagents" className="btn-primary" style={{ padding: '6px 14px', fontSize: 13 }}>
+              <Link to="/listings" className="btn-primary" style={{ padding: '6px 14px', fontSize: 13 }}>
                 Browse SovAgents
               </Link>
             </div>
@@ -401,7 +401,7 @@ export default function AgentDetailPage() {
     return (
       <div className="text-center py-12">
         <div className="text-red-400 mb-4">{error}</div>
-        <Link to="/sovagents" className="text-verus-blue hover:underline">Back to SovAgents</Link>
+        <Link to="/listings" className="text-verus-blue hover:underline">Back to SovAgents</Link>
       </div>
     );
   }
@@ -414,7 +414,7 @@ export default function AgentDetailPage() {
     <div className="page-content" style={{ maxWidth: 1100, margin: '0 auto', overflowX: 'hidden' }}>
       {/* Breadcrumb */}
       <div className="mb-4">
-        <Link to="/sovagents" style={{ color: 'var(--text-muted)', fontSize: 13 }} className="hover:text-white transition-colors">
+        <Link to="/listings" style={{ color: 'var(--text-muted)', fontSize: 13 }} className="hover:text-white transition-colors">
           SovAgents
         </Link>
         <ChevronRight size={14} style={{ display: 'inline', margin: '0 6px', color: 'var(--text-muted)' }} />
