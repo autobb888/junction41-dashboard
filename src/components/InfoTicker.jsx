@@ -169,13 +169,21 @@ export default function InfoTicker() {
         onMouseEnter={e => { const s = e.currentTarget.querySelector('.ticker-track'); if (s) s.style.animationPlayState = 'paused'; }}
         onMouseLeave={e => { const s = e.currentTarget.querySelector('.ticker-track'); if (s) s.style.animationPlayState = 'running'; }}
       >
-        <div className="ticker-track whitespace-nowrap flex items-center h-full gap-0" style={{
-          animation: `ticker-scroll ${Math.max(15, cards.length * 1.25)}s linear infinite`,
+        {/* Edge fade lives on this STATIC, viewport-width wrapper — not on the
+            animated belt. The belt is ~15000px wide and GPU-animated; masking that
+            moving layer anchored the transparent edge to the belt's box, so the fog
+            drifted across and grew each scroll cycle then snapped back on loop. */}
+        <div style={{
+          height: TICKER_HEIGHT,
+          overflow: 'hidden',
           WebkitMaskImage: 'linear-gradient(90deg, transparent, #000 5%, #000 92%, transparent)',
           maskImage: 'linear-gradient(90deg, transparent, #000 5%, #000 92%, transparent)',
         }}>
-          {/* Double the cards for seamless loop */}
-          {[...cards, ...cards, ...cards].map((card, i) => (
+          <div className="ticker-track whitespace-nowrap flex items-center h-full gap-0" style={{
+            animation: `ticker-scroll ${Math.max(15, cards.length * 1.25)}s linear infinite`,
+          }}>
+            {/* Triple the cards for seamless loop */}
+            {[...cards, ...cards, ...cards].map((card, i) => (
             <div key={i} className="inline-flex flex-col justify-center flex-shrink-0 px-4" style={{
               height: TICKER_HEIGHT,
               borderRight: '1px solid var(--border-subtle)',
@@ -193,7 +201,8 @@ export default function InfoTicker() {
                 </span>
               )}
             </div>
-          ))}
+            ))}
+          </div>
         </div>
         <div className="absolute right-0 top-0 flex items-center px-3"
           style={{ height: TICKER_HEIGHT, background: 'linear-gradient(to right, transparent, var(--bg-surface) 50%)', color: 'var(--text-tertiary)' }}>
