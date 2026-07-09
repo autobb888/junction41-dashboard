@@ -38,8 +38,10 @@ export default function DisputeModal({ job, dispute, role, onClose, onAction }) 
 
   // Sign message templates
   const fileMsg = `J41-DISPUTE|Job:${job.jobHash}|Reason:${reason}|Ts:${ts}|I am raising a dispute on this job.`;
-  const respondMsg = `J41-DISPUTE-RESPOND|Job:${job.jobHash}|Action:${action}|Msg:${response}|Ts:${ts}|I respond to this dispute.`;
-  const reworkAcceptMsg = `J41-REWORK-ACCEPT|Job:${job.jobHash}|Ts:${ts}|I accept the rework terms.`;
+  // Canonical strings the backend verifies verbatim — NO |Msg: field, NO trailing sentence.
+  // Job uses the FULL job hash (API serializes jobHash = job.job_hash).
+  const respondMsg = `J41-DISPUTE-RESPOND|Job:${job.jobHash}|Action:${action}|Ts:${ts}`;
+  const reworkAcceptMsg = `J41-REWORK-ACCEPT|Job:${job.jobHash}|Ts:${ts}`;
 
   function handleSigInput(val) {
     if (val.trim().startsWith('{')) {

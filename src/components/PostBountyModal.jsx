@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from './Toast';
 import { apiFetch } from '../utils/api';
+import SignCopyButtons from './SignCopyButtons';
 
 export default function PostBountyModal({ isOpen, onClose, onSuccess }) {
   const { user } = useAuth();
@@ -22,6 +23,11 @@ export default function PostBountyModal({ isOpen, onClose, onSuccess }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [categories, setCategories] = useState([]);
+  // Signing: user signs the canonical funding commitment in their Verus wallet
+  // (CLI / Desktop console) and pastes the signature. The backend verifies it
+  // against the exact same string — there is no bounty QR-consent route.
+  const [signature, setSignature] = useState('');
+  const [timestamp, setTimestamp] = useState(() => Math.floor(Date.now() / 1000));
 
   // Reset form on close
   useEffect(() => {
@@ -29,7 +35,7 @@ export default function PostBountyModal({ isOpen, onClose, onSuccess }) {
       setTitle(''); setDescription(''); setAmount(''); setCurrency('VRSCTEST');
       setCategory(''); setMaxClaimants(1); setApplicationDeadline('');
       setMinReviews(''); setMinTrustTier(''); setRequiredCategory('');
-      setError(null);
+      setError(null); setSignature(''); setTimestamp(Math.floor(Date.now() / 1000));
     }
   }, [isOpen]);
 
@@ -82,30 +88,14 @@ export default function PostBountyModal({ isOpen, onClose, onSuccess }) {
       return;
     }
 
+    if (!signature.trim()) {
+      setError('Please sign the funding commitment and paste your signature');
+      return;
+    }
+
     setSubmitting(true);
 
     try {
-      const timestamp = Math.floor(Date.now() / 1000);
-      const signMessage = `J41-BOUNTY|Post:${title.trim()}|Amount:${amountNum}|Currency:${currency}|Ts:${timestamp}|I commit to funding this bounty.`;
-
-      // Request signature from Verus
-      let signature;
-      try {
-        const signRes = await apiFetch('/v1/me/sign', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: signMessage }),
-        });
-        if (!signRes.ok) throw new Error('Signing failed');
-        const signData = await signRes.json();
-        signature = signData.data?.signature;
-        if (!signature) throw new Error('No signature returned');
-      } catch {
-        setError('Failed to sign bounty commitment. Make sure your identity is available for signing.');
-        setSubmitting(false);
-        return;
-      }
-
       const body = {
         title: title.trim(),
         description: description.trim(),
@@ -117,7 +107,7 @@ export default function PostBountyModal({ isOpen, onClose, onSuccess }) {
         minReviews: minReviews ? parseInt(minReviews) : undefined,
         minTrustTier: minTrustTier || undefined,
         requiredCategory: requiredCategory || undefined,
-        signature,
+        signature: signature.trim(),
         timestamp,
       };
 
@@ -140,6 +130,21 @@ export default function PostBountyModal({ isOpen, onClose, onSuccess }) {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  // Canonical funding-commitment message — MUST match the backend's verify string
+  // in POST /v1/bounties verbatim (title is trimmed the same way the body is sent).
+  const idName = user?.identityName ? `${user.identityName}@` : 'yourID@';
+  const amountNum = parseFloat(amount);
+  const canSign = !!title.trim() && !!description.trim() && !isNaN(amountNum) && amountNum > 0;
+  const signMessage = `J41-BOUNTY|Post:${title.trim()}|Amount:${amountNum}|Currency:${currency}|Ts:${timestamp}|I commit to funding this bounty.`;
+  const signCmd = `signmessage "${idName}" "${signMessage.replace(/"/g, '\\"')}"`;
+
+  function handleSigInput(val) {
+    if (val.trim().startsWith('{')) {
+      try { const p = JSON.parse(val.trim()); if (p.signature) val = p.signature; } catch { /* not JSON */ }
+    }
+    setSignature(val);
   }
 
   const fieldStyle = {
@@ -277,22 +282,55 @@ export default function PostBountyModal({ isOpen, onClose, onSuccess }) {
             </div>
           )}
 
+          {/* Sign the funding commitment — sign in your Verus wallet, paste the signature */}
+          {canSign && (
+            <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <label style={{ ...labelStyle, marginBottom: 0 }}>Sign funding commitment *</label>
+                <button
+                  type="button"
+                  onClick={() => { setTimestamp(Math.floor(Date.now() / 1000)); setSignature(''); }}
+                  style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', fontSize: 12, cursor: 'pointer' }}
+                >
+                  Refresh
+                </button>
+              </div>
+              <p style={{ fontSize: 12, color: 'var(--text-tertiary)', margin: 0 }}>
+                Run this in the Verus CLI or Desktop console (Help → Debug Window → Console), then paste the signature.
+              </p>
+              <div style={{ position: 'relative' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
+                  <SignCopyButtons command={signCmd} />
+                </div>
+                <code style={{ display: 'block', background: 'var(--bg-inset)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: 10, fontSize: 11, color: 'var(--accent-primary)', wordBreak: 'break-all', fontFamily: 'monospace' }}>
+                  {signCmd}
+                </code>
+              </div>
+              <input
+                style={{ ...fieldStyle, fontFamily: 'monospace', fontSize: 13 }}
+                value={signature}
+                onChange={e => handleSigInput(e.target.value)}
+                placeholder="Paste signature (AW1B...)"
+              />
+            </div>
+          )}
+
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || !canSign || !signature.trim()}
             style={{
               padding: '12px 24px',
               borderRadius: 10,
               border: 'none',
-              background: submitting ? 'var(--text-tertiary)' : 'var(--accent-gradient)',
+              background: (submitting || !canSign || !signature.trim()) ? 'var(--text-tertiary)' : 'var(--accent-gradient)',
               color: '#000',
               fontWeight: 600,
               fontSize: 15,
-              cursor: submitting ? 'not-allowed' : 'pointer',
+              cursor: (submitting || !canSign || !signature.trim()) ? 'not-allowed' : 'pointer',
               marginTop: 4,
             }}
           >
-            {submitting ? 'Posting...' : 'Sign & Post Bounty'}
+            {submitting ? 'Posting...' : 'Post Bounty'}
           </button>
         </form>
       </div>

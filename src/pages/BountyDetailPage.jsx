@@ -4,6 +4,40 @@ import { Award, Clock, Users, Filter, ArrowLeft, CheckCircle, AlertTriangle } fr
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { apiFetch } from '../utils/api';
+import SignCopyButtons from '../components/SignCopyButtons';
+
+/**
+ * CLI signing block — mirrors the Advanced (CLI) pattern used across the app
+ * (HireModal / AuthModal / DisputeModal): show a `signmessage` command the user
+ * runs in their Verus wallet, then paste the signature. There is no bounty
+ * QR-consent route, so this is the real signing path for bounties.
+ */
+function CliSignBlock({ idName, message, signature, onSignature }) {
+  const cmd = `signmessage "${idName}" "${message.replace(/"/g, '\\"')}"`;
+  function handleInput(val) {
+    if (val.trim().startsWith('{')) {
+      try { const p = JSON.parse(val.trim()); if (p.signature) val = p.signature; } catch { /* not JSON */ }
+    }
+    onSignature(val);
+  }
+  return (
+    <div style={{ border: '1px solid var(--border-subtle)', borderRadius: 10, padding: 14, background: 'var(--bg-elevated)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Sign in the Verus CLI or Desktop console, then paste the signature</span>
+        <SignCopyButtons command={cmd} />
+      </div>
+      <code style={{ display: 'block', background: 'var(--bg-inset)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: 10, fontSize: 11, color: 'var(--accent-primary)', wordBreak: 'break-all', fontFamily: 'monospace' }}>
+        {cmd}
+      </code>
+      <input
+        value={signature}
+        onChange={e => handleInput(e.target.value)}
+        placeholder="Paste signature (AW1B...)"
+        style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border-default)', background: 'var(--bg-inset)', color: 'var(--text-primary)', fontSize: 13, fontFamily: 'monospace', outline: 'none' }}
+      />
+    </div>
+  );
+}
 
 function timeRemaining(deadline) {
   if (!deadline) return null;
@@ -36,7 +70,11 @@ export default function BountyDetailPage() {
   const [applyMessage, setApplyMessage] = useState('');
   const [applying, setApplying] = useState(false);
   const [applyError, setApplyError] = useState(null);
+  const [applySignature, setApplySignature] = useState('');
+  const [applyTs] = useState(() => Math.floor(Date.now() / 1000));
   const [selectedApplicants, setSelectedApplicants] = useState([]);
+  const [awardSignature, setAwardSignature] = useState('');
+  const [awardTs] = useState(() => Math.floor(Date.now() / 1000));
   const [awarding, setAwarding] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
@@ -72,30 +110,22 @@ export default function BountyDetailPage() {
   const canApply = bounty?.status === 'open' && user && !isPoster && !hasApplied;
   const canSelect = isPoster && (bounty?.status === 'open' || bounty?.status === 'reviewing') && bounty?.applications?.length > 0;
 
+  const idName = user?.identityName ? `${user.identityName}@` : 'yourID@';
+  const applySignMessage = `J41-BOUNTY-APPLY|BountyId:${id}|Ts:${applyTs}|I apply to claim this bounty.`;
+  const awardSignMessage = `J41-BOUNTY-AWARD|BountyId:${id}|Count:${selectedApplicants.length}|Ts:${awardTs}|I award this bounty.`;
+
   async function handleApply(e) {
     e.preventDefault();
     if (!user) { requireAuth(); return; }
+    if (!applySignature.trim()) { setApplyError('Please sign the application message and paste your signature'); return; }
     setApplyError(null);
     setApplying(true);
 
     try {
-      const timestamp = Math.floor(Date.now() / 1000);
-      const signMessage = `J41-BOUNTY-APPLY|BountyId:${id}|Ts:${timestamp}|I apply to claim this bounty.`;
-
-      const signRes = await apiFetch('/v1/me/sign', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: signMessage }),
-      });
-      if (!signRes.ok) throw new Error('Signing failed');
-      const signData = await signRes.json();
-      const signature = signData.data?.signature;
-      if (!signature) throw new Error('No signature returned');
-
       const res = await apiFetch(`/v1/bounties/${id}/apply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: applyMessage || undefined, signature, timestamp }),
+        body: JSON.stringify({ message: applyMessage || undefined, signature: applySignature.trim(), timestamp: applyTs }),
       });
 
       const data = await res.json();
@@ -103,6 +133,7 @@ export default function BountyDetailPage() {
 
       addToast?.('Application submitted!');
       setApplyMessage('');
+      setApplySignature('');
       fetchBounty();
     } catch (err) {
       setApplyError(err.message);
@@ -120,25 +151,14 @@ export default function BountyDetailPage() {
   async function handleAward() {
     if (!user) { requireAuth(); return; }
     if (selectedApplicants.length === 0) return;
+    if (!awardSignature.trim()) { addToast?.('Please sign the award message and paste your signature', 'error'); return; }
     setAwarding(true);
 
     try {
-      const timestamp = Math.floor(Date.now() / 1000);
-      const signMessage = `J41-BOUNTY-AWARD|BountyId:${id}|Count:${selectedApplicants.length}|Ts:${timestamp}|I award this bounty.`;
-
-      const signRes = await apiFetch('/v1/me/sign', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: signMessage }),
-      });
-      if (!signRes.ok) throw new Error('Signing failed');
-      const signData = await signRes.json();
-      const signature = signData.data?.signature;
-
       const res = await apiFetch(`/v1/bounties/${id}/select`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ applicantIds: selectedApplicants, signature, timestamp }),
+        body: JSON.stringify({ applicantIds: selectedApplicants, signature: awardSignature.trim(), timestamp: awardTs }),
       });
 
       const data = await res.json();
@@ -146,6 +166,7 @@ export default function BountyDetailPage() {
 
       addToast?.(`Bounty awarded! ${data.data?.jobsCreated?.length || 0} job(s) created.`);
       setSelectedApplicants([]);
+      setAwardSignature('');
       fetchBounty();
     } catch (err) {
       addToast?.(err.message, 'error');
@@ -349,25 +370,32 @@ export default function BountyDetailPage() {
 
         {/* Award button */}
         {canSelect && selectedApplicants.length > 0 && (
-          <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border-subtle)' }}>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 10 }}>
+          <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>
               Award to {selectedApplicants.length} applicant{selectedApplicants.length !== 1 ? 's' : ''} — total cost: {bounty.amount * selectedApplicants.length} {bounty.currency}
             </p>
+            <CliSignBlock
+              idName={idName}
+              message={awardSignMessage}
+              signature={awardSignature}
+              onSignature={setAwardSignature}
+            />
             <button
               onClick={handleAward}
-              disabled={awarding}
+              disabled={awarding || !awardSignature.trim()}
               style={{
                 padding: '10px 24px',
                 borderRadius: 10,
                 border: 'none',
-                background: awarding ? 'var(--text-tertiary)' : 'var(--accent-gradient)',
+                background: (awarding || !awardSignature.trim()) ? 'var(--text-tertiary)' : 'var(--accent-gradient)',
                 color: '#000',
                 fontWeight: 600,
                 fontSize: 14,
-                cursor: awarding ? 'not-allowed' : 'pointer',
+                cursor: (awarding || !awardSignature.trim()) ? 'not-allowed' : 'pointer',
+                alignSelf: 'flex-start',
               }}
             >
-              {awarding ? 'Awarding...' : `Sign & Award Bounty`}
+              {awarding ? 'Awarding...' : `Award Bounty`}
             </button>
           </div>
         )}
@@ -402,22 +430,28 @@ export default function BountyDetailPage() {
                 outline: 'none',
               }}
             />
+            <CliSignBlock
+              idName={idName}
+              message={applySignMessage}
+              signature={applySignature}
+              onSignature={setApplySignature}
+            />
             <button
               type="submit"
-              disabled={applying}
+              disabled={applying || !applySignature.trim()}
               style={{
                 padding: '10px 24px',
                 borderRadius: 10,
                 border: 'none',
-                background: applying ? 'var(--text-tertiary)' : 'var(--accent-gradient)',
+                background: (applying || !applySignature.trim()) ? 'var(--text-tertiary)' : 'var(--accent-gradient)',
                 color: '#000',
                 fontWeight: 600,
                 fontSize: 14,
-                cursor: applying ? 'not-allowed' : 'pointer',
+                cursor: (applying || !applySignature.trim()) ? 'not-allowed' : 'pointer',
                 alignSelf: 'flex-start',
               }}
             >
-              {applying ? 'Applying...' : 'Sign & Apply'}
+              {applying ? 'Applying...' : 'Apply'}
             </button>
           </form>
         </div>
