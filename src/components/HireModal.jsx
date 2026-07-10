@@ -44,6 +44,9 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
 
   // Signing method: 'wallet' (scan QR in Verus Mobile) | 'cli' (paste a signmessage).
   const [signMethod, setSignMethod] = useState('wallet');
+  // Wallet request protocol: 'legacy' (LoginConsentRequest — stock Verus Mobile)
+  // | 'genreq' (new-envelope GenericRequest — generic-request wallet builds).
+  const [walletProtocol, setWalletProtocol] = useState('legacy');
   const [consent, setConsent] = useState(null);        // { challengeId, qrDataUrl, deeplink, expiresAt }
   const [consentPending, setConsentPending] = useState(null); // { verusId, identityName } once the wallet signed
   const [consentError, setConsentError] = useState('');
@@ -324,7 +327,7 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(buildJobBody()),
+        body: JSON.stringify({ ...buildJobBody(), protocol: walletProtocol }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error?.message || 'Could not create the signing request');
@@ -637,6 +640,19 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
             {/* WALLET (QR) */}
             {signMethod === 'wallet' && (
               <div className="text-center">
+                {/* Request protocol — changing it invalidates any pending QR */}
+                {!consentPending && (
+                  <div className="flex items-center justify-center gap-2 mb-3 text-xs">
+                    <span className="text-gray-500">Wallet app:</span>
+                    <select
+                      value={walletProtocol}
+                      onChange={(e) => { setWalletProtocol(e.target.value); setConsent(null); setConsentError(''); }}
+                      className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-gray-200 text-xs">
+                      <option value="legacy">Verus Mobile (standard)</option>
+                      <option value="genreq">Generic-request wallet (beta)</option>
+                    </select>
+                  </div>
+                )}
                 {consentPending ? (
                   <div className="py-2">
                     <p className="text-gray-300 mb-1">Wallet approved. Confirm your hire as:</p>
@@ -650,7 +666,7 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
                 ) : consent && !consentExpired ? (
                   <>
                     <p className="text-gray-300 text-sm mb-3">
-                      Scan with <strong>Verus Mobile</strong> and approve the request to sign this hire.
+                      Scan with <strong>{walletProtocol === 'genreq' ? 'your generic-request wallet' : 'Verus Mobile'}</strong> and approve the request to sign this hire.
                     </p>
                     <div className="hidden md:block">
                       <div className="bg-white p-3 rounded-lg inline-block mb-2">

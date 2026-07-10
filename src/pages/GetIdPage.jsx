@@ -22,6 +22,8 @@ export default function GetIdPage() {
 
   // Primary (Verus Mobile) flow: signed provisioning QR + on-chain poll.
   const [prov, setProv] = useState(null); // { challengeId, name, identity, deeplink, qrDataUrl, expiresAt }
+  // 'legacy' = stock Verus Mobile; 'genreq' = generic-request wallet builds (beta).
+  const [walletProtocol, setWalletProtocol] = useState('legacy');
   const [result, setResult] = useState(null); // { status, identity, iAddress, funded? }
 
   // Manual (CLI / Desktop) fallback — the legacy /v1/onboard challenge-sign flow.
@@ -66,23 +68,40 @@ export default function GetIdPage() {
   const nameUsable = name.trim().length >= 3 && (availability.state === 'available' || availability.state === 'error');
 
   // ---- Primary flow: request a signed provisioning QR ------------------
+  // walletProtocol: 'legacy' (stock Verus Mobile) | 'genreq' (new-envelope
+  // GenericRequest — generic-request wallet builds). Both mint the same way;
+  // only the QR payload differs.
   async function requestChallenge(chosenName) {
     setError('');
     setLoading(true);
+    const lower = chosenName.toLowerCase().trim();
     try {
-      const res = await fetch(`${API_BASE}/v1/onboard/provision/challenge`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: chosenName.toLowerCase().trim() }),
-      });
-      const data = await res.json();
-      if (data?.data?.qrDataUrl) {
-        setProv(data.data);
-        setManualMode(false);
-        setStep(3);
+      let provData;
+      if (walletProtocol === 'genreq') {
+        const res = await fetch(`${API_BASE}/v1/onboard/provision/genreq?name=${encodeURIComponent(lower)}&format=json`);
+        const data = await res.json();
+        if (!res.ok || !data?.data?.qrDataUrl) {
+          setError(data?.error?.message || 'Could not create your QR code. Try a different name.');
+          return;
+        }
+        // Same shape step 3 expects; the genreq endpoint has no expiry.
+        provData = { ...data.data, name: lower };
       } else {
-        setError(data?.error?.message || 'Could not create your QR code. Try a different name.');
+        const res = await fetch(`${API_BASE}/v1/onboard/provision/challenge`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: lower }),
+        });
+        const data = await res.json();
+        if (!data?.data?.qrDataUrl) {
+          setError(data?.error?.message || 'Could not create your QR code. Try a different name.');
+          return;
+        }
+        provData = data.data;
       }
+      setProv(provData);
+      setManualMode(false);
+      setStep(3);
     } catch {
       setError('Failed to connect to the platform');
     } finally {
@@ -329,6 +348,15 @@ export default function GetIdPage() {
               ) : (
                 <p className="text-xs text-gray-400 mt-1">Couldn’t check availability right now — you can still continue</p>
               )}
+            </div>
+
+            <div className="mb-4 flex items-center gap-2 text-sm">
+              <label htmlFor="wallet-protocol" className="text-gray-400">Wallet app:</label>
+              <select id="wallet-protocol" value={walletProtocol} onChange={(e) => setWalletProtocol(e.target.value)}
+                className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-gray-200 text-sm">
+                <option value="legacy">Verus Mobile (standard)</option>
+                <option value="genreq">Generic-request wallet (beta)</option>
+              </select>
             </div>
 
             <div className="flex gap-3">
