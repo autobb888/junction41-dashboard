@@ -32,6 +32,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
   const [showIdDropdown, setShowIdDropdown] = useState(false);
   const [pendingConfirm, setPendingConfirm] = useState(null); // { verusId, identityName } when wallet has signed, awaiting user confirm
   const [confirming, setConfirming] = useState(false);
+  // 'legacy' (stock Verus Mobile) | 'genreq' (generic-request wallet builds, beta).
+  const [walletProtocol, setWalletProtocol] = useState('legacy');
   const pollIntervalRef = useRef(null);
   const fetchingRef = useRef(false);
   const modalRef = useRef(null);
@@ -137,7 +139,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
 
   if (!isOpen) return null;
 
-  async function doFetchChallenge() {
+  async function doFetchChallenge(protocolArg) {
     // Collapse concurrent fetches (StrictMode double-invoke, rapid reopen) to one
     // so we don't overwrite the session's active challenge mid-flight.
     if (fetchingRef.current) return;
@@ -145,7 +147,9 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`${API_BASE}/auth/consent/challenge`, { credentials: 'include' });
+      const proto = protocolArg ?? walletProtocol;
+      const q = proto === 'genreq' ? '?protocol=genreq' : '';
+      const res = await fetch(`${API_BASE}/auth/consent/challenge${q}`, { credentials: 'include' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error?.message || 'Failed to get challenge');
       setChallenge(data.data);
@@ -371,6 +375,24 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
                 </div>
               ) : (
                 <>
+                  {/* Wallet-app protocol — changing it re-issues the challenge */}
+                  <div className="flex items-center justify-center gap-2 mb-4 text-xs">
+                    <span className="text-gray-500">Wallet app:</span>
+                    <select
+                      value={walletProtocol}
+                      onChange={(e) => {
+                        const p = e.target.value;
+                        setWalletProtocol(p);
+                        setChallenge(null);
+                        setPendingConfirm(null);
+                        doFetchChallenge(p);
+                      }}
+                      className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-gray-200 text-xs"
+                    >
+                      <option value="legacy">Verus Mobile (standard)</option>
+                      <option value="genreq">Generic-request wallet (beta)</option>
+                    </select>
+                  </div>
                   {/* Desktop: open the local Verus Desktop app + scan-with-mobile QR */}
                   <div className="hidden md:block">
                     {safeDeeplink && (
