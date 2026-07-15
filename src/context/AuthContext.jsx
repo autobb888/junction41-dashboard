@@ -30,6 +30,19 @@ export function AuthProvider({ children }) {
     });
   }, []);
 
+  // P5: keep an active-but-idle session alive. Each poll hits /auth/session, which
+  // re-slides both the DB session and the browser cookie, so a user who leaves the
+  // tab open without firing other requests isn't logged out at the cookie's fixed
+  // lifetime. Only polls while the tab is visible to avoid needless background work.
+  useEffect(() => {
+    if (!user) return;
+    const KEEPALIVE_MS = 10 * 60 * 1000; // 10 min — well under the 1h session window
+    const id = setInterval(() => {
+      if (document.visibilityState === 'visible') checkSession();
+    }, KEEPALIVE_MS);
+    return () => clearInterval(id);
+  }, [user]);
+
   // Check admin access once per session (not on every navigation)
   useEffect(() => {
     if (!user) {

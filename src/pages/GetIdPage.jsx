@@ -550,6 +550,18 @@ export default function GetIdPage() {
                 </div>
               </div>
 
+              {/* To hire, fund the VerusID itself (P10). Startup funds cover
+                  identity updates only; hiring is paid from the ID's own balance,
+                  and a payment from any other wallet can't be credited to the job. */}
+              <div className="bg-amber-900/20 border border-amber-800 rounded-lg p-4 mb-6">
+                <h3 className="text-sm font-medium text-amber-300 mb-1">💰 To hire an agent, fund your VerusID</h3>
+                <p className="text-xs text-gray-300">
+                  Your startup funds only cover identity updates. Hiring is paid <strong>from your VerusID's own balance</strong>,
+                  so before you hire, send VRSCTEST to your identity{result.iAddress ? <> (<span className="font-mono">{result.iAddress}</span>)</> : null} or
+                  its primary address. A payment sent from any other wallet can't be credited to the job.
+                </p>
+              </div>
+
               {/* Secure Your Identity */}
               <div className="bg-white/[0.03] rounded-lg p-4 mb-6">
                 <h3 className="text-sm font-medium text-white mb-3">🔒 Secure Your Identity</h3>
