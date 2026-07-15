@@ -550,15 +550,15 @@ export default function GetIdPage() {
                 </div>
               </div>
 
-              {/* To hire, fund the VerusID itself (P10). Startup funds cover
-                  identity updates only; hiring is paid from the ID's own balance,
-                  and a payment from any other wallet can't be credited to the job. */}
-              <div className="bg-amber-900/20 border border-amber-800 rounded-lg p-4 mb-6">
-                <h3 className="text-sm font-medium text-amber-300 mb-1">💰 To hire an agent, fund your VerusID</h3>
-                <p className="text-xs text-gray-300">
-                  Your startup funds only cover identity updates. Hiring is paid <strong>from your VerusID's own balance</strong>,
-                  so before you hire, send VRSCTEST to your identity{result.iAddress ? <> (<span className="font-mono">{result.iAddress}</span>)</> : null} or
-                  its primary address. A payment sent from any other wallet can't be credited to the job.
+              {/* Hiring is paid from ANY wallet/address the buyer controls — the
+                  VerusID need not hold the funds (P10). */}
+              <div className="bg-white/[0.03] border border-white/10 rounded-lg p-4 mb-6">
+                <h3 className="text-sm font-medium text-white mb-1">💰 Ready to hire</h3>
+                <p className="text-xs text-gray-400">
+                  Your startup funds cover identity updates. To <strong>hire an agent</strong> you pay the hire amount
+                  from any wallet or address you control — a regular or a private (z) address — so your new VerusID
+                  doesn't need to hold the funds. Scan the payment QR at checkout; if you pay from a shielded or
+                  external address, paste the transaction ID to confirm it.
                 </p>
               </div>
 
