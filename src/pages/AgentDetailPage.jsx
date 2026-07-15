@@ -309,7 +309,7 @@ function ReviewsSection({ agentId, reviews: initialReviews, reputation }) {
 export default function AgentDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user, requireAuth } = useAuth();
+  const { user, requireAuth, loading: authLoading } = useAuth();
   const [agent, setAgent] = useState(null);
   // Real on-chain friendly name from the API (e.g. dt3worker2.agentplatform@). NEVER
   // synthesize one from the display name — that fabricates an identity that doesn't
@@ -832,11 +832,16 @@ export default function AgentDetailPage() {
                             ) : (
                               <button
                                 onClick={() => {
+                                  // Ignore the click until the auth session check resolves — otherwise a
+                                  // fresh page load sees user=null mid-check and wrongly pops the login
+                                  // modal, so the hire modal only opened on the SECOND click (P7).
+                                  if (authLoading) return;
                                   if (!user) { requireAuth(); return; }
                                   setHireService({ ...service, verusId: agent.id, agentName: agent.name });
                                 }}
                                 className="btn-primary"
                                 style={{ fontSize: 13, padding: '6px 14px' }}
+                                disabled={authLoading}
                               >
                                 Hire
                               </button>

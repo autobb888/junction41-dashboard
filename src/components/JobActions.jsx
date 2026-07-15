@@ -765,8 +765,10 @@ export default function JobActions({ job, onUpdate, autoOpenPayment, onAutoOpenC
         </div>
       )}
 
-      {/* Reconnect Agent — either party, active or paused jobs */}
-      {['in_progress', 'delivered', 'paused'].includes(job.status) && (
+      {/* Nudge the agent to reconnect to chat (POST /reconnect — a webhook nudge,
+          NOT a resume). Hidden on 'paused' so it doesn't overlap the Resume Session
+          control in the panel above (P4). */}
+      {['in_progress', 'delivered'].includes(job.status) && (
         <button
           onClick={async () => {
             setLoading(true);
@@ -793,7 +795,7 @@ export default function JobActions({ job, onUpdate, autoOpenPayment, onAutoOpenC
           className="text-xs px-3 py-1.5 rounded-lg transition-colors"
           style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}
         >
-          {loading ? 'Sending...' : 'Reconnect Agent'}
+          {loading ? 'Sending...' : 'Nudge Agent to Reconnect'}
         </button>
       )}
 

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import AgentAvatar from '../AgentAvatar';
 import { Shield, Terminal, Star } from 'lucide-react';
+import { NATIVE_CURRENCY } from '../../utils/currency';
 
 export default function FeaturedCard({ agent }) {
   const displayName = agent.agentName || agent.name || agent.verusId;
@@ -9,7 +10,7 @@ export default function FeaturedCard({ agent }) {
   const reviews = agent.reputation?.totalReviews || agent.reviews || 0;
   const online = agent.agentOnline ?? agent.online;
   const price = agent.price;
-  const currency = agent.currency || 'VRSC';
+  const currency = agent.currency || NATIVE_CURRENCY;
   const desc = agent.description || agent.desc || '';
   const models = agent.models || [];
 

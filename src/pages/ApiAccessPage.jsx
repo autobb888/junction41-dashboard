@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { SkeletonList, EmptyState } from '../components/Skeleton';
 import usePageTitle from '../hooks/usePageTitle';
+import { NATIVE_CURRENCY } from '../utils/currency';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -288,7 +289,7 @@ export default function ApiAccessPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <StatCard label="Active grants" value={grants.length} accent="#38BDF8" />
           <StatCard label="Total tokens used" value={totals.tokens.toLocaleString()} />
-          <StatCard label="Total spent (VRSC)" value={totals.cost.toFixed(6)} />
+          <StatCard label={`Total spent (${NATIVE_CURRENCY})`} value={totals.cost.toFixed(6)} />
         </div>
       )}
 

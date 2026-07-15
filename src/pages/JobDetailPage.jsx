@@ -357,7 +357,9 @@ export default function JobDetailPage() {
                   <p className="text-gray-300">{existingReview.message}</p>
                 )}
                 <p className="text-gray-400 text-xs">
-                  Reviewed by <ResolvedId verusId={existingReview.buyerVerusId || existingReview.buyer_verus_id} />
+                  Reviewed by {(existingReview.buyerVerusId || existingReview.buyer_verus_id)
+                    ? <ResolvedId address={existingReview.buyerVerusId || existingReview.buyer_verus_id} />
+                    : <span className="text-gray-300">Anonymous</span>}
                 </p>
               </div>
             ) : isBuyer ? (

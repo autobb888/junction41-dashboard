@@ -271,7 +271,11 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
     });
 
     socket.on('error', (err) => {
-      // Socket error — handled via connected state
+      // Surface server-side rejections (paused session, rate/flood pause, blocked
+      // message) instead of swallowing them — otherwise a rejected send looks like
+      // a silent no-op (P1). Connection drops are still reflected by `connected`.
+      const msg = typeof err === 'string' ? err : err?.message;
+      if (msg) addToast?.(msg, 'error');
     });
 
     socket.on('user_joined', (data) => {
@@ -583,9 +587,10 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
       );
     }
 
-    // Paused state
+    // Paused state. The resume/reactivate controls live in the JobActions
+    // "Session Paused" panel (the canonical lifecycle surface) — this bar only
+    // reports status and points there, so the button isn't duplicated (P6).
     if (jobStatus === 'paused') {
-      const freeReactivation = isBuyer && (job?.lifecycle?.reactivationFee || 0) === 0;
       return (
         <div style={{
           padding: '10px 16px', background: 'rgba(245, 158, 11, 0.1)',
@@ -595,37 +600,9 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
           <span style={{ color: '#f59e0b', fontSize: 14 }}>||</span>
           <span style={{ color: '#f59e0b', fontWeight: 600, fontSize: 13, flex: 1 }}>
             Session paused — {isBuyer
-              ? (freeReactivation ? 'resume at no cost' : 'go to job details to reactivate')
+              ? 'use the Session Paused panel above to resume or reactivate'
               : 'buyer needs to reactivate the session'}
           </span>
-          {freeReactivation && (
-            <button
-              onClick={async () => {
-                setActionLoading(true);
-                setActionError(null);
-                try {
-                  const res = await fetch(`${API_BASE}/v1/jobs/${jobId}/extensions`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ amount: 0, reason: 'Free extension' }),
-                  });
-                  const data = await res.json();
-                  if (!res.ok) throw new Error(data.error?.message || 'Failed to extend');
-                  onJobStatusChanged?.();
-                } catch (err) {
-                  setActionError(err.message);
-                } finally {
-                  setActionLoading(false);
-                }
-              }}
-              disabled={actionLoading}
-              className="btn-primary"
-              style={{ padding: '4px 12px', fontSize: 12 }}
-            >
-              {actionLoading ? 'Resuming...' : 'Resume Session (Free)'}
-            </button>
-          )}
         </div>
       );
     }

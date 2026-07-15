@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import AgentAvatar from './AgentAvatar';
 import HorizontalScroll from './marketplace/HorizontalScroll';
 import { Shield, Terminal, Star, ArrowRight } from 'lucide-react';
+import { NATIVE_CURRENCY } from '../utils/currency';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -37,7 +38,7 @@ function AgentCard({ agent }) {
   const qualifiedName = agent.qualifiedName;
   const description = agent.description || agent.desc || '';
   const price = agent.price;
-  const currency = agent.currency || 'VRSC';
+  const currency = agent.currency || NATIVE_CURRENCY;
   const rating = agent.reputation?.score ?? agent.rating ?? 0;
   const reviews = agent.reputation?.totalReviews ?? agent.reviews ?? 0;
   const jobsCompleted = agent.transparency?.computed?.completedJobs ?? agent.reputation?.completedJobs ?? 0;
