@@ -910,22 +910,21 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
     // Delivered state — buyer sees "Confirm & Review"
     if (jobStatus === 'delivered') {
       if (isBuyer) {
+        // Completion is signed in the JobActions "Confirm Complete" panel (the
+        // canonical lifecycle surface, rendered above the chat), and the review is
+        // left from the Review section on the job page. This bar only reports +
+        // points there, so the completion signature field isn't duplicated across
+        // two panels with two different messages — the same P6 treatment already
+        // applied to the paused state. (Tester nearly signed the wrong one of two.)
         return (
           <div style={{
             padding: '10px 16px', background: 'rgba(167, 139, 250, 0.1)',
             borderTop: '1px solid rgba(167, 139, 250, 0.3)',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            display: 'flex', alignItems: 'center', gap: 8,
           }}>
             <span style={{ color: '#A78BFA', fontWeight: 600, fontSize: 13 }}>
-              Work delivered — ready to confirm?
+              Work delivered — confirm completion in the Job Actions panel above to release payment, then leave a review.
             </span>
-            <button
-              onClick={() => { setCompleteTs(Math.floor(Date.now() / 1000)); setEndSessionPanel('complete'); }}
-              className="btn-primary"
-              style={{ padding: '6px 14px', fontSize: 13 }}
-            >
-              Confirm & Review
-            </button>
           </div>
         );
       }
@@ -1075,7 +1074,10 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
         ) : (
           messages.map((msg) => {
             const isMe = msg.senderVerusId === user?.verusId;
-            const isFlagged = msg.safetyScore != null && msg.safetyScore >= 0.4;
+            // Only the block tier (>=0.7) wears the "flagged" treatment. A visible
+            // message was allowed through, so a moderate score must not read as
+            // "blocked" — matches SafetyScanBadge (tester: a delivered msg looked flagged).
+            const isFlagged = msg.safetyScore != null && msg.safetyScore >= 0.7;
             return (
               <div
                 key={msg.id}
