@@ -58,8 +58,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
               setPendingConfirm({ verusId: data.data.verusId, identityName: data.data.identityName });
             } else if (data.data?.status === 'expired') {
               if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-              setError('Challenge expired.');
-              doFetchChallenge();
+              setError('Challenge expired — a fresh one was issued. Please sign again.');
+              doFetchChallenge(undefined, true);
             }
           } catch {}
         })();
@@ -128,8 +128,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
             setPendingConfirm({ verusId: data.data.verusId, identityName: data.data.identityName });
           } else if (data.data?.status === 'expired') {
             clearInterval(pollIntervalRef.current);
-            setError('Challenge expired.');
-            doFetchChallenge();
+            setError('Challenge expired — a fresh one was issued. Please sign again.');
+            doFetchChallenge(undefined, true);
           }
         } catch {}
       }, 2000);
@@ -139,13 +139,15 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
 
   if (!isOpen) return null;
 
-  async function doFetchChallenge(protocolArg) {
+  async function doFetchChallenge(protocolArg, preserveError = false) {
     // Collapse concurrent fetches (StrictMode double-invoke, rapid reopen) to one
     // so we don't overwrite the session's active challenge mid-flight.
     if (fetchingRef.current) return;
     fetchingRef.current = true;
     setLoading(true);
-    setError('');
+    // Keep a just-set "challenge expired" message visible (Bug H) — otherwise it is
+    // cleared in the same tick by the auto-refresh and the user sees nothing.
+    if (!preserveError) setError('');
     try {
       const proto = protocolArg ?? walletProtocol;
       const q = proto === 'genreq' ? '?protocol=genreq' : '';
@@ -170,8 +172,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
       saveRecentId(verusId);
       onSuccess?.();
     } catch (err) {
-      setError(err.message);
-      doFetchChallenge();
+      setError(err.message || 'Sign-in failed — a fresh challenge was issued. Please sign again.');
+      doFetchChallenge(undefined, true);
       setSignature('');
     } finally {
       setSubmitting(false);

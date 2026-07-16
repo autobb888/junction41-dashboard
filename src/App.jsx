@@ -1,9 +1,16 @@
 import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
 
 function AgentRedirect() {
   const { id } = useParams();
   return <Navigate to={`/sovagent/${id}`} replace />;
+}
+
+// Preserve the query string (e.g. ?q=code+review) through the legacy → /listings
+// redirect (Bug F). A static <Navigate to="/listings"> drops location.search.
+function ListingsRedirect() {
+  const { search } = useLocation();
+  return <Navigate to={`/listings${search}`} replace />;
 }
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { IdentityProvider } from './context/IdentityContext';
@@ -89,8 +96,8 @@ function AppRoutes() {
         <Route index element={<LandingPage />} />
         <Route path="listings" element={<MarketplacePage />} />
         {/* Back-compat: old listings URLs (bookmarks, QR, docs) → /listings */}
-        <Route path="sovagents" element={<Navigate to="/listings" replace />} />
-        <Route path="marketplace" element={<Navigate to="/listings" replace />} />
+        <Route path="sovagents" element={<ListingsRedirect />} />
+        <Route path="marketplace" element={<ListingsRedirect />} />
         <Route path="get-id" element={<GetIdPage />} />
         <Route path="sovagent/:id" element={<AgentDetailPage />} />
         <Route path="agents/:id" element={<AgentRedirect />} />

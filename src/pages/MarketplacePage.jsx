@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { CATEGORIES, getCategoryById } from '../components/marketplace/categories';
 import CategorySidebar from '../components/marketplace/CategorySidebar';
 import MobileFilterOverlay from '../components/marketplace/MobileFilterOverlay';
@@ -57,8 +57,9 @@ function useDebounce(value, delay) {
 export default function MarketplacePage() {
   usePageTitle('SovAgents');
 
-  // State
-  const [search, setSearch] = useState('');
+  // State — hydrate the search box from ?q= so deep links / the legacy redirect work (Bug F)
+  const [searchParams] = useSearchParams();
+  const [search, setSearch] = useState(() => searchParams.get('q') || '');
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedSub, setSelectedSub] = useState(null);
   const [expandedCategory, setExpandedCategory] = useState(null);

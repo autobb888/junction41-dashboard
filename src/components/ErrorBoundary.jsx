@@ -19,7 +19,7 @@ export default class ErrorBoundary extends Component {
       return (
         <div className="min-h-screen flex flex-col items-center justify-center text-center px-4" style={{ backgroundColor: 'var(--bg-base)' }}>
           <h1 className="text-4xl font-bold text-gray-300 mb-4">Something went wrong</h1>
-          <p className="text-gray-400 mb-6 max-w-md">An unexpected error occurred. This may be due to an expired session.</p>
+          <p className="text-gray-400 mb-6 max-w-md">A display error occurred on this page. Reloading usually fixes it.</p>
           <div className="flex gap-3">
             <button
               onClick={() => window.location.reload()}

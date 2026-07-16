@@ -232,6 +232,21 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
     socket.on('connect', () => {
       setConnected(true);
       socket.emit('join_job', { jobId });
+      // Hydrate pending budget requests (Bug B): the budget_request WS event is not
+      // replayed on reconnect/reload, so re-fetch the current pending ones — otherwise
+      // a buyer who reloads sees no approve control for a pending request.
+      fetch(`${API_BASE}/v1/jobs/${jobId}/budget-requests`, { credentials: 'include' })
+        .then(r => (r.ok ? r.json() : null))
+        .then(res => {
+          const pending = res?.data;
+          if (Array.isArray(pending) && pending.length) {
+            setBudgetRequests(prev => {
+              const seen = new Set(prev.map(r => r.id));
+              return [...prev, ...pending.filter(p => !seen.has(p.id))];
+            });
+          }
+        })
+        .catch(() => {});
     });
 
     socket.on('disconnect', () => setConnected(false));

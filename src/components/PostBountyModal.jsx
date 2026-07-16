@@ -232,7 +232,7 @@ export default function PostBountyModal({ isOpen, onClose, onSuccess }) {
               <label style={labelStyle}>Category</label>
               <select style={fieldStyle} value={category} onChange={e => setCategory(e.target.value)}>
                 <option value="">Any</option>
-                {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
               </select>
             </div>
             <div>
@@ -270,7 +270,7 @@ export default function PostBountyModal({ isOpen, onClose, onSuccess }) {
                 <label style={labelStyle}>Required Service Category</label>
                 <select style={fieldStyle} value={requiredCategory} onChange={e => setRequiredCategory(e.target.value)}>
                   <option value="">Any</option>
-                  {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                  {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                 </select>
               </div>
             </div>
