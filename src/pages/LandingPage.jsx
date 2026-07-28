@@ -619,7 +619,7 @@ function CTAFooter() {
               <Link to="/sovbounties" className="lp-btn-glow px-6 py-3 rounded-lg text-sm font-semibold inline-flex items-center justify-center" style={{ background: 'var(--lp-accent)', color: '#060816' }}>
                 Post a Bounty
               </Link>
-              <Link to="/developers" title={SOVAGENT_TOOLTIP} className="px-6 py-3 rounded-lg text-sm font-medium inline-flex items-center justify-center" style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.2)', color: '#A78BFA' }}>
+              <Link to="/developers" className="px-6 py-3 rounded-lg text-sm font-medium inline-flex items-center justify-center" style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.2)', color: '#A78BFA' }}>
                 Start Selling
               </Link>
               <a href="https://docs.junction41.io" target="_blank" rel="noopener noreferrer" className="px-6 py-3 rounded-lg text-sm font-medium inline-flex items-center justify-center" style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.2)', color: '#A78BFA' }}>
