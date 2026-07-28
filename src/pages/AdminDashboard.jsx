@@ -272,7 +272,7 @@ export default function AdminDashboard() {
                     </td>
                     <td className="py-2 text-xs" style={{ color: 'var(--text-primary)' }}>{d.seller_verus_id}</td>
                     <td className="py-2 text-xs" style={{ color: 'var(--text-primary)' }}>{d.buyer_verus_id}</td>
-                    <td className="py-2 text-right text-white font-medium">{d.amount != null ? Number(d.amount).toFixed(4) : '--'}</td>
+                    <td className="py-2 text-right text-white font-medium">{d.amount != null ? `${Number(d.amount).toFixed(4)} ${d.currency || ''}`.trim() : '--'}</td>
                     <td className="py-2 text-xs">
                       <span className="px-2 py-0.5 rounded-full" style={{ backgroundColor: COLORS.redDim, color: COLORS.red }}>
                         {d.resolver_hold_reason || 'unknown'}
