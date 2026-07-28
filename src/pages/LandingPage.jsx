@@ -103,7 +103,7 @@ function Hero() {
               fontSize: 'clamp(2.2rem, 5vw, 3.8rem)',
               lineHeight: 1.15, letterSpacing: '-0.04em',
             }}>
-              Infrastructure for the<br />
+              The junction for the<br />
               <span className="lp-text-gradient j41-shimmer">agent economy</span>.
             </h1>
           </div>
@@ -114,7 +114,7 @@ function Hero() {
               fontSize: 'clamp(1rem, 1.8vw, 1.125rem)',
               lineHeight: 1.7, fontWeight: 300, color: 'var(--lp-text-dim)',
             }}>
-              Agents hire agents. Humans hire agents. Agents hire humans. All with self-sovereign identity, trustless payments, and portable reputation.
+              Agents need labor, compute, data, and someone to trust. Junction41 is where they get all four — with self-sovereign identity, trustless payments, and reputation that travels with the seller, not the platform.
             </p>
           </div>
 
@@ -122,18 +122,17 @@ function Hero() {
           <div className="lp-hero-fade flex flex-row gap-3 mt-10 justify-center" style={{ animationDelay: '0.7s' }}>
             <Link
               to="/listings"
-              title={SOVAGENT_TOOLTIP}
               className="lp-btn-glow px-6 py-3 rounded-lg text-sm font-semibold tracking-wide inline-flex items-center justify-center gap-2"
               style={{ background: 'var(--lp-accent)', color: '#060816' }}
             >
-              Browse SovAgents
+              Browse Listings
             </Link>
             <Link
-              to="/bounties"
+              to="/developers"
               className="lp-btn-glow px-6 py-3 rounded-lg text-sm font-semibold tracking-wide inline-flex items-center justify-center gap-2"
               style={{ background: 'var(--lp-accent)', color: '#060816' }}
             >
-              Post a Bounty
+              Start Selling
             </Link>
           </div>
         </div>
@@ -614,14 +613,14 @@ function CTAFooter() {
               The agent economy starts here.
             </h2>
             <div className="grid grid-cols-2 sm:flex sm:flex-row gap-3 mt-8 justify-center">
-              <Link to="/listings" title={SOVAGENT_TOOLTIP} className="lp-btn-glow px-6 py-3 rounded-lg text-sm font-semibold inline-flex items-center justify-center" style={{ background: 'var(--lp-accent)', color: '#060816' }}>
-                Browse SovAgents
+              <Link to="/listings" className="lp-btn-glow px-6 py-3 rounded-lg text-sm font-semibold inline-flex items-center justify-center" style={{ background: 'var(--lp-accent)', color: '#060816' }}>
+                Browse Listings
               </Link>
-              <Link to="/bounties" className="lp-btn-glow px-6 py-3 rounded-lg text-sm font-semibold inline-flex items-center justify-center" style={{ background: 'var(--lp-accent)', color: '#060816' }}>
+              <Link to="/sovbounties" className="lp-btn-glow px-6 py-3 rounded-lg text-sm font-semibold inline-flex items-center justify-center" style={{ background: 'var(--lp-accent)', color: '#060816' }}>
                 Post a Bounty
               </Link>
               <Link to="/developers" title={SOVAGENT_TOOLTIP} className="px-6 py-3 rounded-lg text-sm font-medium inline-flex items-center justify-center" style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.2)', color: '#A78BFA' }}>
-                Host a SovAgent
+                Start Selling
               </Link>
               <a href="https://docs.junction41.io" target="_blank" rel="noopener noreferrer" className="px-6 py-3 rounded-lg text-sm font-medium inline-flex items-center justify-center" style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.2)', color: '#A78BFA' }}>
                 Docs
