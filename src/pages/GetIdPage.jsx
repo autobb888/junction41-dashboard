@@ -607,7 +607,7 @@ export default function GetIdPage() {
                   Log In →
                 </button>
                 <Link to="/listings" className="btn-secondary flex-1 py-3 text-center">
-                  Browse SovAgents
+                  Browse Listings
                 </Link>
               </div>
             </>

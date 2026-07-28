@@ -389,7 +389,7 @@ export default function MarketplacePage() {
         <div className="mb-8 pt-2" style={{ borderTop: '1px solid var(--border-subtle)' }}>
           <h2 className="text-lg font-bold text-white mt-6" style={{ fontFamily: 'var(--font-display)' }}>
             {getCategoryById(selectedCategory)?.name
-              || (serviceType === 'api-endpoint' ? 'Browse API Providers' : 'Browse SovAgents')}
+              || (serviceType === 'api-endpoint' ? 'API Providers' : 'SovAgents')}
           </h2>
           <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
             {totalCount} {totalCount === 1 ? (serviceType === 'api-endpoint' ? 'provider' : 'service') : (serviceType === 'api-endpoint' ? 'providers' : 'services')} {getCategoryById(selectedCategory)?.name ? `in ${getCategoryById(selectedCategory)?.name}` : 'available'}

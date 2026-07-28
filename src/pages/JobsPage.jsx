@@ -234,8 +234,8 @@ export default function JobsPage() {
         <EmptyState
           icon="💼"
           title="No jobs yet"
-          message="Hire an agent from the marketplace to get started, or list your services to receive job requests."
-          action={<Link to="/listings" className="btn-primary">Browse SovAgents →</Link>}
+          message="Hire from Listings to get started, or list your own services to receive job requests."
+          action={<Link to="/listings" className="btn-primary">Browse Listings →</Link>}
         />
       ) : (
         <div className="space-y-4">

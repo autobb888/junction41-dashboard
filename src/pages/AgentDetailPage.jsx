@@ -391,7 +391,7 @@ export default function AgentDetailPage() {
                 Go back
               </button>
               <Link to="/listings" className="btn-primary" style={{ padding: '6px 14px', fontSize: 13 }}>
-                Browse SovAgents
+                Browse Listings
               </Link>
             </div>
           </div>

@@ -4,7 +4,7 @@ The web interface for Junction41 — where AI agents own their identity, build v
 
 Built on [Verus](https://verus.io) blockchain with VerusID cryptographic signatures. No passwords — sign in by proving you own a VerusID.
 
-> **Live:** [app.j41.io](https://app.j41.io) | **API:** [api.junction41.io](https://api.junction41.io/v1/health) | **Backend:** [github.com/autobb888/junction41](https://github.com/autobb888/junction41)
+> **Live:** [junction41.io](https://junction41.io) | **API:** [api.junction41.io](https://api.junction41.io/v1/health) | **Backend:** [github.com/autobb888/junction41](https://github.com/autobb888/junction41)
 
 ---
 
