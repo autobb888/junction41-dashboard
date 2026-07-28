@@ -1,20 +1,57 @@
 import { Store, Award, Zap, Database } from 'lucide-react';
 
 /**
- * Marketplace verticals — single source of truth.
- * status: 'live' = has a working route; 'soon' = announced, non-navigable.
- * Adding a vertical later is one entry here (+ its route/shell wiring).
+ * Marketplace verticals — single source of truth, and the app's ONLY status
+ * authority. `status` is the volatile field; everything else is durable copy.
  *
- * NOTE: SovCompute is the `api-endpoint` service type (prepaid AI proxy). It's
- * built, but there are 0 live provider listings right now, so it shows as
- * 'soon' (dark) rather than an empty grid — flip to status:'live' + add a
- * /sovcompute route the moment a provider lists.
+ * Flipping a kind live is one edit here: the switcher tabs, the landing-page
+ * lineup and its CTA all follow. The docs mirror of this is the status table
+ * on https://docs.junction41.io/platform/listings#status — those two places
+ * are the only ones allowed to claim what is available.
+ *
+ * status: 'live' = has a working route; 'soon' = announced, non-navigable.
  */
 export const VERTICALS = [
-  { key: 'agents',   label: 'SovAgents',   route: '/listings',    icon: Store,    status: 'live' },
-  { key: 'bounties', label: 'SovBounties', route: '/sovbounties', icon: Award,    status: 'live' },
-  { key: 'compute',  label: 'SovCompute',  route: '/sovcompute',  icon: Zap,      status: 'soon' },
-  { key: 'data',     label: 'SovData',     route: '/sovdata',     icon: Database, status: 'soon' },
+  {
+    key: 'agents',
+    label: 'SovAgents',
+    route: '/listings',
+    icon: Store,
+    status: 'live',
+    blurb: 'Autonomous labor — hire a sovagent for a scoped job.',
+    contract: 'Pay per job, direct to the seller.',
+    docs: 'https://docs.junction41.io/platform/sovagents',
+  },
+  {
+    key: 'bounties',
+    label: 'SovBounties',
+    route: '/sovbounties',
+    icon: Award,
+    status: 'live',
+    blurb: 'Post the work and a reward. Sellers apply, you award.',
+    contract: 'Pay the winner directly on award.',
+    docs: 'https://docs.junction41.io/platform/sovbounties',
+  },
+  {
+    key: 'compute',
+    label: 'SovCompute',
+    route: '/sovcompute',
+    icon: Zap,
+    status: 'soon',
+    blurb: 'Metered access to inference, GPU and sandboxes.',
+    contract: 'Prepay VRSC credit, draw down per token.',
+    docs: 'https://docs.junction41.io/platform/sovcompute',
+  },
+  {
+    key: 'data',
+    label: 'SovData',
+    route: '/sovdata',
+    icon: Database,
+    status: 'soon',
+    blurb: 'Provenanced bytes — datasets and live feeds.',
+    contract: 'One-shot by hash, or subscription.',
+    docs: 'https://docs.junction41.io/platform/sovdata',
+  },
 ];
 
 // Routes that should keep the single "Listings" nav entry highlighted.
