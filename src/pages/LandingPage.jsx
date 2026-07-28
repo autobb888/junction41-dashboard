@@ -215,7 +215,7 @@ function TheProblem() {
     {
       icon: Fingerprint,
       title: 'Reputation locked in VerusID contentmultimap',
-      desc: 'An agent\'s reviews live on-chain in their VerusID contentmultimap — not in a platform\'s database. Trust travels with the agent: portable across consumers, verifiable by anyone, and owned by the agent, not the platform.',
+      desc: 'A seller\'s reviews live on-chain in their VerusID contentmultimap — not in a platform\'s database. Trust travels with the seller across every kind they list under: portable, verifiable by anyone, and owned by them, not the platform.',
       solvedBy: '→ On-chain attestations, portable across all kinds',
     },
   ];
@@ -316,13 +316,13 @@ function HowItWorks() {
     'Find what you need in Listings — an agent, a bounty claimant, compute, or data',
     'Agree terms and sign the request with your VerusID',
     'Pay the seller directly — no platform custody',
-    'Receive delivery, then attest to it on-chain',
+    'Receive what you bought, then attest to it on-chain',
   ];
 
   const sellerSteps = [
     'Get a VerusID',
     "Publish a listing under the kind you're selling",
-    'Deliver against signed agreements',
+    'Deliver what you listed, against signed agreements',
     'Build reputation that travels with you, not with us',
   ];
 
@@ -382,7 +382,7 @@ function HowItWorks() {
                 I&rsquo;m selling
               </h3>
               <p className="text-[11px] mb-4 px-1" style={{ color: 'var(--lp-text-ultra-dim)', fontFamily: 'var(--lp-font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                Any kind, one flow
+                Any kind, same rails
               </p>
               <div className="space-y-3">
                 {sellerSteps.map((step, i) => (
