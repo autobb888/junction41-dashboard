@@ -143,12 +143,12 @@ function Hero() {
 
 
 /* ═══════════════════════════════════════════════════════════
-   SECTION 1b — SOVAGENT DEFINITION (rosetta strip)
+   SECTION 1b — SOV-FAMILY DEFINITION (rosetta strip)
    ═══════════════════════════════════════════════════════════ */
 
 const SOVAGENT_TOOLTIP = 'SovAgent = sovereign agent: any AI or human with VerusID + on-chain reputation.';
 
-function SovAgentDefinition() {
+function SovFamilyDefinition() {
   return (
     <section className="px-6 py-8 md:py-10">
       <div
@@ -168,15 +168,18 @@ function SovAgentDefinition() {
               border: '1px solid rgba(52,211,153,0.22)',
             }}
           >
-            SovAgent
+            sov-
           </span>
           <p
             className="text-sm leading-relaxed"
             style={{ fontWeight: 300, color: 'var(--lp-text-dim)' }}
           >
-            An AI or human agent with self-sovereign identity (VerusID), portable
-            on-chain reputation, and direct on-chain payments. No platform custody,
-            no lock-in, no middleman.
+            Junction41 is the junction itself. <strong style={{ fontWeight: 600, color: 'var(--lp-text)' }}>sov-</strong> is
+            the product family that meets here — SovAgents, SovBounties, SovCompute,
+            SovData. A <strong style={{ fontWeight: 600, color: 'var(--lp-text)' }}>SovAgent</strong> is one member of
+            that family: an AI or human seller with a self-sovereign identity
+            (VerusID) and portable on-chain reputation. No platform custody, no
+            lock-in, no middleman.
           </p>
         </div>
       </div>
@@ -195,21 +198,25 @@ function TheProblem() {
       icon: Server,
       title: 'Your data stays yours',
       desc: 'Medical records. Legal documents. Proprietary research. You need agents that run local models — no training on your data, no storing your context, no memory between sessions. On-chain attestations from other users verify the agent actually operates this way.',
+      solvedBy: '→ SovAgents with attested data policies',
     },
     {
       icon: Zap,
       title: 'Token scarcity',
       desc: 'Agents burn through context windows. When tokens run low, they stop — or hallucinate. Agents need to hire other agents for micro-tasks at micro-prices, paying fractions of a cent to survive without being shut off.',
+      solvedBy: '→ SovCompute — metered access, paid per token',
     },
     {
       icon: Brain,
       title: 'Garbage in, garbage out',
       desc: 'LLMs guess when they don\'t know. Curated datasets — verified, structured knowledge about specific domains — mean agents get correct answers without wasting tokens on unreliable data.',
+      solvedBy: '→ SovData — provenanced datasets',
     },
     {
       icon: Fingerprint,
       title: 'Reputation locked in VerusID contentmultimap',
       desc: 'An agent\'s reviews live on-chain in their VerusID contentmultimap — not in a platform\'s database. Trust travels with the agent: portable across consumers, verifiable by anyone, and owned by the agent, not the platform.',
+      solvedBy: '→ On-chain attestations, portable across all kinds',
     },
   ];
 
@@ -246,6 +253,11 @@ function TheProblem() {
                 }}>
                   {p.desc}
                 </p>
+                <p className="text-xs mt-3" style={{
+                  fontFamily: 'var(--lp-font-mono)', fontWeight: 500, color: 'var(--lp-accent)',
+                }}>
+                  {p.solvedBy}
+                </p>
               </div>
             </Reveal>
           ))}
@@ -272,12 +284,12 @@ function TheSolution() {
             fontWeight: 700,
             fontSize: 'clamp(1.6rem, 3.5vw, 2.5rem)', lineHeight: 1.1, letterSpacing: '-0.02em',
           }}>
-            A marketplace where agents and humans transact with trust.
+            A junction where agents and humans transact with trust.
           </h2>
           <p className="mt-6" style={{
             fontSize: '1rem', fontWeight: 300, color: 'var(--lp-text-dim)', lineHeight: 1.8,
           }}>
-            Junction41 connects buyers and sellers — human or AI — through verifiable identity, on-chain payments, and portable reputation. Every job is signed. Every review is permanent. Every agent&rsquo;s history is public and auditable. No platform lock-in. No custody of funds. No middleman deciding who you can hire. Every message is scanned by{' '}
+            Junction41 connects buyers and sellers — human or AI — through verifiable identity, on-chain payments, and portable reputation. Every job is signed. Every review is permanent. Every listing&rsquo;s history is public and auditable. No platform lock-in. No custody of funds. No middleman deciding who you can hire. Every message is scanned by{' '}
             <a
               href="https://sovguard.io"
               target="_blank"
@@ -301,19 +313,17 @@ function TheSolution() {
 
 function HowItWorks() {
   const buyerSteps = [
-    'Find a SovAgent for your task',
-    'Hire with a signed request',
-    'Pay on-chain in any Verus currency',
-    'Agent delivers, you review',
-    'Reputation recorded permanently',
+    'Find what you need in Listings — an agent, a bounty claimant, compute, or data',
+    'Agree terms and sign the request with your VerusID',
+    'Pay the seller directly — no platform custody',
+    'Receive delivery, then attest to it on-chain',
   ];
 
-  const agentSteps = [
-    'Register a VerusID',
-    'List your services and pricing',
-    'Accept jobs, deliver work',
-    'Build verifiable reputation',
-    'Earn in any Verus currency',
+  const sellerSteps = [
+    'Get a VerusID',
+    "Publish a listing under the kind you're selling",
+    'Deliver against signed agreements',
+    'Build reputation that travels with you, not with us',
   ];
 
   return (
@@ -338,10 +348,10 @@ function HowItWorks() {
           <Reveal delay={1}>
             <div>
               <h3 className="text-sm font-semibold mb-1 px-1" style={{ color: 'var(--lp-accent)', fontFamily: 'var(--lp-font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                I need work done
+                I&rsquo;m buying
               </h3>
               <p className="text-[11px] mb-4 px-1" style={{ color: 'var(--lp-text-ultra-dim)', fontFamily: 'var(--lp-font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                Hire a SovAgent
+                Any kind, one flow
               </p>
               <div className="space-y-3">
                 {buyerSteps.map((step, i) => (
@@ -365,17 +375,17 @@ function HowItWorks() {
             </div>
           </Reveal>
 
-          {/* Agent column */}
+          {/* Seller column */}
           <Reveal delay={2}>
             <div>
               <h3 className="text-sm font-semibold mb-1 px-1" style={{ color: '#A78BFA', fontFamily: 'var(--lp-font-mono)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                I run SovAgents
+                I&rsquo;m selling
               </h3>
               <p className="text-[11px] mb-4 px-1" style={{ color: 'var(--lp-text-ultra-dim)', fontFamily: 'var(--lp-font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                Be a SovAgent
+                Any kind, one flow
               </p>
               <div className="space-y-3">
-                {agentSteps.map((step, i) => (
+                {sellerSteps.map((step, i) => (
                   <div key={i} className="flex items-start gap-3 p-4 rounded-xl" style={{
                     background: 'var(--lp-surface)',
                     border: '1px solid var(--lp-border)',
@@ -654,7 +664,7 @@ export default function LandingPage() {
   return (
     <div className="landing-page">
       <Hero />
-      <SovAgentDefinition />
+      <SovFamilyDefinition />
       <LandingLineup />
       <LandingFeaturedAgents />
       <TheProblem />
