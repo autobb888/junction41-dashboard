@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '../utils/api';
+import { useToast } from '../components/Toast';
 import {
   ShieldCheck, Users, Briefcase, Star, Wrench, Activity,
   AlertTriangle, TrendingUp, DollarSign, RefreshCw, Wifi,
-  Clock, Eye, Ban, Server, Zap,
+  Clock, Eye, Ban, Server, Zap, Scale, Unlock,
 } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -80,11 +81,13 @@ function ChartTooltip({ active, payload, label }) {
 }
 
 export default function AdminDashboard() {
+  const addToast = useToast();
   const [data, setData] = useState(null);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastRefresh, setLastRefresh] = useState(null);
+  const [releasingJobId, setReleasingJobId] = useState(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -131,6 +134,26 @@ export default function AdminDashboard() {
     const interval = setInterval(fetchData, REFRESH_INTERVAL);
     return () => clearInterval(interval);
   }, [fetchData]);
+
+  const releaseHold = useCallback(async (jobId) => {
+    if (!window.confirm('Release this dispute back to the resolver sweep? Only do this if the hold was a transient failure, not a genuine bad-faith case.')) {
+      return;
+    }
+    setReleasingJobId(jobId);
+    try {
+      const res = await apiFetch(`/v1/internal/disputes/${jobId}/hold`, { method: 'DELETE' });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error?.message || `Failed to release hold (${res.status})`);
+      }
+      addToast?.('Dispute released back to the sweep');
+      await fetchData();
+    } catch (err) {
+      addToast?.(err.message || 'Failed to release hold', 'error');
+    } finally {
+      setReleasingJobId(null);
+    }
+  }, [addToast, fetchData]);
 
   if (loading) {
     return (
@@ -183,6 +206,9 @@ export default function AdminDashboard() {
   // API routes for table
   const topRoutes = prom?.topRoutes || [];
 
+  // Disputes the resolver couldn't safely auto-default — parked for human review
+  const heldDisputes = data?.heldDisputes || [];
+
   return (
     <div className="space-y-8 pb-12">
       {/* Header */}
@@ -219,6 +245,64 @@ export default function AdminDashboard() {
         <StatCard icon={Star} label="Reviews" value={ov.total_reviews} color={COLORS.amber} dimColor={COLORS.amberDim} />
         <StatCard icon={Briefcase} label="Total Jobs" value={ov.total_jobs} color={COLORS.cyan} dimColor="rgba(34, 211, 238, 0.15)" />
         <StatCard icon={Zap} label="Active Jobs" value={ov.active_jobs} color={COLORS.teal} dimColor="rgba(45, 212, 191, 0.15)" />
+      </div>
+
+      {/* Held Disputes — resolver couldn't safely auto-default; needs a human */}
+      <div className="rounded-xl border p-5" style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-subtle)' }}>
+        <SectionHeader icon={Scale} title="Disputes Held for Review" color={heldDisputes.length > 0 ? COLORS.red : COLORS.green} />
+        {heldDisputes.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left" style={{ color: 'var(--text-tertiary)' }}>
+                  <th className="pb-2 font-medium">Job</th>
+                  <th className="pb-2 font-medium">Seller</th>
+                  <th className="pb-2 font-medium">Buyer</th>
+                  <th className="pb-2 font-medium text-right">Amount</th>
+                  <th className="pb-2 font-medium">Hold Reason</th>
+                  <th className="pb-2 font-medium text-right">Held At</th>
+                  <th className="pb-2 font-medium text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {heldDisputes.map((d) => (
+                  <tr key={d.job_id} className="border-t" style={{ borderColor: 'var(--border-subtle)' }}>
+                    <td className="py-2 font-mono text-xs" style={{ color: 'var(--text-primary)' }} title={d.job_id}>
+                      {d.job_id?.slice(0, 8)}…
+                    </td>
+                    <td className="py-2 text-xs" style={{ color: 'var(--text-primary)' }}>{d.seller_verus_id}</td>
+                    <td className="py-2 text-xs" style={{ color: 'var(--text-primary)' }}>{d.buyer_verus_id}</td>
+                    <td className="py-2 text-right text-white font-medium">{d.amount != null ? Number(d.amount).toFixed(4) : '--'}</td>
+                    <td className="py-2 text-xs">
+                      <span className="px-2 py-0.5 rounded-full" style={{ backgroundColor: COLORS.redDim, color: COLORS.red }}>
+                        {d.resolver_hold_reason || 'unknown'}
+                      </span>
+                    </td>
+                    <td className="py-2 text-right text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                      {d.resolver_held_at ? new Date(d.resolver_held_at).toLocaleString() : '--'}
+                    </td>
+                    <td className="py-2 text-right">
+                      <button
+                        onClick={() => releaseHold(d.job_id)}
+                        disabled={releasingJobId === d.job_id}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border text-xs font-medium transition-colors hover:bg-white/5 disabled:opacity-50"
+                        style={{ borderColor: 'var(--border-subtle)', color: COLORS.green }}
+                        title="Clear the hold and return this dispute to the resolver sweep"
+                      >
+                        <Unlock size={12} />
+                        {releasingJobId === d.job_id ? 'Releasing…' : 'Release'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="h-16 flex items-center justify-center text-sm" style={{ color: 'var(--text-tertiary)' }}>
+            No disputes held for review
+          </div>
+        )}
       </div>
 
       {/* Row: Registration Trends + Financial */}
