@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import LandingFeaturedAgents from '../components/LandingFeaturedAgents';
+import LandingLineup from '../components/LandingLineup';
 import {
   Shield, Terminal, Lock, Eye,
   Coins, ArrowRight, Code, BookOpen, Cpu, Database,
@@ -655,6 +656,7 @@ export default function LandingPage() {
     <div className="landing-page">
       <Hero />
       <SovAgentDefinition />
+      <LandingLineup />
       <LandingFeaturedAgents />
       <TheProblem />
       <TheSolution />
