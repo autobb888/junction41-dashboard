@@ -209,6 +209,11 @@ export default function AdminDashboard() {
   // Disputes the resolver couldn't safely auto-default — parked for human review
   const heldDisputes = data?.heldDisputes || [];
 
+  // Reviews the dispatcher claims to have written but which have never been
+  // found in the seller's on-chain identity. The write may still land — the
+  // platform simply cannot prove it yet, so this is framed as "stuck", not "failed".
+  const stuckReviews = data?.stuckReviews || [];
+
   return (
     <div className="space-y-8 pb-12">
       {/* Header */}
@@ -301,6 +306,47 @@ export default function AdminDashboard() {
         ) : (
           <div className="h-16 flex items-center justify-center text-sm" style={{ color: 'var(--text-tertiary)' }}>
             No disputes held for review
+          </div>
+        )}
+      </div>
+
+      {/* Stuck Reviews — dispatcher claims to have written these, but they've never landed on-chain */}
+      <div className="rounded-xl border p-5" style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-subtle)' }}>
+        <SectionHeader icon={Clock} title="Reviews Stuck Off-Chain" color={stuckReviews.length > 0 ? COLORS.red : COLORS.green} />
+        {stuckReviews.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left" style={{ color: 'var(--text-tertiary)' }}>
+                  <th className="pb-2 font-medium">Agent</th>
+                  <th className="pb-2 font-medium">Job</th>
+                  <th className="pb-2 font-medium">Buyer</th>
+                  <th className="pb-2 font-medium">Rating</th>
+                  <th className="pb-2 font-medium text-right">Stuck For</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stuckReviews.map((r) => (
+                  <tr key={r.id} className="border-t" style={{ borderColor: 'var(--border-subtle)' }}>
+                    <td className="py-2 text-xs" style={{ color: 'var(--text-primary)' }}>{r.agent_name || r.recipient_verus_id}</td>
+                    <td className="py-2 font-mono text-xs" style={{ color: 'var(--text-primary)' }} title={r.job_hash}>
+                      {r.job_hash?.slice(0, 8)}…
+                    </td>
+                    <td className="py-2 text-xs" style={{ color: 'var(--text-primary)' }}>{r.sender_verus_id}</td>
+                    <td className="py-2 text-xs" style={{ color: COLORS.amber }}>
+                      {'★'.repeat(r.rating || 0)}{'☆'.repeat(5 - (r.rating || 0))}
+                    </td>
+                    <td className="py-2 text-right text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                      {r.processed_at ? `${Math.round((Date.now() - new Date(r.processed_at).getTime()) / 3600_000)}h` : '--'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="h-16 flex items-center justify-center text-sm" style={{ color: 'var(--text-tertiary)' }}>
+            No reviews stuck off-chain
           </div>
         )}
       </div>
