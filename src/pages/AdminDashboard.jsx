@@ -3,7 +3,7 @@ import { apiFetch } from '../utils/api';
 import { useToast } from '../components/Toast';
 import {
   ShieldCheck, Users, Briefcase, Star, Wrench, Activity,
-  AlertTriangle, TrendingUp, DollarSign, RefreshCw, Wifi,
+  AlertTriangle, AlertCircle, TrendingUp, DollarSign, RefreshCw, Wifi,
   Clock, Eye, Ban, Server, Zap, Scale, Unlock,
 } from 'lucide-react';
 import {
@@ -312,7 +312,7 @@ export default function AdminDashboard() {
 
       {/* Stuck Reviews — dispatcher claims to have written these, but they've never landed on-chain */}
       <div className="rounded-xl border p-5" style={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-subtle)' }}>
-        <SectionHeader icon={Clock} title="Reviews Stuck Off-Chain" color={stuckReviews.length > 0 ? COLORS.red : COLORS.green} />
+        <SectionHeader icon={AlertCircle} title="Reviews Stuck Off-Chain" color={stuckReviews.length > 0 ? COLORS.red : COLORS.green} />
         {stuckReviews.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
