@@ -669,14 +669,23 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
                       Scan with <strong>{walletProtocol === 'genreq' ? 'your generic-request wallet' : 'Verus Mobile'}</strong> and approve the request to sign this hire.
                     </p>
                     <div className="hidden md:block">
+                      {safeConsentDeeplink && (
+                        <a href={safeConsentDeeplink} className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition-colors mb-3">
+                          Open in Verus Desktop
+                        </a>
+                      )}
+                      {consent?.isTestnet && (
+                        <p className="text-amber-400/90 text-xs mb-3 max-w-xs mx-auto leading-relaxed">
+                          Testnet: if mainnet Verus Desktop is installed, this button may open the wrong chain. Use Verus Mobile (testnet) or{' '}
+                          <button type="button" onClick={() => setSignMethod('cli')} className="underline hover:text-amber-300 font-medium">Advanced (CLI)</button>.
+                        </p>
+                      )}
+                      <p className="text-gray-400 text-xs mb-2">or scan with Verus Mobile:</p>
                       <div className="bg-white p-3 rounded-lg inline-block mb-2">
                         {safeConsentQr
                           ? <img src={safeConsentQr} alt="Hire QR" className="w-52 h-52" />
                           : <div className="w-52 h-52 flex items-center justify-center text-red-600 text-sm">QR unavailable</div>}
                       </div>
-                      {safeConsentDeeplink && (
-                        <p><a href={safeConsentDeeplink} className="text-xs text-verus-blue hover:underline">On your phone? Tap to open Verus Mobile →</a></p>
-                      )}
                     </div>
                     <div className="md:hidden mb-2">
                       {safeConsentDeeplink

@@ -170,10 +170,22 @@ function PaymentQR({ jobId, type, amount, currency, onTxDetected }) {
       <div className="w-full bg-gray-950 rounded p-2 text-center">
         <p className="text-xs font-mono break-all" style={{ color: 'var(--text-secondary)' }}>{qrData.address}</p>
       </div>
-      {safeWalletDeeplink(qrData.deeplink) && (
-        <a href={safeWalletDeeplink(qrData.deeplink)} className="text-xs text-verus-blue hover:underline">
-          Open in Verus Mobile →
-        </a>
+      {payDeeplink && (
+        <>
+          {/* Desktop: open the local Verus Desktop app */}
+          <a href={payDeeplink} className="hidden md:inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition-colors">
+            Open in Verus Desktop
+          </a>
+          {/* Mobile browser: open Verus Mobile directly */}
+          <a href={payDeeplink} className="md:hidden text-xs text-verus-blue hover:underline">
+            Open in Verus Mobile →
+          </a>
+        </>
+      )}
+      {payDeeplink && qrData.isTestnet && (
+        <p className="hidden md:block text-amber-400/90 text-xs max-w-xs text-center leading-relaxed">
+          Testnet: if mainnet Verus Desktop is installed, this may open the wrong chain. Use Verus Mobile (testnet) or paste the txid below.
+        </p>
       )}
       {polling && !detectedTxid && (
         <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-tertiary)' }}>
