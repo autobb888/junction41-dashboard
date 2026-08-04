@@ -515,6 +515,7 @@ export default function JobActions({ job, onUpdate, autoOpenPayment, onAutoOpenC
   const [currentDispute, setCurrentDispute] = useState(null);
   const [extensionAmount, setExtensionAmount] = useState('');
   const [extensionInvoice, setExtensionInvoice] = useState(null);
+  const [pendingExts, setPendingExts] = useState([]);
 
   async function fetchDispute() {
     try {
@@ -524,6 +525,36 @@ export default function JobActions({ job, onUpdate, autoOpenPayment, onAutoOpenC
         setCurrentDispute(data.dispute);
       }
     } catch {}
+  }
+
+  // Extension requests THIS party must decide on: pending + requested by the OTHER party
+  // (the backend approve/reject endpoints are gated to the non-requester). Usually the
+  // agent/seller approving a buyer's paid extension — a dashboard fallback so an
+  // in-progress paid extension isn't stuck waiting on the dispatcher to approve.
+  async function fetchExtensions() {
+    try {
+      const res = await fetch(`${API_BASE}/v1/jobs/${job.id}/extensions`, { credentials: 'include' });
+      if (!res.ok) return;
+      const data = await res.json();
+      setPendingExts((data.data || []).filter(e => e.status === 'pending' && e.requester !== user?.verusId));
+    } catch { /* non-fatal */ }
+  }
+
+  async function actOnExtension(extId, action) {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_BASE}/v1/jobs/${job.id}/extensions/${extId}/${action}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+      });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error?.message || `Failed to ${action} extension`); }
+      await fetchExtensions();
+      onUpdate?.();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   // Auto-open payment panel when autoOpenPayment is set
@@ -542,6 +573,16 @@ export default function JobActions({ job, onUpdate, autoOpenPayment, onAutoOpenC
       onAutoOpenConsumed?.();
     }
   }, [autoOpenPayment, job.status, job.payment?.txid, job.payment?.platformFeeTxid]);
+
+  // Load extension requests awaiting this party's approval while the job is live.
+  useEffect(() => {
+    if ((job.status === 'in_progress' || job.status === 'paused') && (isBuyer || isSeller)) {
+      fetchExtensions();
+    } else {
+      setPendingExts([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [job.id, job.status]);
 
   async function handleAction(action, body = {}) {
     setLoading(true);
@@ -662,6 +703,31 @@ export default function JobActions({ job, onUpdate, autoOpenPayment, onAutoOpenC
           >
             Request Extension
           </button>
+        )}
+
+        {/* Extension requests awaiting THIS party's approval (usually the agent approving a
+            buyer's paid extension — works without the dispatcher). */}
+        {(isBuyer || isSeller) && pendingExts.length > 0 && (
+          <div className="w-full bg-gray-900 rounded-lg p-3 border border-gray-700 space-y-2">
+            <h4 className="text-white font-medium text-sm">
+              Extension request{pendingExts.length > 1 ? 's' : ''} to review
+            </h4>
+            {pendingExts.map(ext => (
+              <div key={ext.id} className="flex items-center justify-between gap-2 flex-wrap">
+                <span className="text-gray-300 text-xs">
+                  +{Number(ext.amount).toFixed(4)} {job.currency}{ext.reason ? ` — ${ext.reason}` : ''}
+                </span>
+                <div className="flex gap-2">
+                  <button onClick={() => actOnExtension(ext.id, 'approve')} disabled={loading} className="btn-primary text-xs">
+                    {loading ? '…' : 'Approve'}
+                  </button>
+                  <button onClick={() => actOnExtension(ext.id, 'reject')} disabled={loading} className="btn-secondary text-xs">
+                    Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
 
         {/* Seller: Deliver */}
