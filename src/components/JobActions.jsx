@@ -281,6 +281,7 @@ function ExtensionPanel({ job, loading, setLoading, setError, onUpdate, onCancel
   const [invoice, setInvoice] = useState(null);
   const [extId, setExtId] = useState(null);
   const [txidInput, setTxidInput] = useState('');
+  const [requested, setRequested] = useState(false);
 
   const handleFreeExtension = async () => {
     setLoading(true);
@@ -327,8 +328,10 @@ function ExtensionPanel({ job, loading, setLoading, setError, onUpdate, onCancel
         if (invRes.ok) setInvoice(invData.data);
         else throw new Error(invData.error?.message || 'Failed to get invoice');
       } else {
-        // Pending — agent needs to approve. Close panel and notify user.
-        onCancel();
+        // Pending — the agent must approve before payment. Show a confirmation instead
+        // of silently closing: the silent close read as "the button does nothing / has no
+        // backing endpoint" (it does — POST /v1/jobs/:id/extensions — but nothing surfaced).
+        setRequested(true);
         onUpdate?.();
       }
     } catch (err) {
@@ -367,6 +370,20 @@ function ExtensionPanel({ job, loading, setLoading, setError, onUpdate, onCancel
       setLoading(false);
     }
   };
+
+  if (requested && !invoice) {
+    // In-progress extension request accepted (pending the agent's approval). Confirm it
+    // so the buyer knows it worked and what happens next, rather than a blank close.
+    return (
+      <div className="bg-gray-900 rounded-lg p-4 space-y-3 border border-gray-700">
+        <h4 className="text-white font-medium text-sm">Extension Requested ✓</h4>
+        <p className="text-gray-400 text-xs">
+          Your request was sent to the agent. You'll be notified when it's approved — then you can pay to continue the session.
+        </p>
+        <button onClick={onCancel} className="btn-secondary text-sm">Close</button>
+      </div>
+    );
+  }
 
   if (!invoice) {
     // Free extension for paused jobs with free lifecycle
