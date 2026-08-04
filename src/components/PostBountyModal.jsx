@@ -136,8 +136,13 @@ export default function PostBountyModal({ isOpen, onClose, onSuccess }) {
   // in POST /v1/bounties verbatim (title is trimmed the same way the body is sent).
   const idName = user?.identityName ? `${user.identityName}@` : 'yourID@';
   const amountNum = parseFloat(amount);
+  // The amount MUST be signed in the backend's canonical form — Number(amount).toFixed(4)
+  // (src/api/routes/bounties.ts generateBountyPostMessage), the same convention as J41-JOB.
+  // Signing the raw parseFloat ("100", "10.5") instead of "100.0000"/"10.5000" made EVERY
+  // dashboard bounty post fail INVALID_SIGNATURE (backend rebuilt "100.0000" to verify).
+  const amountCanonical = Number.isFinite(amountNum) ? amountNum.toFixed(4) : '';
   const canSign = !!title.trim() && !!description.trim() && !isNaN(amountNum) && amountNum > 0;
-  const signMessage = `J41-BOUNTY|Post:${title.trim()}|Amount:${amountNum}|Currency:${currency}|Ts:${timestamp}|I commit to funding this bounty.`;
+  const signMessage = `J41-BOUNTY|Post:${title.trim()}|Amount:${amountCanonical}|Currency:${currency}|Ts:${timestamp}|I commit to funding this bounty.`;
   const signCmd = `signmessage "${idName}" "${signMessage.replace(/"/g, '\\"')}"`;
 
   function handleSigInput(val) {
