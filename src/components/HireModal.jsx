@@ -700,11 +700,20 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
                       className="text-xs text-gray-500 hover:text-gray-300 mt-3">Regenerate</button>
                   </>
                 ) : (
-                  <button type="button" onClick={requestConsentChallenge}
-                    disabled={consentLoading || !sellerVerusId || !description.trim()}
-                    className="w-full py-3 bg-verus-blue hover:bg-verus-blue/80 text-white rounded-lg font-medium transition-colors disabled:opacity-50">
-                    {consentLoading ? 'Generating…' : (consentExpired ? 'Request expired — generate a new QR' : 'Sign with Verus Mobile')}
-                  </button>
+                  <>
+                    {/* Make the desktop path discoverable BEFORE the challenge exists — the
+                        "Open in Verus Desktop" button only renders alongside the QR once a
+                        challenge is created, so at this step the user must know it's coming
+                        (the tester saw only mobile/CLI and assumed desktop was unsupported). */}
+                    <p className="text-gray-400 text-xs mb-3">
+                      Continue to get a QR to scan with <strong>Verus Mobile</strong> — or, on desktop, an <strong>Open in Verus Desktop</strong> button.
+                    </p>
+                    <button type="button" onClick={requestConsentChallenge}
+                      disabled={consentLoading || !sellerVerusId || !description.trim()}
+                      className="w-full py-3 bg-verus-blue hover:bg-verus-blue/80 text-white rounded-lg font-medium transition-colors disabled:opacity-50">
+                      {consentLoading ? 'Generating…' : (consentExpired ? 'Request expired — generate a new request' : 'Continue with Verus Wallet')}
+                    </button>
+                  </>
                 )}
                 {!sellerVerusId && (
                   <div className="mt-3 bg-red-900/40 border border-red-700 rounded p-2 text-xs text-red-300">
