@@ -112,7 +112,14 @@ export default function BountyDetailPage() {
 
   const idName = user?.identityName ? `${user.identityName}@` : 'yourID@';
   const applySignMessage = `J41-BOUNTY-APPLY|BountyId:${id}|Ts:${applyTs}|I apply to claim this bounty.`;
-  const awardSignMessage = `J41-BOUNTY-AWARD|BountyId:${id}|Count:${selectedApplicants.length}|Ts:${awardTs}|I award this bounty.`;
+  // Canonical J41-BOUNTY-AWARD: bind the SORTED applicant VerusIDs — not the count, and not the
+  // opaque application row ids we send as applicantIds. Must be byte-identical to the backend
+  // verifier (generateBountyAwardMessage) so /select passes once BOUNTY_AWARD_SIG_MODE=enforce.
+  const selectedVerusIds = (bounty?.applications || [])
+    .filter(a => selectedApplicants.includes(a.id))
+    .map(a => a.applicant_verus_id)
+    .sort();
+  const awardSignMessage = `J41-BOUNTY-AWARD|Bounty:${id}|Applicants:${selectedVerusIds.join(',')}|Ts:${awardTs}|I award this bounty to the listed applicants.`;
 
   async function handleApply(e) {
     e.preventDefault();
