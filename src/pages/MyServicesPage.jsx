@@ -431,10 +431,11 @@ export default function MyServicesPage() {
               </p>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
+                <label htmlFor="svc-name" className="block text-sm font-medium text-gray-300 mb-1">
                   Name *
                 </label>
                 <input
+                  id="svc-name"
                   type="text"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -445,10 +446,11 @@ export default function MyServicesPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
+                <label htmlFor="svc-description" className="block text-sm font-medium text-gray-300 mb-1">
                   Description
                 </label>
                 <textarea
+                  id="svc-description"
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   className="w-full px-3 py-2 bg-white/[0.06] border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-verus-blue resize-none"
@@ -459,10 +461,11 @@ export default function MyServicesPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">
+                  <label htmlFor="svc-price" className="block text-sm font-medium text-gray-300 mb-1">
                     Price *
                   </label>
                   <input
+                    id="svc-price"
                     type="number"
                     step="0.01"
                     min="0"
@@ -474,10 +477,11 @@ export default function MyServicesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">
+                  <label htmlFor="svc-currency" className="block text-sm font-medium text-gray-300 mb-1">
                     Currency
                   </label>
                   <select
+                    id="svc-currency"
                     value={form.currency}
                     onChange={(e) => setForm({ ...form, currency: e.target.value })}
                     className="w-full px-3 py-2 bg-white/[0.06] border border-white/10 rounded-lg text-white focus:outline-none focus:border-verus-blue"
@@ -490,10 +494,11 @@ export default function MyServicesPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">
+                  <label htmlFor="svc-category" className="block text-sm font-medium text-gray-300 mb-1">
                     Category
                   </label>
                   <select
+                    id="svc-category"
                     value={form.category}
                     onChange={(e) => setForm({ ...form, category: e.target.value })}
                     className="w-full px-3 py-2 bg-white/[0.06] border border-white/10 rounded-lg text-white focus:outline-none focus:border-verus-blue"
@@ -506,10 +511,11 @@ export default function MyServicesPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">
+                  <label htmlFor="svc-turnaround" className="block text-sm font-medium text-gray-300 mb-1">
                     Turnaround
                   </label>
                   <input
+                    id="svc-turnaround"
                     type="text"
                     value={form.turnaround}
                     onChange={(e) => setForm({ ...form, turnaround: e.target.value })}
@@ -522,10 +528,11 @@ export default function MyServicesPage() {
               {form.serviceType === 'api-endpoint' && (
                 <div className="space-y-4 pt-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                    <label htmlFor="svc-endpoint-url" className="block text-sm font-medium text-gray-300 mb-1">
                       Endpoint URL *
                     </label>
                     <input
+                      id="svc-endpoint-url"
                       type="url"
                       value={form.endpointUrl}
                       onChange={(e) => setForm({ ...form, endpointUrl: e.target.value })}
@@ -556,6 +563,7 @@ export default function MyServicesPage() {
                               setForm({ ...form, modelPricing: updated });
                             }}
                             placeholder="gpt-4o-mini"
+                            aria-label="Model name"
                             className="col-span-5 px-3 py-2 bg-[#0a0b10] border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-verus-blue font-mono"
                           />
                           <input
@@ -569,6 +577,7 @@ export default function MyServicesPage() {
                             placeholder="Input"
                             min="0"
                             step="any"
+                            aria-label="Input token rate"
                             className="col-span-3 px-3 py-2 bg-[#0a0b10] border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-verus-blue"
                           />
                           <input
@@ -582,6 +591,7 @@ export default function MyServicesPage() {
                             placeholder="Output"
                             min="0"
                             step="any"
+                            aria-label="Output token rate"
                             className="col-span-3 px-3 py-2 bg-[#0a0b10] border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-verus-blue"
                           />
                           {form.modelPricing.length > 1 && (
@@ -634,6 +644,7 @@ export default function MyServicesPage() {
                           placeholder="Requests / min"
                           min="0"
                           step="1"
+                          aria-label="Requests per minute"
                           className="w-full px-3 py-2 bg-[#0a0b10] border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-verus-blue"
                         />
                       </div>
@@ -648,6 +659,7 @@ export default function MyServicesPage() {
                           placeholder="Tokens / min"
                           min="0"
                           step="1"
+                          aria-label="Tokens per minute"
                           className="w-full px-3 py-2 bg-[#0a0b10] border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-verus-blue"
                         />
                       </div>
@@ -657,10 +669,11 @@ export default function MyServicesPage() {
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
+                <label htmlFor="svc-status" className="block text-sm font-medium text-gray-300 mb-1">
                   Status
                 </label>
                 <select
+                  id="svc-status"
                   value={form.status}
                   onChange={(e) => setForm({ ...form, status: e.target.value })}
                   className="w-full px-3 py-2 bg-white/[0.06] border border-white/10 rounded-lg text-white focus:outline-none focus:border-verus-blue"

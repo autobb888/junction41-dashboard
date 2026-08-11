@@ -118,6 +118,7 @@ export default function ProfileSetupForm({ identityName, parentIAddress }) {
                 onChange={e => update(field.key, e.target.value)}
                 placeholder={field.placeholder}
                 rows={3}
+                aria-label={field.label}
                 className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-verus-blue resize-none"
               />
             ) : (
@@ -126,6 +127,7 @@ export default function ProfileSetupForm({ identityName, parentIAddress }) {
                 value={values[field.key]}
                 onChange={e => update(field.key, e.target.value)}
                 placeholder={field.placeholder}
+                aria-label={field.label}
                 className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-verus-blue"
               />
             )}
@@ -152,33 +154,34 @@ export default function ProfileSetupForm({ identityName, parentIAddress }) {
               <div>
                 <label className="block text-xs text-gray-400 mb-1">Name</label>
                 <input type="text" value={svc.name} onChange={e => updateService(i, 'name', e.target.value)}
-                  placeholder="Code Review" className="w-full px-3 py-1.5 bg-gray-900 border border-gray-700 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-verus-blue" />
+                  placeholder="Code Review" aria-label="Service name" className="w-full px-3 py-1.5 bg-gray-900 border border-gray-700 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-verus-blue" />
               </div>
               <div>
                 <label className="block text-xs text-gray-400 mb-1">Category</label>
                 <input type="text" value={svc.category} onChange={e => updateService(i, 'category', e.target.value)}
-                  placeholder="development" className="w-full px-3 py-1.5 bg-gray-900 border border-gray-700 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-verus-blue" />
+                  placeholder="development" aria-label="Service category" className="w-full px-3 py-1.5 bg-gray-900 border border-gray-700 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-verus-blue" />
               </div>
               <div>
                 <label className="block text-xs text-gray-400 mb-1">Price</label>
                 <input type="text" value={svc.price} onChange={e => updateService(i, 'price', e.target.value)}
-                  placeholder="10" className="w-full px-3 py-1.5 bg-gray-900 border border-gray-700 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-verus-blue" />
+                  placeholder="10" aria-label="Service price" className="w-full px-3 py-1.5 bg-gray-900 border border-gray-700 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-verus-blue" />
               </div>
               <div>
                 <label className="block text-xs text-gray-400 mb-1">Currency</label>
                 <input type="text" value={svc.currency} onChange={e => updateService(i, 'currency', e.target.value)}
-                  placeholder="VRSCTEST" className="w-full px-3 py-1.5 bg-gray-900 border border-gray-700 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-verus-blue" />
+                  placeholder="VRSCTEST" aria-label="Service currency" className="w-full px-3 py-1.5 bg-gray-900 border border-gray-700 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-verus-blue" />
               </div>
               <div>
                 <label className="block text-xs text-gray-400 mb-1">Turnaround</label>
                 <input type="text" value={svc.turnaround} onChange={e => updateService(i, 'turnaround', e.target.value)}
-                  placeholder="24h" className="w-full px-3 py-1.5 bg-gray-900 border border-gray-700 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-verus-blue" />
+                  placeholder="24h" aria-label="Service turnaround" className="w-full px-3 py-1.5 bg-gray-900 border border-gray-700 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-verus-blue" />
               </div>
             </div>
             <div>
               <label className="block text-xs text-gray-400 mb-1">Description</label>
               <textarea value={svc.description} onChange={e => updateService(i, 'description', e.target.value)}
                 placeholder="What this service includes..." rows={2}
+                aria-label="Service description"
                 className="w-full px-3 py-1.5 bg-gray-900 border border-gray-700 rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:border-verus-blue resize-none" />
             </div>
           </div>

@@ -208,8 +208,9 @@ export default function SettingsPage() {
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Data Retention (days)</label>
+            <label htmlFor="settings-retention-days" className="block text-sm text-gray-400 mb-1">Data Retention (days)</label>
             <input
+              id="settings-retention-days"
               type="number"
               min={0}
               max={365}

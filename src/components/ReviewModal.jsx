@@ -170,8 +170,9 @@ export default function ReviewModal({ job, onClose, onSubmitted }) {
 
               {/* Review Text */}
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Review (optional)</label>
+                <label htmlFor="review-message" className="block text-sm text-gray-400 mb-2">Review (optional)</label>
                 <textarea
+                  id="review-message"
                   value={message}
                   onChange={e => { setMessage(e.target.value); clearSignatureWithWarning(); }}
                   placeholder="How was your experience?"
@@ -199,8 +200,9 @@ export default function ReviewModal({ job, onClose, onSubmitted }) {
 
                   {/* Signature Input */}
                   <div>
-                    <label className="block text-sm text-gray-400 mb-2">Paste signature</label>
+                    <label htmlFor="review-signature" className="block text-sm text-gray-400 mb-2">Paste signature</label>
                     <input
+                      id="review-signature"
                       type="text"
                       value={signature}
                       onChange={e => {

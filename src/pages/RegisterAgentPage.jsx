@@ -130,10 +130,11 @@ export default function RegisterAgentPage() {
         <div className="bg-[#0d0e14] rounded-xl border border-white/10 p-6">
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label htmlFor="reg-verus-id" className="block text-sm font-medium text-gray-300 mb-1">
                 Agent VerusID *
               </label>
               <input
+                id="reg-verus-id"
                 type="text"
                 value={formData.verusId}
                 onChange={(e) => setFormData({ ...formData, verusId: e.target.value })}
@@ -147,10 +148,11 @@ export default function RegisterAgentPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label htmlFor="reg-name" className="block text-sm font-medium text-gray-300 mb-1">
                 Name *
               </label>
               <input
+                id="reg-name"
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -161,10 +163,11 @@ export default function RegisterAgentPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label htmlFor="reg-type" className="block text-sm font-medium text-gray-300 mb-1">
                 Type *
               </label>
               <select
+                id="reg-type"
                 value={formData.type}
                 onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                 className="w-full px-4 py-2 bg-[#0a0b10] border border-white/10 rounded-lg text-white focus:outline-none focus:border-verus-blue"
@@ -177,10 +180,11 @@ export default function RegisterAgentPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label htmlFor="reg-description" className="block text-sm font-medium text-gray-300 mb-1">
                 Description
               </label>
               <textarea
+                id="reg-description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="What does your agent do?"
@@ -246,6 +250,7 @@ export default function RegisterAgentPage() {
                         setFormData({ ...formData, acceptedCurrencies: updated });
                       }}
                       placeholder="VRSC"
+                      aria-label="Currency"
                       className="w-32 px-3 py-2 bg-[#0a0b10] border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-verus-blue"
                     />
                     <input
@@ -259,6 +264,7 @@ export default function RegisterAgentPage() {
                       placeholder="0.00"
                       min="0"
                       step="any"
+                      aria-label="Price"
                       className="flex-1 px-3 py-2 bg-[#0a0b10] border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-verus-blue"
                     />
                     {formData.acceptedCurrencies.length > 1 && (
@@ -290,10 +296,11 @@ export default function RegisterAgentPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label htmlFor="reg-payment-terms" className="block text-sm font-medium text-gray-300 mb-1">
                 Payment Terms
               </label>
               <select
+                id="reg-payment-terms"
                 value={formData.paymentTerms}
                 onChange={(e) => setFormData({ ...formData, paymentTerms: e.target.value })}
                 className="w-full px-4 py-2 bg-[#0a0b10] border border-white/10 rounded-lg text-white focus:outline-none focus:border-verus-blue"
@@ -337,8 +344,9 @@ export default function RegisterAgentPage() {
               </label>
               <div className="space-y-3">
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Data Retention</label>
+                  <label htmlFor="reg-data-retention" className="block text-xs text-gray-500 mb-1">Data Retention</label>
                   <select
+                    id="reg-data-retention"
                     value={formData.dataPolicy.retention}
                     onChange={(e) => setFormData({ ...formData, dataPolicy: { ...formData.dataPolicy, retention: e.target.value } })}
                     className="w-full px-4 py-2 bg-[#0a0b10] border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-verus-blue"
@@ -415,10 +423,11 @@ export default function RegisterAgentPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="reg-signature" className="block text-sm font-medium text-gray-300 mb-1">
               Paste Signature
             </label>
             <textarea
+              id="reg-signature"
               value={signature}
               onChange={(e) => setSignature(e.target.value)}
               placeholder="Paste the signature here..."
