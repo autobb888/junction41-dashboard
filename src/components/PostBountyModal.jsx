@@ -207,23 +207,23 @@ export default function PostBountyModal({ isOpen, onClose, onSuccess }) {
           )}
 
           <div>
-            <label style={labelStyle}>Title *</label>
-            <input style={fieldStyle} value={title} onChange={e => setTitle(e.target.value)} placeholder="Build a React dashboard component" maxLength={200} />
+            <label htmlFor="bounty-title" style={labelStyle}>Title *</label>
+            <input id="bounty-title" style={fieldStyle} value={title} onChange={e => setTitle(e.target.value)} placeholder="Build a React dashboard component" maxLength={200} />
           </div>
 
           <div>
-            <label style={labelStyle}>Description *</label>
-            <textarea style={{ ...fieldStyle, minHeight: 100, resize: 'vertical' }} value={description} onChange={e => setDescription(e.target.value)} placeholder="Describe what needs to be done..." maxLength={5000} />
+            <label htmlFor="bounty-description" style={labelStyle}>Description *</label>
+            <textarea id="bounty-description" style={{ ...fieldStyle, minHeight: 100, resize: 'vertical' }} value={description} onChange={e => setDescription(e.target.value)} placeholder="Describe what needs to be done..." maxLength={5000} />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label style={labelStyle}>Amount *</label>
-              <input style={fieldStyle} type="number" step="0.0001" min="0.0001" value={amount} onChange={e => setAmount(e.target.value)} placeholder="50" />
+              <label htmlFor="bounty-amount" style={labelStyle}>Amount *</label>
+              <input id="bounty-amount" style={fieldStyle} type="number" step="0.0001" min="0.0001" value={amount} onChange={e => setAmount(e.target.value)} placeholder="50" />
             </div>
             <div>
-              <label style={labelStyle}>Currency</label>
-              <select style={fieldStyle} value={currency} onChange={e => setCurrency(e.target.value)}>
+              <label htmlFor="bounty-currency" style={labelStyle}>Currency</label>
+              <select id="bounty-currency" style={fieldStyle} value={currency} onChange={e => setCurrency(e.target.value)}>
                 <option value="VRSCTEST">VRSCTEST</option>
                 <option value="VRSC">VRSC</option>
                 <option value="tBTC">tBTC</option>
@@ -234,21 +234,21 @@ export default function PostBountyModal({ isOpen, onClose, onSuccess }) {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label style={labelStyle}>Category</label>
-              <select style={fieldStyle} value={category} onChange={e => setCategory(e.target.value)}>
+              <label htmlFor="bounty-category" style={labelStyle}>Category</label>
+              <select id="bounty-category" style={fieldStyle} value={category} onChange={e => setCategory(e.target.value)}>
                 <option value="">Any</option>
                 {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
               </select>
             </div>
             <div>
-              <label style={labelStyle}>Max Claimants</label>
-              <input style={fieldStyle} type="number" min="1" max="10" value={maxClaimants} onChange={e => setMaxClaimants(Math.max(1, Math.min(10, parseInt(e.target.value) || 1)))} />
+              <label htmlFor="bounty-max-claimants" style={labelStyle}>Max Claimants</label>
+              <input id="bounty-max-claimants" style={fieldStyle} type="number" min="1" max="10" value={maxClaimants} onChange={e => setMaxClaimants(Math.max(1, Math.min(10, parseInt(e.target.value) || 1)))} />
             </div>
           </div>
 
           <div>
-            <label style={labelStyle}>Application Deadline (optional)</label>
-            <input style={fieldStyle} type="datetime-local" value={applicationDeadline} onChange={e => setApplicationDeadline(e.target.value)} />
+            <label htmlFor="bounty-app-deadline" style={labelStyle}>Application Deadline (optional)</label>
+            <input id="bounty-app-deadline" style={fieldStyle} type="datetime-local" value={applicationDeadline} onChange={e => setApplicationDeadline(e.target.value)} />
             {!applicationDeadline && (
               <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 4 }}>No deadline — applications stay open until you select someone</p>
             )}
@@ -259,12 +259,12 @@ export default function PostBountyModal({ isOpen, onClose, onSuccess }) {
             <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' }}>Qualification Filters (optional)</summary>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
               <div>
-                <label style={labelStyle}>Minimum Reviews</label>
-                <input style={fieldStyle} type="number" min="0" value={minReviews} onChange={e => setMinReviews(e.target.value)} placeholder="e.g. 3" />
+                <label htmlFor="bounty-min-reviews" style={labelStyle}>Minimum Reviews</label>
+                <input id="bounty-min-reviews" style={fieldStyle} type="number" min="0" value={minReviews} onChange={e => setMinReviews(e.target.value)} placeholder="e.g. 3" />
               </div>
               <div>
-                <label style={labelStyle}>Minimum Trust Tier</label>
-                <select style={fieldStyle} value={minTrustTier} onChange={e => setMinTrustTier(e.target.value)}>
+                <label htmlFor="bounty-min-trust" style={labelStyle}>Minimum Trust Tier</label>
+                <select id="bounty-min-trust" style={fieldStyle} value={minTrustTier} onChange={e => setMinTrustTier(e.target.value)}>
                   <option value="">Any</option>
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
@@ -272,8 +272,8 @@ export default function PostBountyModal({ isOpen, onClose, onSuccess }) {
                 </select>
               </div>
               <div>
-                <label style={labelStyle}>Required Service Category</label>
-                <select style={fieldStyle} value={requiredCategory} onChange={e => setRequiredCategory(e.target.value)}>
+                <label htmlFor="bounty-required-category" style={labelStyle}>Required Service Category</label>
+                <select id="bounty-required-category" style={fieldStyle} value={requiredCategory} onChange={e => setRequiredCategory(e.target.value)}>
                   <option value="">Any</option>
                   {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                 </select>
@@ -291,7 +291,7 @@ export default function PostBountyModal({ isOpen, onClose, onSuccess }) {
           {canSign && (
             <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <label style={{ ...labelStyle, marginBottom: 0 }}>Sign funding commitment *</label>
+                <label htmlFor="bounty-signature" style={{ ...labelStyle, marginBottom: 0 }}>Sign funding commitment *</label>
                 <button
                   type="button"
                   onClick={() => { setTimestamp(Math.floor(Date.now() / 1000)); setSignature(''); }}
@@ -312,6 +312,7 @@ export default function PostBountyModal({ isOpen, onClose, onSuccess }) {
                 </code>
               </div>
               <input
+                id="bounty-signature"
                 style={{ ...fieldStyle, fontFamily: 'monospace', fontSize: 13 }}
                 value={signature}
                 onChange={e => handleSigInput(e.target.value)}

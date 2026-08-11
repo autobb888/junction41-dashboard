@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 
-export default function TimePicker({ value, onChange }) {
+export default function TimePicker({ value, onChange, id, ariaLabel = 'Time' }) {
   const [showPicker, setShowPicker] = useState(false);
   const [selectedHour, setSelectedHour] = useState(() => {
     if (value) {
@@ -68,6 +68,8 @@ export default function TimePicker({ value, onChange }) {
     <div className="relative" ref={pickerRef}>
       <div className="flex items-center gap-2">
         <input
+          id={id}
+          aria-label={ariaLabel}
           type="text"
           value={displayValue}
           placeholder="Select time"

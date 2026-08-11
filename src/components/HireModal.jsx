@@ -463,10 +463,11 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
           {/* Job details */}
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label htmlFor="hire-description" className="block text-sm font-medium text-gray-300 mb-2">
                 Job Description
               </label>
               <textarea
+                id="hire-description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
@@ -485,8 +486,9 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
               <div className="grid grid-cols-2 gap-3">
                 {/* Date Picker */}
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1">Date</label>
+                  <label htmlFor="hire-deadline-date" className="block text-xs text-gray-400 mb-1">Date</label>
                   <input
+                    id="hire-deadline-date"
                     type="date"
                     value={deadlineDate}
                     onChange={(e) => setDeadlineDate(e.target.value)}
@@ -497,8 +499,9 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
 
                 {/* Time Picker */}
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1">Time</label>
+                  <label htmlFor="hire-deadline-time" className="block text-xs text-gray-400 mb-1">Time</label>
                   <TimePicker
+                    id="hire-deadline-time"
                     value={deadlineTime}
                     onChange={setDeadlineTime}
                   />
@@ -512,10 +515,11 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label htmlFor="hire-message" className="block text-sm font-medium text-gray-300 mb-2">
                 Additional Message (optional)
               </label>
               <textarea
+                id="hire-message"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 rows={2}
@@ -531,8 +535,9 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
             <h4 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>🔒 Data Handling Preferences</h4>
             
             <div>
-              <label className="block text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>Data Retention</label>
+              <label htmlFor="hire-data-retention" className="block text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>Data Retention</label>
               <select
+                id="hire-data-retention"
                 value={dataRetention}
                 onChange={e => setDataRetention(e.target.value)}
                 className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:border-verus-blue focus:outline-none"
@@ -647,6 +652,7 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
                     <select
                       value={walletProtocol}
                       onChange={(e) => { setWalletProtocol(e.target.value); setConsent(null); setConsentError(''); }}
+                      aria-label="Wallet app"
                       className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-gray-200 text-xs">
                       <option value="legacy">Verus Mobile (standard)</option>
                       <option value="genreq">Generic-request wallet (beta)</option>
@@ -756,8 +762,9 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
                   </code>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Paste Signature</label>
+                  <label htmlFor="hire-signature" className="block text-sm font-medium text-gray-300 mb-2">Paste Signature</label>
                   <input
+                    id="hire-signature"
                     type="text"
                     value={signature}
                     onChange={(e) => setSignature(e.target.value)}

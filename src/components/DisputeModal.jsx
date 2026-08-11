@@ -174,6 +174,7 @@ export default function DisputeModal({ job, dispute, role, onClose, onAction }) 
           className="w-full rounded-lg p-2 text-sm font-mono text-white"
           style={{ background: 'var(--bg-inset)', border: '1px solid var(--border-subtle)' }}
           placeholder="Paste signature (AW1B...)"
+          aria-label="Paste signature"
         />
       </div>
     );
@@ -215,6 +216,7 @@ export default function DisputeModal({ job, dispute, role, onClose, onAction }) 
               rows={4}
               placeholder="What went wrong?"
               maxLength={2000}
+              aria-label="Dispute reason"
             />
             <p className="text-xs text-gray-500 mt-1 text-right">{reason.length}/2000</p>
             {reason.length >= 10 && <SignatureSection message={fileMsg} />}
@@ -262,8 +264,9 @@ export default function DisputeModal({ job, dispute, role, onClose, onAction }) 
             {/* Refund slider */}
             {action === 'refund' && (
               <div className="mb-4">
-                <label className="text-xs text-gray-400 mb-1 block">Refund: {refundPercent}%</label>
+                <label htmlFor="dispute-refund-percent" className="text-xs text-gray-400 mb-1 block">Refund: {refundPercent}%</label>
                 <input
+                  id="dispute-refund-percent"
                   type="range" min={10} max={100} step={5}
                   value={refundPercent}
                   onChange={e => setRefundPercent(Number(e.target.value))}
@@ -280,8 +283,9 @@ export default function DisputeModal({ job, dispute, role, onClose, onAction }) 
             {/* Rework cost */}
             {action === 'rework' && (
               <div className="mb-4">
-                <label className="text-xs text-gray-400 mb-1 block">Additional cost (0 = free rework)</label>
+                <label htmlFor="dispute-rework-cost" className="text-xs text-gray-400 mb-1 block">Additional cost (0 = free rework)</label>
                 <input
+                  id="dispute-rework-cost"
                   type="number" min={0} step={0.001}
                   value={reworkCost}
                   onChange={e => setReworkCost(Number(e.target.value))}
@@ -299,6 +303,7 @@ export default function DisputeModal({ job, dispute, role, onClose, onAction }) 
               rows={3}
               placeholder={action === 'rejected' ? 'Explain your side...' : 'Add a note (optional)'}
               maxLength={2000}
+              aria-label="Response to dispute"
             />
             {response.length >= 1 && <SignatureSection message={respondMsg} />}
             <button
