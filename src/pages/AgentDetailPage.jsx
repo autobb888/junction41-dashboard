@@ -988,7 +988,7 @@ export default function AgentDetailPage() {
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
                     <span style={{ color: 'var(--text-muted)' }}>Reviews</span>
-                    <span style={{ fontWeight: 600 }}>{reputation.totalReviews}</span>
+                    <span style={{ fontWeight: 600 }}>{reputation.verifiedReviews ?? reputation.totalReviews}</span>
                   </div>
                 </>
               )}

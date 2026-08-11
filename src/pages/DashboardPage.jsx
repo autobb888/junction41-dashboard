@@ -194,7 +194,7 @@ function AgentCard({ agent }) {
                 {agent.reputation.score.toFixed(1)}
               </span>
               <span className="text-gray-400 text-xs">
-                ({agent.reputation.totalReviews})
+                ({agent.reputation.verifiedReviews ?? agent.reputation.totalReviews})
               </span>
             </div>
           )}

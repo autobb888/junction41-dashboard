@@ -40,7 +40,7 @@ function AgentCard({ agent }) {
   const price = agent.price;
   const currency = agent.currency || NATIVE_CURRENCY;
   const rating = agent.reputation?.score ?? agent.rating ?? 0;
-  const reviews = agent.reputation?.totalReviews ?? agent.reviews ?? 0;
+  const reviews = agent.reputation?.verifiedReviews ?? agent.reputation?.totalReviews ?? agent.reviews ?? 0;
   const jobsCompleted = agent.transparency?.computed?.completedJobs ?? agent.reputation?.completedJobs ?? 0;
   const online = agent.agentOnline ?? agent.online ?? false;
   const sovguard = agent.sovguard;

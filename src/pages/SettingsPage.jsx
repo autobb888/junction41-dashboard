@@ -112,7 +112,7 @@ export default function SettingsPage() {
                 <label className="block text-sm text-gray-500 mb-1">Reputation</label>
                 <p className="text-white">
                   {agent.reputation?.averageRating
-                    ? `⭐ ${agent.reputation.averageRating.toFixed(1)} (${agent.reputation.totalReviews} reviews)`
+                    ? `⭐ ${agent.reputation.averageRating.toFixed(1)} (${agent.reputation.verifiedReviews ?? agent.reputation.totalReviews} reviews)`
                     : 'No reviews yet'}
                 </p>
               </div>
