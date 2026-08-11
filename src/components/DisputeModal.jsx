@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { AlertTriangle, RefreshCw, X, DollarSign } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -21,6 +21,36 @@ export default function DisputeModal({ job, dispute, role, onClose, onAction }) 
   const [error, setError] = useState('');
   const [sig, setSig] = useState('');
   const [ts] = useState(() => Math.floor(Date.now() / 1000));
+
+  // A1: dialog semantics — focus trap + Escape + focus-on-open (ported from AuthModal), so
+  // keyboard / screen-reader users can safely operate this money-critical dispute/refund modal
+  // instead of having focus leak to the page behind the overlay.
+  const modalRef = useRef(null);
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === 'Escape') { onClose(); return; }
+    if (e.key !== 'Tab' || !modalRef.current) return;
+    const focusable = modalRef.current.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey) {
+      if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+    } else {
+      if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  }, [onClose]);
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    const timer = setTimeout(() => {
+      if (modalRef.current) {
+        const first = modalRef.current.querySelector('button, [href], input, select, textarea');
+        if (first) first.focus();
+      }
+    }, 50);
+    return () => { document.removeEventListener('keydown', handleKeyDown); clearTimeout(timer); };
+  }, [handleKeyDown]);
 
   const isFilingPhase = !dispute;
   const isRespondPhase = dispute?.action === 'pending' && role === 'seller';
@@ -151,12 +181,12 @@ export default function DisputeModal({ job, dispute, role, onClose, onAction }) 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-      <div className="w-full max-w-md rounded-xl p-6" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}>
+      <div ref={modalRef} role="dialog" aria-modal="true" aria-labelledby="dispute-modal-title" className="w-full max-w-md rounded-xl p-6" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}>
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
             <AlertTriangle size={18} className="text-amber-400" />
-            <h3 className="text-base font-bold text-white">
+            <h3 id="dispute-modal-title" className="text-base font-bold text-white">
               {isFilingPhase ? 'File a Dispute'
                 : isRespondPhase ? 'Respond to Dispute'
                 : isReworkAcceptPhase ? 'Rework Offer'
@@ -168,7 +198,7 @@ export default function DisputeModal({ job, dispute, role, onClose, onAction }) 
                 : 'Dispute Details'}
             </h3>
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-white"><X size={18} /></button>
+          <button onClick={onClose} aria-label="Close" className="text-gray-500 hover:text-white"><X size={18} /></button>
         </div>
 
         {error && <p className="text-red-400 text-sm mb-4">{error}</p>}
