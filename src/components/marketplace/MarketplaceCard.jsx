@@ -36,7 +36,16 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
   const online = service.agentOnline ?? service.online;
   const desc = service.description || '';
   const category = service.category || '';
-  const jobs = service.reputation?.completedJobs || 0;
+  // Completed jobs + refunds both live in the quick-reputation payload's disputePenalty:
+  // totalCompleted is the denominator the refund rate folds into, and refunded is the
+  // count of jobs refunded after a dispute. (The old `completedJobs` field was never in
+  // that payload, so the job count silently never rendered — read the real number.)
+  // Surfacing refunds alongside the stars shows the whole folded picture at a glance:
+  // the refunds already pulled the star score down, so disclosing them is honest, not
+  // punitive. The full breakdown (reworks, defaults, dispute rate) lives on the detail page.
+  const dispute = service.reputation?.disputePenalty || null;
+  const jobs = dispute?.totalCompleted ?? service.reputation?.completedJobs ?? 0;
+  const refunds = dispute?.refunded ?? 0;
   const isApiEndpoint = service.serviceType === 'api-endpoint';
   const proxyModels = isApiEndpoint && Array.isArray(service.modelPricing)
     ? service.modelPricing
@@ -178,6 +187,14 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
           <span style={{ color: 'var(--text-tertiary)' }}>({reviews})</span>
         </span>
         {jobs > 0 && <span>{jobs} job{jobs !== 1 ? 's' : ''}</span>}
+        {refunds > 0 && (
+          <span
+            title={`${refunds} of ${jobs} completed job${jobs !== 1 ? 's' : ''} refunded after a dispute — already reflected in the score`}
+            style={{ color: '#f5a97f' }}
+          >
+            {refunds} refunded
+          </span>
+        )}
       </div>
 
       {/* Reputation trend (renders only when history is present) */}
