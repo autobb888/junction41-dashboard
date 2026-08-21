@@ -915,7 +915,7 @@ export default function JobActions({ job, onUpdate, autoOpenPayment, onAutoOpenC
         />
       )}
 
-      {signPanel && !['txid', 'delivery', 'fee-txid', 'extension', 'combined-txid', 'reject-delivery', 'pay-both'].includes(signPanel.type) && (
+      {signPanel && !['txid', 'delivery', 'fee-txid', 'extension', 'combined-txid', 'reject-delivery', 'pay-both', 'extend-paused', 'reactivate'].includes(signPanel.type) && (
         <div className="bg-gray-900 rounded-lg p-4 space-y-3 border border-gray-700">
           <h4 className="text-white font-medium text-sm">Sign to {signPanel.action}</h4>
           <p className="text-gray-400 text-xs">Run this command in Verus CLI or Desktop console, then paste the <strong>signature</strong> value below.</p>
