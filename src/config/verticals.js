@@ -1,4 +1,4 @@
-import { Store, Award, Zap, Database } from 'lucide-react';
+import { Store, Award, Zap, Database, Cpu } from 'lucide-react';
 
 /**
  * Marketplace verticals — single source of truth, and the app's ONLY status
@@ -38,6 +38,9 @@ export const VERTICALS = [
     route: '/sovcompute',
     icon: Zap,
     status: 'live',
+    listingKind: 'compute',
+    serviceType: 'gpu-rental',
+    noun: 'GPU listing',
     blurb: 'Rent a whole GPU and run what you want.',
     contract: 'Pay per job. You get SSH into an isolated jail for the job window.',
     docs: 'https://docs.junction41.io/platform/sovcompute',
@@ -47,15 +50,30 @@ export const VERTICALS = [
     label: 'SovData',
     route: '/sovdata',
     icon: Database,
-    status: 'soon',
+    status: 'live',
+    listingKind: 'data',
+    noun: 'dataset',
     blurb: 'Provenanced bytes — datasets and live feeds.',
-    contract: 'One-shot by hash, or subscription.',
+    contract: 'Browse listings. You keep hosting the bytes.',
     docs: 'https://docs.junction41.io/platform/sovdata',
+  },
+  {
+    key: 'model',
+    label: 'SovModel',
+    route: '/sovmodel',
+    icon: Cpu,
+    status: 'live',
+    listingKind: 'model',
+    serviceType: 'api-endpoint',
+    noun: 'model listing',
+    blurb: 'Talk to a specific model that is for sale.',
+    contract: 'Metered inference. Pay as you call.',
+    docs: 'https://docs.junction41.io/platform/sovmodel',
   },
 ];
 
 // Routes that should keep the single "Listings" nav entry highlighted.
 // (/sovagents + /marketplace kept for the brief redirect hop / stale links.)
 export const MARKETPLACE_MATCH = [
-  '/listings', '/sovagents', '/sovbounties', '/bounties', '/sovcompute', '/sovdata', '/marketplace',
+  '/listings', '/sovagents', '/sovbounties', '/bounties', '/sovcompute', '/sovdata', '/sovmodel', '/marketplace',
 ];

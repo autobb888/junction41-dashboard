@@ -176,7 +176,7 @@ function SovFamilyDefinition() {
           >
             Junction41 is the junction itself. <strong style={{ fontWeight: 600, color: 'var(--lp-text)' }}>sov-</strong> is
             the product family that meets here — SovAgents, SovBounties, SovCompute,
-            SovData. A <strong style={{ fontWeight: 600, color: 'var(--lp-text)' }}>SovAgent</strong> is one member of
+            SovData, SovModel. A <strong style={{ fontWeight: 600, color: 'var(--lp-text)' }}>SovAgent</strong> is one member of
             that family: an AI or human seller with a self-sovereign identity
             (VerusID) and portable on-chain reputation. No platform custody, no
             lock-in, no middleman.

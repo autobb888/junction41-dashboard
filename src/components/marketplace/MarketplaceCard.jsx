@@ -109,7 +109,7 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
       onClick={() => navigate(agentUrl)}
       className="marketplace-card group relative rounded-xl lp-featured-card-hover"
     >
-      <KindBadge kind={isCompute ? 'compute' : 'agent'} className="absolute top-3 right-3" />
+      <KindBadge kind={service.kind || (isGpuRental ? 'compute' : isApiEndpoint ? 'model' : 'agent')} className="absolute top-3 right-3" />
 
       {/* Header: avatar + name + online */}
       <div className="flex items-center gap-3 mb-3">

@@ -8,7 +8,6 @@ import usePageTitle from '../hooks/usePageTitle';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const PAGE_SIZE = 24;
-const compute = VERTICALS.find((v) => v.key === 'compute');
 
 const enrichCache = new Map();
 
@@ -41,8 +40,35 @@ function useDebounce(value, delay) {
   return debounced;
 }
 
-export default function ComputeMarketplacePage() {
-  usePageTitle(compute?.label || 'SovCompute');
+function nounPhrase(noun, count) {
+  if (count === 1) return noun;
+  if (!noun) return 'listings';
+  if (noun.endsWith('s')) return noun;
+  return `${noun}s`;
+}
+
+function asMarketplaceCard(row) {
+  if (row.verusId) return row;
+  return {
+    id: row.id,
+    verusId: row.id,
+    agentName: row.name,
+    qualifiedName: row.qualifiedName,
+    name: row.name,
+    description: row.description,
+    category: row.category,
+    kind: row.kind,
+    agentOnline: row.online,
+    privacyTier: row.privacyTier,
+    models: row.models,
+    status: row.status,
+  };
+}
+
+export function KindMarketplacePage({ verticalKey }) {
+  const vertical = VERTICALS.find((v) => v.key === verticalKey) || VERTICALS.find((v) => v.key === 'compute');
+  const noun = vertical?.noun || 'listing';
+  usePageTitle(vertical?.label || 'Listings');
 
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('created_at');
@@ -56,23 +82,25 @@ export default function ComputeMarketplacePage() {
   const [fetchError, setFetchError] = useState(null);
 
   const debouncedSearch = useDebounce(search, 300);
+  const browseAgents = vertical?.listingKind === 'data' && !vertical?.serviceType;
 
   const buildParams = useCallback((extraOffset) => {
+    const sort = browseAgents && sortBy === 'price' ? 'created_at' : sortBy;
     const params = new URLSearchParams({
       status: 'active',
-      sort: sortBy,
-      order: sortBy === 'price' ? 'asc' : 'desc',
+      sort,
+      order: sort === 'price' ? 'asc' : 'desc',
       limit: String(PAGE_SIZE),
       offset: String(extraOffset || 0),
     });
-    if (debouncedSearch) params.set('q', debouncedSearch);
-    params.set('kind', 'compute');
-    params.set('serviceType', 'gpu-rental');
+    if (debouncedSearch && !browseAgents) params.set('q', debouncedSearch);
+    if (vertical?.listingKind) params.set('kind', vertical.listingKind);
+    if (vertical?.serviceType) params.set('serviceType', vertical.serviceType);
     return params;
-  }, [debouncedSearch, sortBy]);
+  }, [browseAgents, debouncedSearch, sortBy, vertical?.listingKind, vertical?.serviceType]);
 
   async function enrichWithReputation(serviceList) {
-    const agentIds = [...new Set(serviceList.map(s => s.verusId))];
+    const agentIds = [...new Set(serviceList.map(s => s.verusId).filter(Boolean))];
     const results = await Promise.all(agentIds.map(id => fetchEnrichment(id)));
     const byId = {};
     agentIds.forEach((id, i) => { byId[id] = results[i]; });
@@ -95,16 +123,26 @@ export default function ComputeMarketplacePage() {
     try {
       const currentOffset = isLoadMore ? offset + PAGE_SIZE : 0;
       const params = buildParams(currentOffset);
-      const res = await fetch(`${API_BASE}/v1/services?${params}`);
+      const path = browseAgents ? '/v1/agents' : '/v1/services';
+      const res = await fetch(`${API_BASE}${path}?${params}`);
       const data = await res.json();
 
       if (!res.ok) throw new Error(data.error?.message || 'Failed to fetch');
 
+      const rows = (data.data || []).map(asMarketplaceCard);
       let enriched;
       try {
-        enriched = await enrichWithReputation(data.data || []);
+        enriched = await enrichWithReputation(rows);
       } catch {
-        enriched = (data.data || []).map(s => ({ ...s, reputation: null, transparency: null }));
+        enriched = rows.map(s => ({ ...s, reputation: null, transparency: null }));
+      }
+      if (browseAgents && debouncedSearch) {
+        const q = debouncedSearch.toLowerCase();
+        enriched = enriched.filter(s =>
+          (s.agentName || s.name || '').toLowerCase().includes(q)
+          || (s.description || '').toLowerCase().includes(q)
+          || (s.qualifiedName || '').toLowerCase().includes(q),
+        );
       }
       enriched.sort((a, b) => (b.agentOnline ? 1 : 0) - (a.agentOnline ? 1 : 0));
 
@@ -118,7 +156,7 @@ export default function ComputeMarketplacePage() {
       setTotalCount(data.meta?.total || enriched.length);
       setHasMore(data.meta?.hasMore || false);
     } catch {
-      setFetchError('Failed to load GPU listings. Please try again.');
+      setFetchError(`Failed to load ${nounPhrase(noun, 2)}. Please try again.`);
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -127,7 +165,14 @@ export default function ComputeMarketplacePage() {
 
   useEffect(() => {
     fetchServices(false);
-  }, [debouncedSearch, sortBy]);
+  }, [debouncedSearch, sortBy, vertical?.listingKind, vertical?.serviceType]);
+
+  const emptyTitle = debouncedSearch
+    ? `No results for "${debouncedSearch}"`
+    : `No ${nounPhrase(noun, 2)} available`;
+  const emptyHint = debouncedSearch
+    ? 'Try different keywords'
+    : `Be the first to list a ${noun}`;
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg-base)' }}>
@@ -150,7 +195,7 @@ export default function ComputeMarketplacePage() {
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder={`Search ${totalCount.toLocaleString()} GPU listings`}
+              placeholder={`Search ${totalCount.toLocaleString()} ${nounPhrase(noun, totalCount)}`}
               className="w-full pl-12 pr-4 py-3.5 rounded-xl text-sm text-white placeholder-gray-500 transition-all duration-300 outline-none"
               style={{
                 background: 'rgba(15, 19, 32, 0.8)',
@@ -165,7 +210,7 @@ export default function ComputeMarketplacePage() {
               style={{ border: '1px solid var(--border-default)' }}>
               <option value="created_at" className="bg-gray-900">Newest</option>
               <option value="name" className="bg-gray-900">Name</option>
-              <option value="price" className="bg-gray-900">Price: Low</option>
+              {!browseAgents && <option value="price" className="bg-gray-900">Price: Low</option>}
             </select>
             <div className="hidden sm:flex rounded-xl overflow-hidden" style={{ border: '1px solid var(--border-default)' }}>
               <button onClick={() => setViewMode('grid')}
@@ -184,13 +229,13 @@ export default function ComputeMarketplacePage() {
 
         <div className="mb-8 pt-2" style={{ borderTop: '1px solid var(--border-subtle)' }}>
           <h2 className="text-lg font-bold text-white mt-6" style={{ fontFamily: 'var(--font-display)' }}>
-            {compute?.label || 'SovCompute'}
+            {vertical?.label || 'Listings'}
           </h2>
           <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
-            {compute?.blurb} {compute?.contract}
+            {vertical?.blurb} {vertical?.contract}
           </p>
           <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
-            {totalCount} {totalCount === 1 ? 'GPU listing' : 'GPU listings'} available
+            {totalCount} {nounPhrase(noun, totalCount)} available
           </p>
         </div>
 
@@ -205,14 +250,10 @@ export default function ComputeMarketplacePage() {
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="text-4xl mb-3">&#128269;</div>
             <h3 className="text-lg font-medium text-white mb-2">
-              {debouncedSearch
-                ? `No results for "${debouncedSearch}"`
-                : 'No GPU listings available'}
+              {emptyTitle}
             </h3>
             <p className="text-sm text-gray-400 mb-4">
-              {debouncedSearch
-                ? 'Try different keywords'
-                : 'Be the first to list a GPU'}
+              {emptyHint}
             </p>
             <Link to="/register" className="text-sm text-teal-400 hover:text-teal-300 font-medium no-underline">
               Register your listing &#8594;
@@ -246,4 +287,8 @@ export default function ComputeMarketplacePage() {
       </div>
     </div>
   );
+}
+
+export default function ComputeMarketplacePage() {
+  return <KindMarketplacePage verticalKey="compute" />;
 }

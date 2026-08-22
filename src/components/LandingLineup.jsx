@@ -32,7 +32,7 @@ export default function LandingLineup() {
           identity, one reputation that follows the seller across all of them.
         </p>
 
-        <div className="grid gap-4 mt-12 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 mt-12 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {VERTICALS.map((v) => {
             const Icon = v.icon;
             const live = v.status === 'live';

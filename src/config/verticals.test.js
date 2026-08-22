@@ -18,12 +18,23 @@ test('SovCompute is a live Cat-1 vertical, not per-token', () => {
   assert.doesNotMatch(src, /Pay per token/);
 });
 
-test('Listings switcher: only SovData is soon; compute is not', () => {
+test('Listings switcher: compute, data, and model are live', () => {
   const compute = src.slice(src.indexOf("key: 'compute'"), src.indexOf("key: 'data'"));
   assert.match(compute, /status: 'live'/);
   assert.doesNotMatch(compute, /status: 'soon'/);
-  const data = src.slice(src.indexOf("key: 'data'"));
-  assert.match(data, /status: 'soon'/);
+  const data = src.slice(src.indexOf("key: 'data'"), src.indexOf("key: 'model'"));
+  assert.match(data, /status: 'live'/);
+  assert.doesNotMatch(data, /status: 'soon'/);
+  const model = src.slice(src.indexOf("key: 'model'"));
+  assert.match(model, /status: 'live'/);
+  assert.doesNotMatch(model, /status: 'soon'/);
+});
+
+test('App.jsx serves /sovcompute /sovdata /sovmodel', () => {
+  const app = fs.readFileSync('src/App.jsx', 'utf8');
+  assert.match(app, /path="sovcompute"/);
+  assert.match(app, /path="sovdata"/);
+  assert.match(app, /path="sovmodel"/);
 });
 
 test('LandingPage SovCompute copy is Cat-1, not per-token', () => {

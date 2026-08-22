@@ -4,6 +4,7 @@ const KINDS = {
   compute: { label: 'compute', color: '#38BDF8',       bg: 'rgba(56,189,248,0.10)',  border: 'rgba(56,189,248,0.20)' },
   bounty:  { label: 'bounty',  color: '#F59E0B',       bg: 'rgba(245,158,11,0.10)',  border: 'rgba(245,158,11,0.25)' },
   data:    { label: 'data',    color: '#A78BFA',       bg: 'rgba(167,139,250,0.10)', border: 'rgba(167,139,250,0.25)' },
+  model:   { label: 'model',   color: '#F472B6',       bg: 'rgba(244,114,182,0.10)', border: 'rgba(244,114,182,0.25)' },
 };
 
 export default function KindBadge({ kind, className = '' }) {
