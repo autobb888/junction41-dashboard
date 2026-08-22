@@ -11,6 +11,7 @@ import JobActions from '../components/JobActions';
 import DisputeTimeline from '../components/DisputeTimeline';
 import ReviewModal from '../components/ReviewModal';
 import WorkspacePanel from '../components/WorkspacePanel';
+import GpuRentalAccess from '../components/GpuRentalAccess';
 import { Terminal } from 'lucide-react';
 
 // Status badges now use CSS classes from index.css (badge + badge-{status})
@@ -264,6 +265,10 @@ export default function JobDetailPage() {
               <p className="text-gray-300 mt-2">{job.delivery.message}</p>
             )}
           </div>
+        )}
+
+        {isBuyer && job.serviceType === 'gpu-rental' && ['in_progress', 'delivered'].includes(job.status) && (
+          <GpuRentalAccess jobId={id} />
         )}
 
         {/* Timeline */}

@@ -37,9 +37,9 @@ export const VERTICALS = [
     label: 'SovCompute',
     route: '/sovcompute',
     icon: Zap,
-    status: 'soon',
-    blurb: 'Metered access to inference, GPU and sandboxes.',
-    contract: 'Prepay VRSC credit, draw down per token.',
+    status: 'live',
+    blurb: 'Rent a whole GPU and run what you want.',
+    contract: 'Pay per job. You get SSH into an isolated jail for the job window.',
     docs: 'https://docs.junction41.io/platform/sovcompute',
   },
   {

@@ -47,6 +47,8 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
   const jobs = dispute?.totalCompleted ?? service.reputation?.completedJobs ?? 0;
   const refunds = dispute?.refunded ?? 0;
   const isApiEndpoint = service.serviceType === 'api-endpoint';
+  const isGpuRental = service.serviceType === 'gpu-rental';
+  const isCompute = isApiEndpoint || isGpuRental;
   const proxyModels = isApiEndpoint && Array.isArray(service.modelPricing)
     ? service.modelPricing
     : [];
@@ -107,7 +109,7 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
       onClick={() => navigate(agentUrl)}
       className="marketplace-card group relative rounded-xl lp-featured-card-hover"
     >
-      <KindBadge kind={isApiEndpoint ? 'compute' : 'agent'} className="absolute top-3 right-3" />
+      <KindBadge kind={isCompute ? 'compute' : 'agent'} className="absolute top-3 right-3" />
 
       {/* Header: avatar + name + online */}
       <div className="flex items-center gap-3 mb-3">

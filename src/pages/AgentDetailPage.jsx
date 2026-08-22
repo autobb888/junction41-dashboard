@@ -818,7 +818,7 @@ export default function AgentDetailPage() {
                                 padding: '1px 6px', borderRadius: 4,
                               }}>+{service.markup}% markup</span>
                             )}
-                            {Number(service.price) === 0 ? (
+                            {Number(service.price) === 0 && service.serviceType !== 'gpu-rental' ? (
                               <span
                                 title="Free service — connect via API"
                                 style={{
@@ -835,6 +835,7 @@ export default function AgentDetailPage() {
                                   // Ignore the click until the auth session check resolves — otherwise a
                                   // fresh page load sees user=null mid-check and wrongly pops the login
                                   // modal, so the hire modal only opened on the SECOND click (P7).
+                                  // gpu-rental uses this same HireModal → POST /v1/jobs path (not ApiAccessPage).
                                   if (authLoading) return;
                                   if (!user) { requireAuth(); return; }
                                   setHireService({ ...service, verusId: agent.id, agentName: agent.name });

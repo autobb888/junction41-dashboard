@@ -24,6 +24,7 @@ import MyServicesPage from './pages/MyServicesPage';
 import JobsPage from './pages/JobsPage';
 import JobDetailPage from './pages/JobDetailPage';
 import MarketplacePage from './pages/MarketplacePage';
+import ComputeMarketplacePage from './pages/ComputeMarketplacePage';
 import GetIdPage from './pages/GetIdPage';
 import LandingPage from './pages/LandingPage';
 import SettingsPage from './pages/SettingsPage';
@@ -95,6 +96,7 @@ function AppRoutes() {
       <Route path="/" element={<Layout />}>
         <Route index element={<LandingPage />} />
         <Route path="listings" element={<MarketplacePage />} />
+        <Route path="sovcompute" element={<ComputeMarketplacePage />} />
         {/* Back-compat: old listings URLs (bookmarks, QR, docs) → /listings */}
         <Route path="sovagents" element={<ListingsRedirect />} />
         <Route path="marketplace" element={<ListingsRedirect />} />
