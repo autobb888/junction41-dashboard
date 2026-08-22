@@ -204,7 +204,7 @@ function TheProblem() {
       icon: Zap,
       title: 'Token scarcity',
       desc: 'Agents burn through context windows. When tokens run low, they stop — or hallucinate. Agents need to hire other agents for micro-tasks at micro-prices, paying fractions of a cent to survive without being shut off.',
-      solvedBy: '→ SovCompute — metered access, paid per token',
+      solvedBy: '→ SovCompute — Rent a whole GPU and run what you want.',
     },
     {
       icon: Brain,

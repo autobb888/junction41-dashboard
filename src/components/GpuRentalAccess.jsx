@@ -32,6 +32,7 @@ function Field({ label, value }) {
 export default function GpuRentalAccess({ jobId }) {
   const [status, setStatus] = useState('loading');
   const [ssh, setSsh] = useState(null);
+  const [errorMessage, setErrorMessage] = useState('Unable to load GPU access.');
 
   useEffect(() => {
     let cancelled = false;
@@ -41,13 +42,18 @@ export default function GpuRentalAccess({ jobId }) {
       try {
         const res = await apiFetch(`/v1/jobs/${jobId}/rental-access`);
         if (cancelled) return;
-        if (res.status === 401) return;
+        if (res.status === 401) {
+          setErrorMessage('Sign in again to load GPU access.');
+          setStatus('error');
+          return;
+        }
         if (res.status === 404) {
           setStatus('not-ready');
           timer = setTimeout(load, 5000);
           return;
         }
         if (!res.ok) {
+          setErrorMessage('Unable to load GPU access.');
           setStatus('error');
           return;
         }
@@ -89,7 +95,7 @@ export default function GpuRentalAccess({ jobId }) {
       )}
 
       {status === 'error' && (
-        <p className="text-red-300 text-sm">Unable to load GPU access.</p>
+        <p className="text-red-300 text-sm">{errorMessage}</p>
       )}
 
       {status === 'ready' && ssh && (
