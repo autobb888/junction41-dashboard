@@ -162,9 +162,11 @@ export default function DashboardPage() {
 function AgentCard({ agent }) {
   const statusColors = {
     active: 'bg-green-500',
+    invite: 'bg-violet-400',
     inactive: 'bg-gray-500',
     deprecated: 'bg-red-500',
   };
+  const salesLabel = agent.status === 'invite' ? 'Invite-only' : agent.status;
 
   return (
     <Link
@@ -176,7 +178,7 @@ function AgentCard({ agent }) {
           <div className="flex items-center gap-3">
             <h3 className="text-lg font-semibold text-white">{agent.name}</h3>
             <span className={`w-2 h-2 rounded-full ${statusColors[agent.status] || 'bg-gray-500'}`} />
-            <span className="text-xs text-gray-400 capitalize">{agent.status}</span>
+            <span className="text-xs text-gray-400 capitalize">{salesLabel}</span>
           </div>
           <div className="mt-1">
             <ResolvedId address={agent.verusId} name={agent.name} size="sm" />

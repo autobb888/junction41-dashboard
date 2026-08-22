@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import HireModal from '../components/HireModal';
+import { salesModeLabel, isInviteSalesMode } from '../utils/salesMode';
 import ResolvedId from '../components/ResolvedId';
 import TrustScore from '../components/TrustScore';
 import TransparencyCard from '../components/TransparencyCard';
@@ -455,8 +456,11 @@ export default function AgentDetailPage() {
                   <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#6b7280', display: 'inline-block' }} />
                   Offline
                 </span>
-              ) : (
-                <span className={`badge badge-${agent.status}`}>{agent.status}</span>
+              ) : !isInviteSalesMode(agent.status) ? (
+                <span className={`badge badge-${agent.status}`}>{salesModeLabel(agent.status) || agent.status}</span>
+              ) : null}
+              {isInviteSalesMode(agent.status) && (
+                <span className="badge badge-invite">Invite-only</span>
               )}
             </div>
 
@@ -647,6 +651,11 @@ export default function AgentDetailPage() {
           {services.length > 0 && (
             <div className="card" style={{ marginBottom: 20 }}>
               <SectionHeader icon={Zap} title="Services" count={services.length} />
+              {isInviteSalesMode(agent.status) && (
+                <p style={{ color: 'var(--text-secondary)', fontSize: 13, margin: '0 0 12px' }}>
+                  This seller is invite-only. You can still hire; the job stays unpaid until they accept.
+                </p>
+              )}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {services.map((service) => (
                   <div key={service.id} style={{

@@ -4,6 +4,7 @@ import ResolvedId from '../components/ResolvedId';
 import DataPolicyBadge from '../components/DataPolicyBadge';
 import { SkeletonCard } from '../components/Skeleton';
 import { apiFetch } from '../utils/api';
+import { salesModeLabel } from '../utils/salesMode';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -125,11 +126,23 @@ export default function SettingsPage() {
                 </p>
               </div>
               <div>
-                <label className="block text-sm text-gray-500 mb-1">Status</label>
+                <label className="block text-sm text-gray-500 mb-1">Sales mode</label>
+                <p className="text-white">
+                  {salesModeLabel(agent.status) || 'Open'}
+                  {String(agent.status).toLowerCase() === 'invite' && (
+                    <span className="block text-sm text-gray-500 mt-1">
+                      Floodgate is <code className="font-mono text-xs">j41-dispatcher sales-mode</code> on the seller box — not this toggle.
+                    </span>
+                  )}
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-500 mb-1">Live availability</label>
                 <div className="flex items-center gap-3">
                   <button
                     onClick={async () => {
-                      const newStatus = agent.status === 'active' ? 'inactive' : 'active';
+                      const live = (agent.platformStatus || agent.platform_status || 'active') === 'active';
+                      const newStatus = live ? 'inactive' : 'active';
                       try {
                         const res = await apiFetch(`/v1/agents/${user.verusId}/status`, {
                           method: 'POST',
@@ -142,23 +155,23 @@ export default function SettingsPage() {
                           }),
                         });
                         if (res.ok) {
-                          setAgent(prev => ({ ...prev, status: newStatus }));
-                          setMessage({ type: 'success', text: `Agent ${newStatus === 'active' ? 'activated' : 'deactivated'}` });
+                          setAgent(prev => ({ ...prev, platformStatus: newStatus }));
+                          setMessage({ type: 'success', text: `Agent ${newStatus === 'active' ? 'available' : 'unavailable'}` });
                         }
                       } catch (err) {
                         setMessage({ type: 'error', text: err.message });
                       }
                     }}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      agent.status === 'active' ? 'bg-emerald-600' : 'bg-gray-600'
+                      (agent.platformStatus || agent.platform_status || 'active') === 'active' ? 'bg-emerald-600' : 'bg-gray-600'
                     }`}
                   >
                     <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      agent.status === 'active' ? 'translate-x-6' : 'translate-x-1'
+                      (agent.platformStatus || agent.platform_status || 'active') === 'active' ? 'translate-x-6' : 'translate-x-1'
                     }`} />
                   </button>
-                  <span className={`text-sm font-medium ${agent.status === 'active' ? 'text-emerald-400' : 'text-gray-400'}`}>
-                    {agent.status === 'active' ? 'Active' : 'Inactive'}
+                  <span className={`text-sm font-medium ${(agent.platformStatus || agent.platform_status || 'active') === 'active' ? 'text-emerald-400' : 'text-gray-400'}`}>
+                    {(agent.platformStatus || agent.platform_status || 'active') === 'active' ? 'Available' : 'Unavailable'}
                   </span>
                 </div>
               </div>

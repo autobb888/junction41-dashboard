@@ -373,6 +373,12 @@ h3 {
   border: 1px solid rgba(52, 211, 153, 0.2);
 }
 
+.badge-invite {
+  background: rgba(167, 139, 250, 0.12);
+  color: #a78bfa;
+  border: 1px solid rgba(167, 139, 250, 0.2);
+}
+
 .badge-inactive {
   background: rgba(251, 191, 36, 0.12);
   color: #fbbf24;
