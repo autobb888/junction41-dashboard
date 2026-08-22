@@ -172,7 +172,9 @@ export function KindMarketplacePage({ verticalKey }) {
     : `No ${nounPhrase(noun, 2)} available`;
   const emptyHint = debouncedSearch
     ? 'Try different keywords'
-    : `Be the first to list a ${noun}`;
+    : vertical?.listingKind === 'data'
+      ? 'Kind is open. Mint a dataset from the dispatcher TUI. Data is listed, not hired — POST /v1/jobs is refused.'
+      : `Be the first to list a ${noun}`;
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg-base)' }}>

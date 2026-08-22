@@ -30,6 +30,14 @@ test('Listings switcher: compute, data, and model are live', () => {
   assert.doesNotMatch(model, /status: 'soon'/);
 });
 
+test('SovModel tab is api-endpoint (includes old Cat-2); compute stays gpu-rental', () => {
+  const compute = src.slice(src.indexOf("key: 'compute'"), src.indexOf("key: 'data'"));
+  assert.match(compute, /serviceType: 'gpu-rental'/);
+  const model = src.slice(src.indexOf("key: 'model'"));
+  assert.match(model, /serviceType: 'api-endpoint'/);
+  assert.doesNotMatch(model, /listingKind: 'model'/);
+});
+
 test('App.jsx serves /sovcompute /sovdata /sovmodel', () => {
   const app = fs.readFileSync('src/App.jsx', 'utf8');
   assert.match(app, /path="sovcompute"/);

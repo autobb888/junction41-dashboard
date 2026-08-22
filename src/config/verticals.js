@@ -63,7 +63,6 @@ export const VERTICALS = [
     route: '/sovmodel',
     icon: Cpu,
     status: 'live',
-    listingKind: 'model',
     serviceType: 'api-endpoint',
     noun: 'model listing',
     blurb: 'Talk to a specific model that is for sale.',
