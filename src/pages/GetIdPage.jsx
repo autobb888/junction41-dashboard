@@ -3,20 +3,31 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import CopyButton from '../components/CopyButton';
 import SignCopyButtons from '../components/SignCopyButtons';
+import { ID_KINDS } from '../config/verticals';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
 const STEPS = [
   { num: 1, title: 'Get a Verus Wallet', desc: 'Download a wallet to hold your identity' },
-  { num: 2, title: 'Choose a Name', desc: 'Pick your unique agentplatform@ identity' },
+  { num: 2, title: 'Choose a Name', desc: 'Pick your unique identity and kind' },
   { num: 3, title: 'Scan to Claim', desc: 'Approve the request in Verus Mobile' },
   { num: 4, title: 'Done!', desc: 'Your identity is ready to use' },
 ];
+
+const KIND_ACCENT = {
+  agent:   { color: 'var(--accent)', border: 'rgba(52,211,153,0.45)', bg: 'rgba(52,211,153,0.08)' },
+  compute: { color: '#38BDF8',       border: 'rgba(56,189,248,0.45)',  bg: 'rgba(56,189,248,0.08)' },
+  data:    { color: '#A78BFA',       border: 'rgba(167,139,250,0.45)', bg: 'rgba(167,139,250,0.08)' },
+  model:   { color: '#F472B6',       border: 'rgba(244,114,182,0.45)', bg: 'rgba(244,114,182,0.08)' },
+  general: { color: '#94A3B8',       border: 'rgba(148,163,184,0.45)', bg: 'rgba(148,163,184,0.10)' },
+};
 
 export default function GetIdPage() {
   const { setShowAuthModal } = useAuth();
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
+  const [kind, setKind] = useState('agent');
+  const [hostingKinds, setHostingKinds] = useState(null); // { agent: { parent, open }, ... }
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -36,6 +47,19 @@ export default function GetIdPage() {
   const [availability, setAvailability] = useState({ state: 'idle', reason: null });
 
   const addressValid = /^R[1-9A-HJ-NP-Za-km-z]{33}$/.test(address);
+  const parentName = hostingKinds?.[kind]?.parent || 'agentplatform@';
+  const kindOpen = (k) => hostingKinds?.[k]?.open !== false;
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${API_BASE}/v1/version`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!cancelled && data?.hosting?.kinds) setHostingKinds(data.hosting.kinds);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   // Debounced availability check — tells the user a name is taken BEFORE they scan,
   // instead of failing at the callback. Authoritative re-check happens server-side.
@@ -47,7 +71,7 @@ export default function GetIdPage() {
     let cancelled = false;
     const t = setTimeout(async () => {
       try {
-        const res = await fetch(`${API_BASE}/v1/onboard/provision/available?name=${encodeURIComponent(n)}`);
+        const res = await fetch(`${API_BASE}/v1/onboard/provision/available?name=${encodeURIComponent(n)}&kind=${encodeURIComponent(kind)}`);
         const data = await res.json();
         if (cancelled) return;
         if (res.ok && data?.data) {
@@ -61,7 +85,7 @@ export default function GetIdPage() {
       }
     }, 400);
     return () => { cancelled = true; clearTimeout(t); };
-  }, [name, step]);
+  }, [name, step, kind]);
 
   // Block Continue on a known-bad name; allow on available, or on a check error
   // (the server re-checks at /challenge, so a flaky check endpoint shouldn't trap the user).
@@ -78,7 +102,7 @@ export default function GetIdPage() {
     try {
       let provData;
       if (walletProtocol === 'genreq') {
-        const res = await fetch(`${API_BASE}/v1/onboard/provision/genreq?name=${encodeURIComponent(lower)}&format=json`);
+        const res = await fetch(`${API_BASE}/v1/onboard/provision/genreq?name=${encodeURIComponent(lower)}&kind=${encodeURIComponent(kind)}&format=json`);
         const data = await res.json();
         if (!res.ok || !data?.data?.qrDataUrl) {
           setError(data?.error?.message || 'Could not create your QR code. Try a different name.');
@@ -90,7 +114,7 @@ export default function GetIdPage() {
         const res = await fetch(`${API_BASE}/v1/onboard/provision/challenge`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: lower }),
+          body: JSON.stringify({ name: lower, kind }),
         });
         const data = await res.json();
         if (!data?.data?.qrDataUrl) {
@@ -142,7 +166,7 @@ export default function GetIdPage() {
       const challengeRes = await fetch(`${API_BASE}/v1/onboard`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.toLowerCase().trim(), address: address.trim(), pubkey: pubkey.trim() }),
+        body: JSON.stringify({ name: name.toLowerCase().trim(), address: address.trim(), pubkey: pubkey.trim(), kind }),
       });
       const challengeData = await challengeRes.json();
       if (challengeData.status === 'challenge') {
@@ -172,6 +196,7 @@ export default function GetIdPage() {
           challenge: result.challenge,
           token: result.token,
           signature: signature.trim(),
+          kind,
         }),
       });
       const data = await res.json();
@@ -222,7 +247,7 @@ export default function GetIdPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white">Get Your Free Identity</h1>
         <p className="text-gray-400 mt-1">
-          Register a free <span className="text-verus-blue font-mono">yourname.agentplatform@</span> identity on the Verus blockchain
+          Register a free VerusID. Pick a listing kind, or j41General if you only hire.
         </p>
       </div>
 
@@ -310,10 +335,57 @@ export default function GetIdPage() {
         <div className="card !p-8">
           <h2 className="text-xl font-semibold text-white mb-4">✨ Step 2: Choose Your Name</h2>
           <p className="text-gray-300 mb-6">
-            Your identity will be <span className="font-mono text-verus-blue">{name || 'yourname'}.agentplatform@</span>
+            Your identity will be <span className="font-mono text-verus-blue">{name || 'yourname'}.{parentName}</span>
           </p>
 
-          <form onSubmit={(e) => { e.preventDefault(); if (nameUsable) requestChallenge(name); }}>
+          <form onSubmit={(e) => { e.preventDefault(); if (nameUsable && kindOpen(kind)) requestChallenge(name); }}>
+            <div className="mb-5">
+              <label className="block text-sm font-medium text-gray-300 mb-2">What kind of ID?</label>
+              <div role="radiogroup" aria-label="Identity kind" className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {ID_KINDS.map((v) => {
+                  const k = v.idKind;
+                  const selected = kind === k;
+                  const open = kindOpen(k);
+                  const accent = KIND_ACCENT[k] || KIND_ACCENT.agent;
+                  const Icon = v.icon;
+                  return (
+                    <button
+                      key={k}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      disabled={!open}
+                      onClick={() => open && setKind(k)}
+                      className="text-left rounded-xl p-3 border transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{
+                        borderColor: selected ? accent.border : 'var(--border-subtle)',
+                        background: selected ? accent.bg : 'var(--bg-inset, #080B17)',
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Icon size={16} style={{ color: selected ? accent.color : 'var(--text-secondary)' }} />
+                        <span className="font-semibold text-sm" style={{ color: selected ? accent.color : '#e5e7eb' }}>
+                          {v.label}
+                        </span>
+                        {!open && (
+                          <span className="ml-auto font-mono uppercase text-[9px] tracking-wider text-amber-400 border border-amber-400/30 rounded px-1.5 py-px">
+                            not open
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1.5 leading-snug">{v.blurb}</p>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Names still mint under <span className="font-mono">.{parentName}</span>.
+                {kind === 'general'
+                  ? ' j41General is a purchaser identity — not a listing.'
+                  : ' Kind is written into the identity content map so listings know which vertical you are.'}
+              </p>
+            </div>
+
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-300 mb-2">Identity Name</label>
               <div className={`flex items-center bg-[#0d0e14] rounded-lg overflow-hidden border focus-within:border-verus-blue ${
@@ -329,7 +401,7 @@ export default function GetIdPage() {
                   maxLength={32}
                   autoFocus
                 />
-                <span className="px-3 text-gray-500 font-mono text-sm">.agentplatform@</span>
+                <span className="px-3 text-gray-500 font-mono text-sm">.{parentName}</span>
               </div>
               {/* Live availability feedback */}
               {name.trim().length < 3 ? (
@@ -340,7 +412,7 @@ export default function GetIdPage() {
                   Checking availability…
                 </p>
               ) : availability.state === 'available' ? (
-                <p className="text-xs text-green-400 mt-1">✓ <span className="font-mono">{name}.agentplatform@</span> is available</p>
+                <p className="text-xs text-green-400 mt-1">✓ <span className="font-mono">{name}.{parentName}</span> is available</p>
               ) : availability.state === 'taken' ? (
                 <p className="text-xs text-red-400 mt-1">✗ That name is already taken — try another</p>
               ) : availability.state === 'invalid' ? (
@@ -363,7 +435,7 @@ export default function GetIdPage() {
               <button type="button" onClick={() => setStep(1)} className="btn-secondary flex-1 py-3">
                 ← Back
               </button>
-              <button type="submit" disabled={loading || !nameUsable} className="btn-primary flex-1 py-3 disabled:opacity-50">
+              <button type="submit" disabled={loading || !nameUsable || !kindOpen(kind)} className="btn-primary flex-1 py-3 disabled:opacity-50">
                 {loading ? 'Creating QR...' : 'Continue →'}
               </button>
             </div>
@@ -377,7 +449,7 @@ export default function GetIdPage() {
           <h2 className="text-xl font-semibold text-white mb-2">📲 Step 3: Scan to Claim</h2>
           <p className="text-gray-300 mb-6">
             Open <strong>Verus Mobile</strong>, scan this QR, and approve <strong className="text-gray-200">"request ID"</strong>.
-            The platform mints <span className="font-mono text-verus-blue">{prov?.identity}</span> for you — free.
+            The platform mints <span className="font-mono text-verus-blue">{prov?.identity}</span> as <span className="font-mono">{kind}</span> — free.
           </p>
 
           <div className="flex flex-col items-center mb-6">
@@ -430,7 +502,7 @@ export default function GetIdPage() {
           <h2 className="text-xl font-semibold text-white mb-4">🔑 Manual: Your Wallet Address</h2>
           <p className="text-gray-300 mb-6">
             For CLI / Desktop users. Paste your R-address to link it to your new
-            <span className="font-mono text-verus-blue"> {name}.agentplatform@</span> identity.
+            <span className="font-mono text-verus-blue"> {name}.{parentName}</span> identity.
           </p>
 
           <form onSubmit={handleRegister}>
@@ -527,6 +599,10 @@ export default function GetIdPage() {
                   <div>
                     <span className="text-gray-400 text-sm">Identity</span>
                     <div className="text-white font-mono">{result.identity}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-400 text-sm">Kind</span>
+                    <div className="text-white font-mono">{kind}</div>
                   </div>
                   {result.iAddress && (
                     <div>

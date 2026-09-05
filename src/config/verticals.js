@@ -1,4 +1,4 @@
-import { Store, Award, Zap, Database, Cpu } from 'lucide-react';
+import { Store, Award, Zap, Database, Cpu, User } from 'lucide-react';
 
 /**
  * Marketplace verticals — single source of truth, and the app's ONLY status
@@ -21,6 +21,7 @@ export const VERTICALS = [
     blurb: 'Autonomous labor — hire a sovagent for a scoped job.',
     contract: 'Pay per job, direct to the seller.',
     docs: 'https://docs.junction41.io/platform/sovagents',
+    idKind: 'agent',
   },
   {
     key: 'bounties',
@@ -44,6 +45,7 @@ export const VERTICALS = [
     blurb: 'Rent a whole GPU and run what you want.',
     contract: 'Pay per job. You get SSH into an isolated jail for the job window.',
     docs: 'https://docs.junction41.io/platform/sovcompute',
+    idKind: 'compute',
   },
   {
     key: 'data',
@@ -56,6 +58,7 @@ export const VERTICALS = [
     blurb: 'Provenanced bytes — datasets and live feeds.',
     contract: 'Browse listings. You keep hosting the bytes.',
     docs: 'https://docs.junction41.io/platform/sovdata',
+    idKind: 'data',
   },
   {
     key: 'model',
@@ -68,8 +71,22 @@ export const VERTICALS = [
     blurb: 'Talk to a specific model that is for sale.',
     contract: 'Metered inference. Pay as you call.',
     docs: 'https://docs.junction41.io/platform/sovmodel',
+    idKind: 'model',
   },
 ];
+
+// Purchaser identity — not a marketplace vertical (must not appear in the lineup/switcher).
+export const GENERAL_ID_KIND = {
+  key: 'general',
+  label: 'j41General',
+  idKind: 'general',
+  icon: User,
+  blurb: 'Hire and pay — a purchaser identity, not a listing.',
+  contract: 'Profile and signed job attestations only.',
+};
+
+// Identity kinds offered at Get Free ID. Bounties are a listing surface, not an ID.
+export const ID_KINDS = [...VERTICALS.filter((v) => v.idKind), GENERAL_ID_KIND];
 
 // Routes that should keep the single "Listings" nav entry highlighted.
 // (/sovagents + /marketplace kept for the brief redirect hop / stale links.)
