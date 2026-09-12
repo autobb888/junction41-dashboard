@@ -48,7 +48,7 @@ function nounPhrase(noun, count) {
 }
 
 function asMarketplaceCard(row) {
-  if (row.verusId) return row;
+  if (row.verusId) return { ...row, website: row.website || null };
   return {
     id: row.id,
     verusId: row.id,
@@ -62,6 +62,7 @@ function asMarketplaceCard(row) {
     privacyTier: row.privacyTier,
     models: row.models,
     status: row.status,
+    website: row.website || null,
   };
 }
 
@@ -197,7 +198,9 @@ export function KindMarketplacePage({ verticalKey }) {
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder={`Search ${totalCount.toLocaleString()} ${nounPhrase(noun, totalCount)}`}
+              placeholder={loading
+                ? `Search ${nounPhrase(noun, 2)}`
+                : `Search ${totalCount.toLocaleString()} ${nounPhrase(noun, totalCount)}`}
               className="w-full pl-12 pr-4 py-3.5 rounded-xl text-sm text-white placeholder-gray-500 transition-all duration-300 outline-none"
               style={{
                 background: 'rgba(15, 19, 32, 0.8)',
@@ -237,7 +240,7 @@ export function KindMarketplacePage({ verticalKey }) {
             {vertical?.blurb} {vertical?.contract}
           </p>
           <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
-            {totalCount} {nounPhrase(noun, totalCount)} available
+            {loading ? 'Loading listings…' : `${totalCount} ${nounPhrase(noun, totalCount)} available`}
           </p>
         </div>
 

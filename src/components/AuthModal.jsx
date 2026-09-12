@@ -6,6 +6,7 @@ import { safeWalletDeeplink } from '../utils/walletDeeplink';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const RECENT_IDS_KEY = 'j41_recent_ids';
+const CHALLENGE_TIMEOUT_MS = 15000;
 
 function getRecentIds() {
   try { return JSON.parse(localStorage.getItem(RECENT_IDS_KEY) || '[]'); } catch { return []; }
@@ -36,7 +37,11 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
   const [walletProtocol, setWalletProtocol] = useState('legacy');
   const pollIntervalRef = useRef(null);
   const fetchingRef = useRef(false);
+  const fetchGenRef = useRef(0);
+  const challengeAbortRef = useRef(null);
+  const openRef = useRef(false);
   const modalRef = useRef(null);
+  openRef.current = isOpen;
 
   // Cleanup polling on unmount or close
   useEffect(() => {
@@ -72,6 +77,9 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
   // Fetch challenge + reset state when modal opens
   useEffect(() => {
     if (isOpen) {
+      fetchingRef.current = false;
+      if (challengeAbortRef.current) challengeAbortRef.current.abort('superseded');
+      setLoading(true);
       setTab('wallet');
       setChallenge(null);
       setVerusId('');
@@ -82,6 +90,9 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
       setConfirming(false);
       doFetchChallenge();
     } else {
+      fetchGenRef.current += 1;
+      fetchingRef.current = false;
+      if (challengeAbortRef.current) challengeAbortRef.current.abort('closed');
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     }
   }, [isOpen]);
@@ -144,20 +155,37 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
     // so we don't overwrite the session's active challenge mid-flight.
     if (fetchingRef.current) return;
     fetchingRef.current = true;
+    const gen = ++fetchGenRef.current;
     setLoading(true);
     // Keep a just-set "challenge expired" message visible (Bug H) — otherwise it is
     // cleared in the same tick by the auto-refresh and the user sees nothing.
     if (!preserveError) setError('');
+    const controller = new AbortController();
+    if (challengeAbortRef.current) challengeAbortRef.current.abort('superseded');
+    challengeAbortRef.current = controller;
+    const timeoutId = setTimeout(() => controller.abort('timeout'), CHALLENGE_TIMEOUT_MS);
     try {
       const proto = protocolArg ?? walletProtocol;
       const q = proto === 'genreq' ? '?protocol=genreq' : '';
-      const res = await fetch(`${API_BASE}/auth/consent/challenge${q}`, { credentials: 'include' });
+      const res = await fetch(`${API_BASE}/auth/consent/challenge${q}`, {
+        credentials: 'include',
+        signal: controller.signal,
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error?.message || 'Failed to get challenge');
       setChallenge(data.data);
     } catch (err) {
-      setError(err.message);
+      if (gen !== fetchGenRef.current || !openRef.current) return;
+      const reason = controller.signal.reason;
+      if (reason === 'closed' || reason === 'superseded') return;
+      if (err?.name === 'AbortError' || reason === 'timeout') {
+        setError('Challenge request timed out. Please try again.');
+      } else {
+        setError(err.message || 'Failed to get challenge');
+      }
     } finally {
+      clearTimeout(timeoutId);
+      if (gen !== fetchGenRef.current) return;
       setLoading(false);
       fetchingRef.current = false;
     }
@@ -261,11 +289,20 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
         )}
 
         <div className="p-6">
-          {loading && (
+          {loading && !error && (
             <div className="flex items-center justify-center py-8" role="status" aria-label="Loading">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-verus-blue"></div>
               <span className="sr-only">Loading...</span>
             </div>
+          )}
+          {!loading && error && !challenge && (
+            <button
+              type="button"
+              onClick={() => doFetchChallenge()}
+              className="w-full mb-4 py-3 bg-verus-blue hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
+            >
+              Try again
+            </button>
           )}
 
           {/* CLI Tab */}

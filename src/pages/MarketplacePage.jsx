@@ -88,7 +88,7 @@ export default function MarketplacePage() {
   const [featured, setFeatured] = useState([]);
   const [trending, setTrending] = useState([]);
   const [categoryCounts, setCategoryCounts] = useState({});
-  const [allAgentsTotal, setAllAgentsTotal] = useState(0);
+  const [allAgentsTotal, setAllAgentsTotal] = useState(undefined);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -189,10 +189,11 @@ export default function MarketplacePage() {
   // Fetch featured + trending carousels + category counts
   async function fetchCarousels() {
     try {
-      const [featuredRes, trendingRes, catRes] = await Promise.all([
+      const [featuredRes, trendingRes, catRes, allRes] = await Promise.all([
         fetch(`${API_BASE}/v1/services/featured`).catch(() => null),
         fetch(`${API_BASE}/v1/services/trending`).catch(() => null),
         fetch(`${API_BASE}/v1/services/categories`).catch(() => null),
+        fetch(`${API_BASE}/v1/services?serviceType=agent&status=active&limit=1`).catch(() => null),
       ]);
 
       if (featuredRes?.ok) {
@@ -207,18 +208,18 @@ export default function MarketplacePage() {
       }
       if (catRes?.ok) {
         const data = await catRes.json();
-        if (data.counts) {
-          // Build normalized lookup — store both raw key and lowercase
-          const normalized = {};
-          for (const [key, val] of Object.entries(data.counts)) {
-            normalized[key] = (normalized[key] || 0) + val;
-            normalized[key.toLowerCase()] = (normalized[key.toLowerCase()] || 0) + val;
-          }
-          setCategoryCounts(normalized);
-          // Sum unique category counts for the "All Agents" total
-          const sum = Object.values(data.counts).reduce((a, b) => a + b, 0);
-          setAllAgentsTotal(sum);
+        const rows = Array.isArray(data.data) ? data.data : [];
+        const normalized = {};
+        for (const cat of rows) {
+          if (!cat || cat.count == null) continue;
+          if (cat.id) normalized[cat.id] = cat.count;
+          if (cat.name) normalized[String(cat.name).toLowerCase()] = cat.count;
         }
+        setCategoryCounts(normalized);
+      }
+      if (allRes?.ok) {
+        const data = await allRes.json();
+        setAllAgentsTotal(data.meta?.total);
       }
     } catch { /* carousel fetch is non-critical */ }
   }
@@ -315,7 +316,7 @@ export default function MarketplacePage() {
 
         {/* Search + controls */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-8">
-          <MarketplaceSearchBar value={search} onChange={setSearch} agentCount={totalCount || services.length} />
+          <MarketplaceSearchBar value={search} onChange={setSearch} agentCount={totalCount} loading={loading} />
           <div className="flex items-center gap-2 flex-shrink-0">
             {/* Mobile filter button */}
             <button onClick={() => setMobileFilterOpen(true)}
@@ -392,7 +393,9 @@ export default function MarketplacePage() {
               || (serviceType === 'api-endpoint' ? 'API Providers' : 'SovAgents')}
           </h2>
           <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
-            {totalCount} {totalCount === 1 ? (serviceType === 'api-endpoint' ? 'provider' : 'service') : (serviceType === 'api-endpoint' ? 'providers' : 'services')} {getCategoryById(selectedCategory)?.name ? `in ${getCategoryById(selectedCategory)?.name}` : 'available'}
+            {loading
+              ? 'Loading listings…'
+              : `${totalCount} ${totalCount === 1 ? (serviceType === 'api-endpoint' ? 'provider' : 'service') : (serviceType === 'api-endpoint' ? 'providers' : 'services')} ${getCategoryById(selectedCategory)?.name ? `in ${getCategoryById(selectedCategory)?.name}` : 'available'}`}
             {serviceType === 'api-endpoint' && (
               <> — OpenAI-compatible endpoints, on-chain access grants, per-token billing</>
             )}

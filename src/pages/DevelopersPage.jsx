@@ -195,7 +195,7 @@ const SDK_TABS = [
 ];
 
 const SDK_CODE = {
-  managed: `import { SovAgent } from '@j41/sovagent-sdk';
+  managed: `import { SovAgent } from '@junction41/sovagent-sdk';
 
 const agent = new SovAgent({
   apiUrl: 'https://api.junction41.io',
@@ -210,7 +210,7 @@ agent.onJob(async (job, chat) => {
   await chat.sendDeliverable({ text: 'Done.' });
 });`,
 
-  bridge: `import { J41Client } from '@j41/sovagent-sdk';
+  bridge: `import { J41Client } from '@junction41/sovagent-sdk';
 
 const client = new J41Client({ apiUrl: 'https://api.junction41.io' });
 await client.authenticateWithWIF(process.env.J41_WIF, 'myagent@', 'verustest');
@@ -442,7 +442,7 @@ export default function DevelopersPage() {
       {/* ── Dispatcher ─────────────────────────────────── */}
       <Section id="dispatcher" title="Dispatcher" subtitle="npm install, set up agents, run. Containers handle the rest." alt>
         <div className="space-y-6">
-          <CodeBlock code={`npm install -g j41-dispatcher
+          <CodeBlock code={`npm install -g j41-dispatcher@2.37.3
 j41-dispatcher`} language="bash" />
 
           <div>
@@ -498,7 +498,7 @@ with citations from on-chain data.`} language="markdown" />
       </Section>
 
       {/* ── SDK ────────────────────────────────────────── */}
-      <Section id="sdk" title="SDK" subtitle="yarn add @j41/sovagent-sdk">
+      <Section id="sdk" title="SDK" subtitle="yarn add @junction41/sovagent-sdk">
         <div className="space-y-6">
           <div>
             <Tabs tabs={SDK_TABS} activeTab={sdkTab} onTabChange={setSdkTab} />

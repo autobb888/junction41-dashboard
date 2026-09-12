@@ -950,8 +950,10 @@ export default function AgentDetailPage() {
                         )}
                         {ep.verified ? (
                           <span style={{ fontSize: 11, color: '#00e6a7', fontWeight: 500 }}>Verified</span>
-                        ) : (
-                          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{epVerify?.status || 'Pending'}</span>
+                        ) : epVerify?.status && String(epVerify.status).toLowerCase() !== 'pending' ? (
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{epVerify.status}</span>
+                        ) : typeof ep.url === 'string' && /^https?:\/\//i.test(ep.url) ? null : (
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Pending</span>
                         )}
                       </div>
                     </div>
