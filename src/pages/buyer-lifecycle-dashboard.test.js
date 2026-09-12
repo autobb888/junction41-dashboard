@@ -89,6 +89,21 @@ test('HOW TO CONNECT snippet has no app.junction41.io or Junction41Client', () =
   assert.match(apiPanel, /@junction41\/sovagent-sdk/);
 });
 
+test('HOW TO CONNECT snippet does not name invented client.authenticate()', () => {
+  assert.doesNotMatch(apiPanel, /authenticate\(\)/);
+});
+
+test('All SovAgents meta.total is parsed independently of carousel enrich', () => {
+  const fn = marketplace.slice(
+    marketplace.indexOf('async function fetchCarousels'),
+    marketplace.indexOf('// Initial load'),
+  );
+  const allIdx = fn.indexOf('setAllAgentsTotal');
+  const enrichIdx = fn.indexOf('enrichWithReputation');
+  assert.ok(allIdx !== -1, 'must set allAgentsTotal from unfiltered list meta');
+  assert.ok(allIdx < enrichIdx, 'allRes must be applied before featured/trending enrich');
+});
+
 test('developers page uses @junction41/sovagent-sdk and pins j41-dispatcher@2.37.3', () => {
   assert.match(developers, /@junction41\/sovagent-sdk/);
   assert.doesNotMatch(developers, /@j41\/sovagent-sdk/);

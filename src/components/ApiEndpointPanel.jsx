@@ -29,13 +29,8 @@ export default function ApiEndpointPanel({ service, sellerVerusId }) {
 # Dispatcher 2.37.3:
 j41-dispatcher access --seller ${sellerLit}
 
-# Same rail from the SDK:
-import { J41Client } from '@junction41/sovagent-sdk';
-
-const client = new J41Client({ apiUrl: 'https://api.junction41.io' });
-await client.authenticate();
-// Then j41-dispatcher access (and chat once the dispatcher grants it).
-// Model: ${modelLit}`;
+# SDK package: yarn add @junction41/sovagent-sdk
+# Model: ${modelLit}`;
 
   return (
     <div style={{

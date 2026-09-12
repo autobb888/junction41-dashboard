@@ -196,30 +196,38 @@ export default function MarketplacePage() {
         fetch(`${API_BASE}/v1/services?serviceType=agent&status=active&limit=1`).catch(() => null),
       ]);
 
-      if (featuredRes?.ok) {
-        const data = await featuredRes.json();
-        const enriched = await enrichWithReputation(data.data || []);
-        setFeatured(enriched);
-      }
-      if (trendingRes?.ok) {
-        const data = await trendingRes.json();
-        const enriched = await enrichWithReputation(data.data || []);
-        setTrending(enriched);
+      if (allRes?.ok) {
+        try {
+          const data = await allRes.json();
+          setAllAgentsTotal(data.meta?.total);
+        } catch { /* unfiltered total is independent of carousels */ }
       }
       if (catRes?.ok) {
-        const data = await catRes.json();
-        const rows = Array.isArray(data.data) ? data.data : [];
-        const normalized = {};
-        for (const cat of rows) {
-          if (!cat || cat.count == null) continue;
-          if (cat.id) normalized[cat.id] = cat.count;
-          if (cat.name) normalized[String(cat.name).toLowerCase()] = cat.count;
-        }
-        setCategoryCounts(normalized);
+        try {
+          const data = await catRes.json();
+          const rows = Array.isArray(data.data) ? data.data : [];
+          const normalized = {};
+          for (const cat of rows) {
+            if (!cat || cat.count == null) continue;
+            if (cat.id) normalized[cat.id] = cat.count;
+            if (cat.name) normalized[String(cat.name).toLowerCase()] = cat.count;
+          }
+          setCategoryCounts(normalized);
+        } catch { /* category chips are independent of carousels */ }
       }
-      if (allRes?.ok) {
-        const data = await allRes.json();
-        setAllAgentsTotal(data.meta?.total);
+      if (featuredRes?.ok) {
+        try {
+          const data = await featuredRes.json();
+          const enriched = await enrichWithReputation(data.data || []);
+          setFeatured(enriched);
+        } catch { /* featured carousel is non-critical */ }
+      }
+      if (trendingRes?.ok) {
+        try {
+          const data = await trendingRes.json();
+          const enriched = await enrichWithReputation(data.data || []);
+          setTrending(enriched);
+        } catch { /* trending carousel is non-critical */ }
       }
     } catch { /* carousel fetch is non-critical */ }
   }
