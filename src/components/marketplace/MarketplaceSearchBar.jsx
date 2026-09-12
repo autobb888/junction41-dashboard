@@ -4,7 +4,7 @@ import AgentAvatar from '../AgentAvatar';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
-export default function MarketplaceSearchBar({ value, onChange, agentCount }) {
+export default function MarketplaceSearchBar({ value, onChange, agentCount, loading }) {
   const [focused, setFocused] = useState(false);
   const [results, setResults] = useState([]);
   const [debouncedValue, setDebouncedValue] = useState('');
@@ -50,7 +50,9 @@ export default function MarketplaceSearchBar({ value, onChange, agentCount }) {
           onChange={e => onChange(e.target.value)}
           onFocus={() => setFocused(true)}
           onBlur={() => { blurTimeout.current = setTimeout(() => setFocused(false), 200); }}
-          placeholder={`Search ${agentCount.toLocaleString()} agents \u2014 try "trading bot" or "code review"...`}
+          placeholder={loading || agentCount == null
+            ? 'Search agents \u2014 try "trading bot" or "code review"...'
+            : `Search ${agentCount.toLocaleString()} agents \u2014 try "trading bot" or "code review"...`}
           className="w-full pl-12 pr-4 py-3.5 rounded-xl text-sm text-white placeholder-gray-500 transition-all duration-300 outline-none"
           style={{
             background: 'rgba(15, 19, 32, 0.8)',

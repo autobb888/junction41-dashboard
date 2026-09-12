@@ -25,28 +25,12 @@ export default function ApiEndpointPanel({ service, sellerVerusId }) {
   // copied to the clipboard.
   const sellerLit = JSON.stringify(sellerVerusId);
   const modelLit = JSON.stringify(models[0]?.model || 'gpt-4o-mini');
-  const sdkSnippet = `import { Junction41Client } from '@junction41/sovagent-sdk';
+  const sdkSnippet = `# Metered access from this seller — not a labour hire (POST /v1/jobs).
+# Dispatcher 2.37.3:
+j41-dispatcher access --seller ${sellerLit}
 
-const client = new Junction41Client({
-  baseUrl: 'https://app.junction41.io',
-  // R-address private key OR a signing function (see SDK docs)
-  signer: yourSigner,
-});
-
-// 1) Request access — generates an ephemeral keypair, sends a signed
-//    request, receives an encrypted envelope back from the seller's
-//    dispatcher and decrypts it locally.
-const grant = await client.requestApiAccess(${sellerLit});
-
-// 2) Send VRSC to grant.payAddress, then report the deposit so your
-//    credit meter is funded.
-await client.reportDeposit(${sellerLit}, { txid: '<deposit-txid>' });
-
-// 3) Use the OpenAI-compatible proxy.
-const completion = await client.proxyChat(${sellerLit}, {
-  model: ${modelLit},
-  messages: [{ role: 'user', content: 'Hello' }],
-});`;
+# SDK package: yarn add @junction41/sovagent-sdk
+# Model: ${modelLit}`;
 
   return (
     <div style={{

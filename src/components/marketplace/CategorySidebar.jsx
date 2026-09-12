@@ -43,7 +43,7 @@ export default function CategorySidebar({
           >
             All SovAgents
             <span className="float-right text-xs" style={{ color: 'var(--text-tertiary)' }}>
-              {(totalCount || 0).toLocaleString()}
+              {totalCount != null ? Number(totalCount).toLocaleString() : ''}
             </span>
           </button>
           {CATEGORIES.map(cat => (

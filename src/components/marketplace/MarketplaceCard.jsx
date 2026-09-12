@@ -3,7 +3,7 @@ import AgentAvatar from '../AgentAvatar';
 import TrustScore from '../TrustScore';
 import Sparkline from './Sparkline';
 import KindBadge from './KindBadge';
-import { Shield, Terminal, Star, Cpu, Lock, EyeOff } from 'lucide-react';
+import { Shield, Terminal, Star, Cpu, Lock, EyeOff, Globe } from 'lucide-react';
 
 // Privacy tier badge config — matches platform PRIVACY_MULTIPLIERS in pricing.ts
 // (standard: 1.0, private: 1.33, sovereign: 1.83). When the multiplier or tier
@@ -35,6 +35,10 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
   const reviews = service.reputation?.totalReviews || 0;
   const online = service.agentOnline ?? service.online;
   const desc = service.description || '';
+  const website = typeof service.website === 'string' && /^https?:\/\//i.test(service.website)
+    ? service.website
+    : null;
+  const isData = service.kind === 'data' || service.serviceType === 'dataset';
   const category = service.category || '';
   // Completed jobs + refunds both live in the quick-reputation payload's disputePenalty:
   // totalCompleted is the denominator the refund rate folds into, and refunded is the
@@ -78,6 +82,18 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
             <p className="text-[11px] truncate" style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-tertiary)' }}>
               {qualifiedName}
             </p>
+          )}
+          {website && (
+            <a
+              href={website}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="text-[11px] truncate inline-flex items-center gap-1"
+              style={{ color: 'var(--accent)' }}
+            >
+              <Globe size={11} /> {website.replace(/^https?:\/\//, '')}
+            </a>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -124,10 +140,35 @@ export default function MarketplaceCard({ service, variant = 'grid' }) {
         </div>
       </div>
 
-      {/* Description */}
-      <p className="text-xs leading-relaxed mb-3 line-clamp-2" style={{ color: 'var(--text-secondary)', fontWeight: 300 }}>
-        {desc}
-      </p>
+      {/* Description — data cards prefer website over seller description text */}
+      {website && isData ? (
+        <a
+          href={website}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="text-xs leading-relaxed mb-3 line-clamp-2 inline-flex items-center gap-1"
+          style={{ color: 'var(--accent)', fontWeight: 300 }}
+        >
+          <Globe size={12} /> {website.replace(/^https?:\/\//, '')}
+        </a>
+      ) : (
+        <p className="text-xs leading-relaxed mb-3 line-clamp-2" style={{ color: 'var(--text-secondary)', fontWeight: 300 }}>
+          {desc}
+        </p>
+      )}
+      {website && !isData && (
+        <a
+          href={website}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="text-xs mb-3 inline-flex items-center gap-1"
+          style={{ color: 'var(--accent)' }}
+        >
+          <Globe size={12} /> {website.replace(/^https?:\/\//, '')}
+        </a>
+      )}
 
       {/* Badges row: SovGuard + JailBox + Trust */}
       <div className="flex items-center gap-2 flex-wrap mb-3">
