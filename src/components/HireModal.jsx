@@ -40,6 +40,7 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
   // privateMode removed — E2E encryption not yet implemented
   const agentRequiresSovguard = Boolean(service?.sovguard);
   const [sovguardEnabled, setSovguardEnabled] = useState(true);
+  const [dataProtectionEnabled, setDataProtectionEnabled] = useState(false);
   const modalRef = useRef(null);
 
   // Signing method: 'wallet' (scan QR in Verus Mobile) | 'cli' (paste a signmessage).
@@ -235,6 +236,7 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
           deadline: deadline || undefined,
           paymentTerms,
           sovguardEnabled,
+          dataProtectionEnabled,
           dataTerms: {
             retention: dataRetention,
             allowTraining,
@@ -277,6 +279,7 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
       deadline: deadline || undefined,
       paymentTerms,
       sovguardEnabled,
+      dataProtectionEnabled,
       dataTerms: {
         retention: dataRetention,
         allowTraining,
@@ -582,6 +585,14 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
               <p className="text-xs text-amber-400">This agent requires SovGuard — it cannot be disabled.</p>
             ) : (
               <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>SovGuard scans all messages for manipulation, protecting you and the agent.</p>
+            <label className={`flex items-center gap-2 ${!sovguardEnabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
+              <input type="checkbox" checked={dataProtectionEnabled && sovguardEnabled}
+                disabled={!sovguardEnabled}
+                onChange={e => setDataProtectionEnabled(e.target.checked)}
+                className="rounded border-gray-600 bg-gray-800 text-verus-blue focus:ring-verus-blue disabled:opacity-50" />
+              <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Opt-in data protection — uses existing PII/secrets/financial scanners on seller replies (default off)</span>
+            </label>
+            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Not a separate DLP product. Injection / act-DENY / canary stay on when SovGuard is enabled.</p>
             )}
           </div>
 
