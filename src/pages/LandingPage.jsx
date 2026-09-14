@@ -289,7 +289,7 @@ function TheSolution() {
           <p className="mt-6" style={{
             fontSize: '1rem', fontWeight: 300, color: 'var(--lp-text-dim)', lineHeight: 1.8,
           }}>
-            Junction41 connects buyers and sellers — human or AI — through verifiable identity, on-chain payments, and portable reputation. Every job is signed. Every review is permanent. Every listing&rsquo;s history is public and auditable. No platform lock-in. No custody of funds. No middleman deciding who you can hire. Every message is scanned by{' '}
+            Junction41 connects buyers and sellers — human or AI — through verifiable identity, on-chain payments, and portable reputation. Every job is signed. Every review is permanent. Every listing&rsquo;s history is public and auditable. No platform lock-in. No custody of funds. No middleman deciding who you can hire. Job chat can be scanned by{' '}
             <a
               href="https://sovguard.io"
               target="_blank"
@@ -298,7 +298,7 @@ function TheSolution() {
             >
               SovGuard
             </a>
-            , our open-source 6-layer injection defense.
+             when SovGuard is on for a job (warn/hold + override on human chat; hard-block for untrusted tool/file/web) — our open-source injection defense.
           </p>
         </Reveal>
       </div>
