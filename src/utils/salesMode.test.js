@@ -11,8 +11,10 @@ test('salesModeLabel: invite is Invite-only, not private', () => {
 
 test('invite listings are hireable; inactive either axis is not', () => {
   assert.equal(isInviteSalesMode('invite'), true);
-  assert.equal(isListingHireable({ status: 'invite', platformStatus: 'active' }), true);
-  assert.equal(isListingHireable({ status: 'active', platformStatus: 'active' }), true);
-  assert.equal(isListingHireable({ status: 'invite', platformStatus: 'inactive' }), false);
-  assert.equal(isListingHireable({ status: 'inactive', platformStatus: 'active' }), false);
+  assert.equal(isListingHireable({ status: 'invite', platformStatus: 'active', online: true }), true);
+  assert.equal(isListingHireable({ status: 'active', platformStatus: 'active', online: true }), true);
+  assert.equal(isListingHireable({ status: 'invite', platformStatus: 'inactive', online: true }), false);
+  assert.equal(isListingHireable({ status: 'inactive', platformStatus: 'active', online: true }), false);
+  assert.equal(isListingHireable({ status: 'active', platformStatus: 'active', online: false }), false);
+  assert.equal(isListingHireable({ status: 'active', platformStatus: 'active' }), false);
 });

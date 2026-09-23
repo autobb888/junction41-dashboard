@@ -13,10 +13,11 @@ export function isInviteSalesMode(status) {
   return String(status || '').trim().toLowerCase() === 'invite';
 }
 
-/** Hireable unless either axis is inactive (invite is hireable). */
+/** Hireable unless either status axis is inactive, or the dispatcher has not checked in. */
 export function isListingHireable(agent) {
   if (!agent) return false;
   const chain = String(agent.status || '').trim().toLowerCase();
   const platform = String(agent.platformStatus || agent.platform_status || 'active').trim().toLowerCase();
-  return chain !== 'inactive' && chain !== 'deprecated' && platform !== 'inactive' && platform !== 'disabled';
+  const willing = chain !== 'inactive' && chain !== 'deprecated' && platform !== 'inactive' && platform !== 'disabled';
+  return willing && agent.online === true;
 }
