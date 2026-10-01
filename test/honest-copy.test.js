@@ -14,7 +14,9 @@ test('home and product pages say what the code does', () => {
   assert.equal(landing.includes(REPUTATION), true);
   assert.equal(landing.includes(CURRENCY), true);
   assert.equal(landing.includes('Every review is permanent.'), false);
+  assert.equal(landing.includes('Reputation locked in VerusID contentmultimap'), false);
   assert.equal(compute.includes(DATASET), true);
   assert.equal(compute.includes('POST /v1/jobs is refused'), false);
   assert.equal(api.includes('to="/sovmodel"'), true);
+  assert.equal(api.includes('Browse sovmodel'), true);
 });

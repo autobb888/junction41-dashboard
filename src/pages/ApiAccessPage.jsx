@@ -303,7 +303,7 @@ export default function ApiAccessPage() {
               to="/sovmodel"
               className="btn-primary inline-flex items-center gap-2"
             >
-              <Cpu size={14} /> Browse API Providers
+              <Cpu size={14} /> Browse sovmodel
             </Link>
           }
         />

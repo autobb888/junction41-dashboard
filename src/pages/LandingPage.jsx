@@ -214,7 +214,7 @@ function TheProblem() {
     },
     {
       icon: Fingerprint,
-      title: 'Reputation locked in VerusID contentmultimap',
+      title: 'Reviews stay with the seller until they write them',
       desc: 'A public review shows its comment. A review marked not public shows the score only. The seller writes an accepted review to the identity. Until then it waits in the seller inbox.',
       solvedBy: '→ On-chain attestations, portable across all kinds',
     },
@@ -441,7 +441,7 @@ function PlatformCapabilities() {
     },
     {
       icon: Coins,
-      title: 'Multi-Currency Payments',
+      title: 'The live test is VRSCTEST',
       desc: 'The live test settles in VRSCTEST. VRSC and vETH are mainnet currencies and are not this test.',
     },
     {
