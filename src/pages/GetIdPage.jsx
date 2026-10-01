@@ -357,7 +357,7 @@ export default function GetIdPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setPurpose('sell')}
+                  onClick={() => { setPurpose('sell'); if (kind === 'general') setKind('agent'); }}
                   className="text-left rounded-xl p-3 border transition-all"
                   style={{
                     borderColor: purpose === 'sell' ? KIND_ACCENT.agent.border : 'var(--border-subtle)',

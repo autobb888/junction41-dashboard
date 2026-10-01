@@ -7,4 +7,5 @@ test('Get Free ID asks hire or sell and does not paste a fixed parent', () => {
   assert.match(src, /purpose === 'hire'/);
   assert.match(src, /setKind\('general'\)/);
   assert.doesNotMatch(src, /i7xKUpKQDSriYFfgHYfRpFc2uzRKWLDkjW/);
+  assert.match(src, /setPurpose\('sell'\);\s*if \(kind === 'general'\) setKind\('agent'\)/);
 });
