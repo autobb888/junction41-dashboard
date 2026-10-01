@@ -6,5 +6,6 @@ test('confirm hire says it does not send coins and the hire returns after sign-i
   const modal = fs.readFileSync('src/components/HireModal.jsx', 'utf8');
   const page = fs.readFileSync('src/pages/AgentDetailPage.jsx', 'utf8');
   assert.equal(modal.includes('It does not send coins.'), true);
+  assert.equal((modal.match(/This step creates the job\. It does not send coins\./g) || []).length, 2);
   assert.equal(page.includes('j41.pendingHire'), true);
 });

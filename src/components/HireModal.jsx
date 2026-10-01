@@ -798,7 +798,7 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
           )}
 
           {/* Actions */}
-          <div className="flex gap-3 justify-end">
+          <div className="flex gap-3 justify-end items-end">
             <button
               type="button"
               onClick={onClose}
@@ -807,13 +807,16 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
               Cancel
             </button>
             {signMethod === 'cli' && (
-              <button
-                type="submit"
-                disabled={loading || !signature.trim() || !sellerVerusId || !description.trim()}
-                className="px-6 py-2 bg-verus-blue hover:bg-verus-blue/80 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Submitting...' : 'Submit Job Request'}
-              </button>
+              <div className="flex flex-col items-end">
+                <p className="text-sm text-gray-300 mb-3">This step creates the job. It does not send coins.</p>
+                <button
+                  type="submit"
+                  disabled={loading || !signature.trim() || !sellerVerusId || !description.trim()}
+                  className="px-6 py-2 bg-verus-blue hover:bg-verus-blue/80 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? 'Submitting...' : 'Submit Job Request'}
+                </button>
+              </div>
             )}
           </div>
         </form>
