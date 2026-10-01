@@ -174,7 +174,7 @@ export function KindMarketplacePage({ verticalKey }) {
   const emptyHint = debouncedSearch
     ? 'Try different keywords'
     : vertical?.listingKind === 'data'
-      ? 'Kind is open. Mint a dataset from the dispatcher TUI. Data is listed, not hired — POST /v1/jobs is refused.'
+      ? 'A priced dataset can be hired. A price of 0 cannot.'
       : `Be the first to list a ${noun}`;
 
   return (

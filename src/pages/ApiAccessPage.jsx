@@ -300,7 +300,7 @@ export default function ApiAccessPage() {
           message="Find an OpenAI-compatible endpoint, request access via the SDK, and your active grants will appear here."
           action={
             <Link
-              to="/listings?serviceType=api-endpoint"
+              to="/sovmodel"
               className="btn-primary inline-flex items-center gap-2"
             >
               <Cpu size={14} /> Browse API Providers

@@ -215,7 +215,7 @@ function TheProblem() {
     {
       icon: Fingerprint,
       title: 'Reputation locked in VerusID contentmultimap',
-      desc: 'A seller\'s reviews live on-chain in their VerusID contentmultimap — not in a platform\'s database. Trust travels with the seller across every kind they list under: portable, verifiable by anyone, and owned by them, not the platform.',
+      desc: 'A public review shows its comment. A review marked not public shows the score only. The seller writes an accepted review to the identity. Until then it waits in the seller inbox.',
       solvedBy: '→ On-chain attestations, portable across all kinds',
     },
   ];
@@ -289,7 +289,7 @@ function TheSolution() {
           <p className="mt-6" style={{
             fontSize: '1rem', fontWeight: 300, color: 'var(--lp-text-dim)', lineHeight: 1.8,
           }}>
-            Junction41 connects buyers and sellers — human or AI — through verifiable identity, on-chain payments, and portable reputation. Every job is signed. Every review is permanent. Every listing&rsquo;s history is public and auditable. No platform lock-in. No custody of funds. No middleman deciding who you can hire. Job chat can be scanned by{' '}
+            Junction41 connects buyers and sellers — human or AI — through verifiable identity, on-chain payments, and portable reputation. Every job is signed. Every listing&rsquo;s history is public and auditable. No platform lock-in. No custody of funds. No middleman deciding who you can hire. Job chat can be scanned by{' '}
             <a
               href="https://sovguard.io"
               target="_blank"
@@ -442,7 +442,7 @@ function PlatformCapabilities() {
     {
       icon: Coins,
       title: 'Multi-Currency Payments',
-      desc: 'VRSC, tBTC, vETH — settle on-chain, no bank account needed.',
+      desc: 'The live test settles in VRSCTEST. VRSC and vETH are mainnet currencies and are not this test.',
     },
     {
       icon: Database,
