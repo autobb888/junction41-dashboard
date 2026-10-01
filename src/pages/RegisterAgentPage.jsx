@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { CATEGORIES } from '../components/marketplace/categories';
@@ -7,8 +7,39 @@ import SignCopyButtons from '../components/SignCopyButtons';
 // In dev, use empty string to go through Vite proxy (avoids CORS)
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
+// A blank price is not a price. A typed 0 is.
+function pricedCurrencies(entries) {
+  return (entries || [])
+    .filter((c) => c.currency && c.price !== '' && Number(c.price) >= 0)
+    .map((c) => ({ currency: c.currency, price: Number(c.price) }));
+}
+
+async function postMyService(listing) {
+  if (!listing?.acceptedCurrencies?.length) return;
+  const res = await fetch(`${API_BASE}/v1/me/services`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({
+      name: listing.name,
+      price: listing.acceptedCurrencies[0].price,
+      currency: listing.acceptedCurrencies[0].currency,
+      acceptedCurrencies: listing.acceptedCurrencies,
+    }),
+  });
+  let data = null;
+  try {
+    data = await res.json();
+  } catch {
+    data = null;
+  }
+  if (!res.ok) {
+    throw new Error(data?.error?.message || 'Could not create the service');
+  }
+}
+
 export default function RegisterAgentPage() {
-  const { user } = useAuth();
+  const { user, requireAuth } = useAuth();
   const navigate = useNavigate();
   
   const [formData, setFormData] = useState({
@@ -33,6 +64,28 @@ export default function RegisterAgentPage() {
   const [step, setStep] = useState('form'); // form, sign, complete
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [serviceListed, setServiceListed] = useState(false);
+  const [agentRegistered, setAgentRegistered] = useState(false);
+  const [pendingAfterAuth, setPendingAfterAuth] = useState(false);
+  const [savingService, setSavingService] = useState(false);
+  const listingRef = useRef(null);
+  const postingRef = useRef(false);
+
+  // No session at register time. Once sign-in sets user, post the form price.
+  useEffect(() => {
+    if (!user || !pendingAfterAuth || postingRef.current) return;
+    const listing = listingRef.current;
+    if (!listing) return;
+    postingRef.current = true;
+    postMyService(listing).then(() => {
+      setServiceListed(true);
+      setPendingAfterAuth(false);
+      navigate('/services');
+    }, (err) => {
+      postingRef.current = false;
+      setError(err.message || 'Could not create the service');
+    });
+  }, [user, pendingAfterAuth, navigate]);
 
   function generatePayload() {
     const nonce = crypto.randomUUID();
@@ -49,9 +102,7 @@ export default function RegisterAgentPage() {
         description: formData.description || undefined,
         owner: user.verusId,
         category: formData.categories.join(',') || undefined,
-        acceptedCurrencies: formData.acceptedCurrencies
-          .filter(c => c.currency && c.price !== '' && Number(c.price) >= 0)
-          .map(c => ({ currency: c.currency, price: Number(c.price) })),
+        acceptedCurrencies: pricedCurrencies(formData.acceptedCurrencies),
         paymentTerms: formData.paymentTerms,
         privateMode: formData.privateMode,
         sovguard: formData.sovguard,
@@ -65,29 +116,69 @@ export default function RegisterAgentPage() {
 
   async function handleSubmit() {
     if (!payload || !signature) return;
-    
+
+    const listing = {
+      name: formData.name,
+      acceptedCurrencies: pricedCurrencies(formData.acceptedCurrencies),
+    };
+    listingRef.current = listing;
+
+    if (agentRegistered && !user) {
+      setPendingAfterAuth(true);
+      setStep('complete');
+      return;
+    }
+
     setLoading(true);
     setError('');
-    
+
     try {
-      const res = await fetch(`${API_BASE}/v1/agents/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ ...payload, signature }),
-      });
-      
-      const data = await res.json();
-      
-      if (!res.ok) {
-        throw new Error(data.error?.message || 'Registration failed');
+      if (!agentRegistered) {
+        const res = await fetch(`${API_BASE}/v1/agents/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ ...payload, signature }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error?.message || 'Registration failed');
+        }
+        setAgentRegistered(true);
       }
-      
+
+      if (user && listing.acceptedCurrencies.length > 0) {
+        await postMyService(listing);
+      }
+      if (user) setServiceListed(true);
+      else setPendingAfterAuth(true);
       setStep('complete');
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function saveService() {
+    if (!user || postingRef.current) return;
+    const listing = listingRef.current;
+    if (!listing) return;
+    postingRef.current = true;
+    setSavingService(true);
+    setError('');
+    try {
+      await postMyService(listing);
+      setServiceListed(true);
+      setPendingAfterAuth(false);
+      navigate('/services');
+    } catch (err) {
+      postingRef.current = false;
+      setError(err.message);
+    } finally {
+      setSavingService(false);
     }
   }
 
@@ -99,12 +190,33 @@ export default function RegisterAgentPage() {
         <p className="text-gray-400 mb-6">
           Your agent has been registered and endpoint verification has started.
         </p>
-        <Link
-          to="/"
-          className="inline-block px-6 py-3 bg-verus-blue hover:bg-teal-500 text-white font-medium rounded-lg transition-colors"
-        >
-          View My Agents
-        </Link>
+        {error && (
+          <div className="mb-6 p-4 bg-red-900/30 border border-red-800 rounded-lg text-red-400">
+            {error}
+          </div>
+        )}
+        {user && serviceListed ? (
+          <Link
+            to="/services"
+            className="inline-block px-6 py-3 bg-verus-blue hover:bg-teal-500 text-white font-medium rounded-lg transition-colors"
+          >
+            View My Services
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              if (!user) requireAuth();
+              else saveService();
+            }}
+            disabled={Boolean(user && (savingService || (pendingAfterAuth && !error)))}
+            className="inline-block px-6 py-3 bg-verus-blue hover:bg-teal-500 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+          >
+            {!user
+              ? 'Sign in to list your service'
+              : ((savingService || (pendingAfterAuth && !error)) ? 'Saving your service...' : 'Save your service')}
+          </button>
+        )}
       </div>
     );
   }
@@ -448,7 +560,9 @@ export default function RegisterAgentPage() {
               disabled={loading || !signature}
               className="flex-1 py-3 px-4 bg-verus-blue hover:bg-teal-500 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
             >
-              {loading ? 'Registering...' : 'Register Agent'}
+              {loading
+                ? (agentRegistered ? 'Saving your service...' : 'Registering...')
+                : (agentRegistered ? 'Save your service' : 'Register Agent')}
             </button>
           </div>
         </div>
