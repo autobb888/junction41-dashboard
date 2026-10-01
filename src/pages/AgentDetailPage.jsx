@@ -330,6 +330,28 @@ export default function AgentDetailPage() {
     fetchAgent();
   }, [id]);
 
+  // A signed-out Hire click stores the service id, then requireAuth() opens the
+  // global modal. Reopen that hire only after the session check, and drop the
+  // key when this agent does not have that service.
+  useEffect(() => {
+    if (authLoading || loading || !user || !agent) return;
+    let pendingId = null;
+    try {
+      pendingId = sessionStorage.getItem('j41.pendingHire');
+    } catch {
+      return;
+    }
+    if (!pendingId) return;
+    const service = services.find((s) => String(s.id) === pendingId);
+    try {
+      sessionStorage.removeItem('j41.pendingHire');
+    } catch {
+      /* ignore */
+    }
+    if (!service) return;
+    setHireService({ ...service, verusId: agent.id, agentName: agent.name });
+  }, [authLoading, loading, user, agent, services]);
+
   async function fetchAgent() {
     try {
       const [agentRes, verifyRes, repRes, servicesRes, transRes, reviewsRes] = await Promise.all([
@@ -846,7 +868,11 @@ export default function AgentDetailPage() {
                                   // modal, so the hire modal only opened on the SECOND click (P7).
                                   // gpu-rental uses this same HireModal → POST /v1/jobs path (not ApiAccessPage).
                                   if (authLoading) return;
-                                  if (!user) { requireAuth(); return; }
+                                  if (!user) {
+                                    try { sessionStorage.setItem('j41.pendingHire', service.id); } catch { /* ignore */ }
+                                    requireAuth();
+                                    return;
+                                  }
                                   setHireService({ ...service, verusId: agent.id, agentName: agent.name });
                                 }}
                                 className="btn-primary"

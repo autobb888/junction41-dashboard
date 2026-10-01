@@ -677,6 +677,7 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
                   <div className="py-2">
                     <p className="text-gray-300 mb-1">Wallet approved. Confirm your hire as:</p>
                     <p className="text-verus-blue font-semibold text-lg mb-4">{consentPending.identityName || consentPending.verusId}</p>
+                    <p className="text-sm text-gray-300 mb-3">This step creates the job. It does not send coins.</p>
                     <button type="button" onClick={confirmConsent} disabled={confirming}
                       className="w-full py-3 bg-verus-blue hover:bg-blue-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50">
                       {confirming ? 'Creating job…' : `Confirm hire as ${consentPending.identityName || consentPending.verusId}`}
