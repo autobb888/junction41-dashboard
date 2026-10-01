@@ -16,6 +16,12 @@ import { Terminal } from 'lucide-react';
 
 // Status badges now use CSS classes from index.css (badge + badge-{status})
 
+// A missing id must not compare equal to another missing id.
+function signedInVerusId(user) {
+  const id = user?.verusId;
+  return typeof id === 'string' && id.length > 0 ? id : '';
+}
+
 export default function JobDetailPage() {
   const { id } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -29,10 +35,11 @@ export default function JobDetailPage() {
   const [autoOpenPayment, setAutoOpenPayment] = useState(false);
   const chatRef = useRef(null);
   const prevStatusRef = useRef(null);
+  const fetchGen = useRef(0);
 
   useEffect(() => {
     fetchJob();
-  }, [id]);
+  }, [id, user?.verusId]);
 
   // Poll for status changes when waiting on the other party (e.g. buyer waiting for agent to accept)
   useEffect(() => {
@@ -46,7 +53,8 @@ export default function JobDetailPage() {
   // Auto-open payment when job is accepted and buyer hasn't paid yet
   useEffect(() => {
     if (!job || loading) return;
-    const isBuyer = job.buyerVerusId === user?.verusId;
+    const viewerId = signedInVerusId(user);
+    const isBuyer = viewerId !== '' && job.buyerVerusId === viewerId;
     if (!isBuyer) return;
 
     const needsPayment = job.status === 'accepted' && !job.payment?.txid;
@@ -56,7 +64,7 @@ export default function JobDetailPage() {
       setAutoOpenPayment(true);
     }
     prevStatusRef.current = job.status;
-  }, [job?.status, loading]);
+  }, [job?.status, job?.buyerVerusId, loading, user?.verusId]);
 
   // Handle ?action=pay URL param
   useEffect(() => {
@@ -74,14 +82,17 @@ export default function JobDetailPage() {
   }
 
   async function fetchJob() {
+    const gen = ++fetchGen.current;
     try {
       const res = await apiFetch(`/v1/jobs/${id}`);
+      if (gen !== fetchGen.current) return;
       if (res.status === 401) return; // apiFetch triggers auth modal
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error?.message || 'Failed to fetch job');
       }
       const data = await res.json();
+      if (gen !== fetchGen.current) return;
       setJob(data.data);
 
       // Check for existing review on this job
@@ -96,12 +107,14 @@ export default function JobDetailPage() {
             }
           }
         } catch { /* no review yet */ }
+        if (gen !== fetchGen.current) return;
         setReviewChecked(true);
       }
     } catch (err) {
+      if (gen !== fetchGen.current) return;
       setError(err.message);
     } finally {
-      setLoading(false);
+      if (gen === fetchGen.current) setLoading(false);
     }
   }
 
@@ -124,8 +137,11 @@ export default function JobDetailPage() {
 
   if (!job) return null;
 
-  const isBuyer = job.buyerVerusId === user?.verusId;
-  const isSeller = job.sellerVerusId === user?.verusId;
+  const viewerId = signedInVerusId(user);
+  const isBuyer = viewerId !== '' && job.buyerVerusId === viewerId;
+  const isSeller = viewerId !== '' && job.sellerVerusId === viewerId;
+  // No buyer on the payload, or nobody signed in: this is the public job.
+  const isPublicView = viewerId === '' || !job.buyerVerusId;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -209,25 +225,35 @@ export default function JobDetailPage() {
 
       {/* Job Info */}
       <div className="card space-y-4">
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-xl font-bold text-white">{job.description}</h1>
+        {isPublicView ? (
+          <p className="text-gray-300">Sign in to see this job</p>
+        ) : (
+          <div className="flex justify-between items-start">
+            <div>
+              {job.description ? (
+                <h1 className="text-xl font-bold text-white">{job.description}</h1>
+              ) : null}
+            </div>
+            {job.amount != null && (
+              <div className="text-right">
+                <p className="text-2xl font-bold text-verus-blue">
+                  {job.amount} {job.currency}
+                </p>
+                <p className="text-gray-500 text-sm">
+                  {job.payment?.terms}
+                </p>
+              </div>
+            )}
           </div>
-          <div className="text-right">
-            <p className="text-2xl font-bold text-verus-blue">
-              {job.amount} {job.currency}
-            </p>
-            <p className="text-gray-500 text-sm">
-              {job.payment?.terms}
-            </p>
-          </div>
-        </div>
+        )}
 
         <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-700">
-          <Link to={`/sovagent/${job.buyerVerusId}`} className="block hover:bg-gray-800/50 rounded-lg p-2 -m-2 transition-colors">
-            <p className="text-gray-500 text-sm mb-1">Buyer</p>
-            <ResolvedId address={job.buyerVerusId} size="sm" />
-          </Link>
+          {!isPublicView && (
+            <Link to={`/sovagent/${job.buyerVerusId}`} className="block hover:bg-gray-800/50 rounded-lg p-2 -m-2 transition-colors">
+              <p className="text-gray-500 text-sm mb-1">Buyer</p>
+              <ResolvedId address={job.buyerVerusId} size="sm" />
+            </Link>
+          )}
           <Link to={`/sovagent/${job.sellerVerusId}`} className="block hover:bg-gray-800/50 rounded-lg p-2 -m-2 transition-colors">
             <p className="text-gray-500 text-sm mb-1">Seller</p>
             <ResolvedId address={job.sellerVerusId} size="sm" />
@@ -235,29 +261,31 @@ export default function JobDetailPage() {
         </div>
 
         {/* Payment Status */}
-        <div className="bg-gray-900 rounded-lg p-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-gray-400 text-sm">Payment Status</p>
-              <p className="text-white">
-                {job.payment?.txid ? (
-                  <span className="text-green-400">✓ Paid ({job.payment.txid.slice(0, 16)}...)</span>
-                ) : (
-                  <span className="text-yellow-400">Pending</span>
-                )}
-              </p>
-            </div>
-            {job.payment?.address && (
-              <div className="text-right">
-                <p className="text-gray-400 text-sm">Pay to</p>
-                <p className="text-white font-mono text-xs">{job.payment.address}</p>
+        {!isPublicView && (
+          <div className="bg-gray-900 rounded-lg p-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-gray-400 text-sm">Payment Status</p>
+                <p className="text-white">
+                  {job.payment?.txid ? (
+                    <span className="text-green-400">✓ Paid ({job.payment.txid.slice(0, 16)}...)</span>
+                  ) : (
+                    <span className="text-yellow-400">Pending</span>
+                  )}
+                </p>
               </div>
-            )}
+              {job.payment?.address && (
+                <div className="text-right">
+                  <p className="text-gray-400 text-sm">Pay to</p>
+                  <p className="text-white font-mono text-xs">{job.payment.address}</p>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Delivery */}
-        {job.delivery && (
+        {!isPublicView && job.delivery && (
           <div className="bg-gray-900 rounded-lg p-4">
             <p className="text-gray-400 text-sm mb-2">Delivery</p>
             <p className="text-white break-all font-mono text-sm">{job.delivery.hash}</p>
@@ -267,50 +295,54 @@ export default function JobDetailPage() {
           </div>
         )}
 
-        {isBuyer && job.serviceType === 'gpu-rental' && ['in_progress', 'delivered'].includes(job.status) && (
+        {!isPublicView && isBuyer && job.serviceType === 'gpu-rental' && ['in_progress', 'delivered'].includes(job.status) && (
           <GpuRentalAccess jobId={id} />
         )}
 
         {/* Timeline */}
-        <div className="pt-4 border-t border-gray-700">
-          <p className="text-gray-400 text-sm mb-2">Timeline</p>
-          <div className="space-y-1 text-sm">
-            <p className="text-gray-300">
-              <span className="text-gray-500">Requested:</span> {formatDateTime(job.timestamps.requested)}
-            </p>
-            {job.timestamps.accepted && (
-              <p className="text-gray-300">
-                <span className="text-gray-500">Accepted:</span> {formatDateTime(job.timestamps.accepted)}
-              </p>
-            )}
-            {job.timestamps.delivered && (
-              <p className="text-gray-300">
-                <span className="text-gray-500">Delivered:</span> {formatDateTime(job.timestamps.delivered)}
-              </p>
-            )}
-            {job.timestamps.completed && (
-              <p className="text-gray-300">
-                <span className="text-gray-500">Completed:</span> {formatDateTime(job.timestamps.completed)}
-              </p>
-            )}
+        {!isPublicView && (job.timestamps?.requested || job.timestamps?.accepted || job.timestamps?.delivered || job.timestamps?.completed) && (
+          <div className="pt-4 border-t border-gray-700">
+            <p className="text-gray-400 text-sm mb-2">Timeline</p>
+            <div className="space-y-1 text-sm">
+              {job.timestamps.requested && (
+                <p className="text-gray-300">
+                  <span className="text-gray-500">Requested:</span> {formatDateTime(job.timestamps.requested)}
+                </p>
+              )}
+              {job.timestamps.accepted && (
+                <p className="text-gray-300">
+                  <span className="text-gray-500">Accepted:</span> {formatDateTime(job.timestamps.accepted)}
+                </p>
+              )}
+              {job.timestamps.delivered && (
+                <p className="text-gray-300">
+                  <span className="text-gray-500">Delivered:</span> {formatDateTime(job.timestamps.delivered)}
+                </p>
+              )}
+              {job.timestamps.completed && (
+                <p className="text-gray-300">
+                  <span className="text-gray-500">Completed:</span> {formatDateTime(job.timestamps.completed)}
+                </p>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Dispute Timeline */}
-      {['disputed', 'resolved', 'resolved_rejected', 'rework'].includes(job.status) && (
+      {!isPublicView && ['disputed', 'resolved', 'resolved_rejected', 'rework'].includes(job.status) && (
         <DisputeTimeline jobId={id} />
       )}
 
       {/* Job Actions */}
-      {(isBuyer || isSeller) && (
+      {!isPublicView && (isBuyer || isSeller) && (
         <div className="card">
           <JobActions job={job} onUpdate={fetchJob} autoOpenPayment={autoOpenPayment} onAutoOpenConsumed={() => setAutoOpenPayment(false)} onJobStarted={handleJobStarted} />
         </div>
       )}
 
-      {/* Workspace Panel — buyer only, active/delivered jobs */}
-      {isBuyer && ['in_progress', 'delivered', 'paused'].includes(job.status) && (
+      {/* JailBox — not a gpu-rental */}
+      {!isPublicView && isBuyer && job.serviceType !== 'gpu-rental' && ['in_progress', 'delivered', 'paused'].includes(job.status) && (
         job.seller?.workspaceCapable ? (
           <WorkspacePanel job={job} />
         ) : (
@@ -326,7 +358,7 @@ export default function JobDetailPage() {
       )}
 
       {/* Real-time Chat */}
-      {(isBuyer || isSeller) && job.status !== 'cancelled' && (
+      {!isPublicView && (isBuyer || isSeller) && job.status !== 'cancelled' && (
         <div ref={chatRef}>
           <Chat jobId={id} job={job} onJobStatusChanged={() => fetchJob()} onJobAccepted={() => setAutoOpenPayment(true)} />
         </div>

@@ -657,7 +657,7 @@ export default function AgentDetailPage() {
           {agent.chainReviewCount != null && agent.chainReviewCount > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <Link2 size={14} style={{ color: 'var(--text-muted)' }} />
-              <span style={{ color: 'var(--text-muted)' }}>On-chain reviews:</span>
+              <span style={{ color: 'var(--text-muted)' }}>Posted public reviews:</span>
               <span style={{ fontWeight: 600 }}>{agent.chainReviewCount}</span>
             </div>
           )}
@@ -1041,7 +1041,7 @@ export default function AgentDetailPage() {
                   )}
                   {agent.chainReviewCount > 0 && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
-                      <span style={{ color: 'var(--text-muted)' }}>On-chain reviews</span>
+                      <span style={{ color: 'var(--text-muted)' }}>Posted public reviews</span>
                       <span style={{ fontWeight: 600 }}>{agent.chainReviewCount}</span>
                     </div>
                   )}
