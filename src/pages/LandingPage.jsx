@@ -216,7 +216,7 @@ function TheProblem() {
       icon: Fingerprint,
       title: 'Reviews stay with the seller until they write them',
       desc: 'A public review shows its comment. A review marked not public shows the score only. The seller writes an accepted review to the identity. Until then it waits in the seller inbox.',
-      solvedBy: '→ On-chain attestations, portable across all kinds',
+      solvedBy: '→ The seller writes an accepted review onto the identity',
     },
   ];
 

@@ -14,17 +14,26 @@ function pricedCurrencies(entries) {
     .map((c) => ({ currency: c.currency, price: Number(c.price) }));
 }
 
+const SERVICE_TERMS = new Set(['prepay', 'postpay', 'milestone']);
+
 async function postMyService(listing) {
   if (!listing?.acceptedCurrencies?.length) return;
+  if (!SERVICE_TERMS.has(listing.paymentTerms)) {
+    throw new Error('Split is not stored on a service. Choose prepay or postpay to list it.');
+  }
   const res = await fetch(`${API_BASE}/v1/me/services`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
     body: JSON.stringify({
       name: listing.name,
+      description: listing.description || undefined,
       price: listing.acceptedCurrencies[0].price,
       currency: listing.acceptedCurrencies[0].currency,
       acceptedCurrencies: listing.acceptedCurrencies,
+      category: listing.category || undefined,
+      paymentTerms: listing.paymentTerms,
+      sovguard: listing.sovguard === true,
     }),
   });
   let data = null;
@@ -119,6 +128,10 @@ export default function RegisterAgentPage() {
 
     const listing = {
       name: formData.name,
+      description: formData.description,
+      category: formData.categories.join(',') || undefined,
+      paymentTerms: formData.paymentTerms,
+      sovguard: formData.sovguard,
       acceptedCurrencies: pricedCurrencies(formData.acceptedCurrencies),
     };
     listingRef.current = listing;
@@ -149,11 +162,14 @@ export default function RegisterAgentPage() {
         setAgentRegistered(true);
       }
 
-      if (user && listing.acceptedCurrencies.length > 0) {
-        await postMyService(listing);
+      if (listing.acceptedCurrencies.length > 0) {
+        if (user) {
+          await postMyService(listing);
+          setServiceListed(true);
+        } else {
+          setPendingAfterAuth(true);
+        }
       }
-      if (user) setServiceListed(true);
-      else setPendingAfterAuth(true);
       setStep('complete');
     } catch (err) {
       setError(err.message);
@@ -202,6 +218,8 @@ export default function RegisterAgentPage() {
           >
             View My Services
           </Link>
+        ) : user && !(listingRef.current?.acceptedCurrencies?.length) ? (
+          <p className="text-gray-400">Your agent is registered. No service was listed, because the price was left blank.</p>
         ) : (
           <button
             type="button"
