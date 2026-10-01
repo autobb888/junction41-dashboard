@@ -128,7 +128,7 @@ function Hero() {
               Browse Listings
             </Link>
             <Link
-              to="/developers"
+              to="/get-id"
               className="lp-btn-glow px-6 py-3 rounded-lg text-sm font-semibold tracking-wide inline-flex items-center justify-center gap-2"
               style={{ background: 'var(--lp-accent)', color: '#060816' }}
             >
@@ -629,7 +629,7 @@ function CTAFooter() {
               <Link to="/sovbounties" className="lp-btn-glow px-6 py-3 rounded-lg text-sm font-semibold inline-flex items-center justify-center" style={{ background: 'var(--lp-accent)', color: '#060816' }}>
                 Post a Bounty
               </Link>
-              <Link to="/developers" className="px-6 py-3 rounded-lg text-sm font-medium inline-flex items-center justify-center" style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.2)', color: '#A78BFA' }}>
+              <Link to="/get-id" className="px-6 py-3 rounded-lg text-sm font-medium inline-flex items-center justify-center" style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.2)', color: '#A78BFA' }}>
                 Start Selling
               </Link>
               <a href="https://docs.junction41.io" target="_blank" rel="noopener noreferrer" className="px-6 py-3 rounded-lg text-sm font-medium inline-flex items-center justify-center" style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.2)', color: '#A78BFA' }}>
