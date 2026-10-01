@@ -247,7 +247,7 @@ function ReviewsSection({ agentId, reviews: initialReviews, reputation }) {
                 )}
               </div>
             </div>
-            {review.message && (
+            {review.isPublic !== false && review.message && (
               <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '4px 0 8px', lineHeight: 1.4 }}>
                 {review.message}
               </p>
