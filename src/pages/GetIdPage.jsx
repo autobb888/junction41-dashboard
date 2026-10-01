@@ -26,6 +26,7 @@ export default function GetIdPage() {
   const { setShowAuthModal } = useAuth();
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
+  const [purpose, setPurpose] = useState(null);
   const [kind, setKind] = useState('agent');
   const [hostingKinds, setHostingKinds] = useState(null); // { agent: { parent, open }, ... }
   const [error, setError] = useState('');
@@ -338,7 +339,43 @@ export default function GetIdPage() {
             Your identity will be <span className="font-mono text-verus-blue">{name || 'yourname'}.{parentName}</span>
           </p>
 
-          <form onSubmit={(e) => { e.preventDefault(); if (nameUsable && kindOpen(kind)) requestChallenge(name); }}>
+          <form onSubmit={(e) => { e.preventDefault(); if (purpose && nameUsable && kindOpen(kind)) requestChallenge(name); }}>
+            <div className="mb-5">
+              <label className="block text-sm font-medium text-gray-300 mb-2">Hiring or selling?</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setPurpose('hire'); setKind('general'); }}
+                  className="text-left rounded-xl p-3 border transition-all"
+                  style={{
+                    borderColor: purpose === 'hire' ? KIND_ACCENT.general.border : 'var(--border-subtle)',
+                    background: purpose === 'hire' ? KIND_ACCENT.general.bg : 'var(--bg-inset, #080B17)',
+                  }}
+                >
+                  <span className="font-semibold text-sm" style={{ color: purpose === 'hire' ? KIND_ACCENT.general.color : '#e5e7eb' }}>Hire</span>
+                  <p className="text-xs text-gray-400 mt-1.5 leading-snug">Mint a purchaser identity. You do not pick a listing kind.</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPurpose('sell')}
+                  className="text-left rounded-xl p-3 border transition-all"
+                  style={{
+                    borderColor: purpose === 'sell' ? KIND_ACCENT.agent.border : 'var(--border-subtle)',
+                    background: purpose === 'sell' ? KIND_ACCENT.agent.bg : 'var(--bg-inset, #080B17)',
+                  }}
+                >
+                  <span className="font-semibold text-sm" style={{ color: purpose === 'sell' ? KIND_ACCENT.agent.color : '#e5e7eb' }}>Sell</span>
+                  <p className="text-xs text-gray-400 mt-1.5 leading-snug">Pick a listing kind, then mint that identity.</p>
+                </button>
+              </div>
+            </div>
+
+            {purpose === 'hire' ? (
+              <p className="text-xs text-gray-500 mb-5">
+                Names still mint under <span className="font-mono">.{parentName}</span>.
+                {' '}j41General is a purchaser identity — not a listing.
+              </p>
+            ) : purpose === 'sell' ? (
             <div className="mb-5">
               <label className="block text-sm font-medium text-gray-300 mb-2">What kind of ID?</label>
               <div role="radiogroup" aria-label="Identity kind" className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -385,6 +422,7 @@ export default function GetIdPage() {
                   : ' Kind is written into the identity content map so listings know which vertical you are.'}
               </p>
             </div>
+            ) : null}
 
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-300 mb-2">Identity Name</label>
@@ -435,7 +473,7 @@ export default function GetIdPage() {
               <button type="button" onClick={() => setStep(1)} className="btn-secondary flex-1 py-3">
                 ← Back
               </button>
-              <button type="submit" disabled={loading || !nameUsable || !kindOpen(kind)} className="btn-primary flex-1 py-3 disabled:opacity-50">
+              <button type="submit" disabled={loading || !purpose || !nameUsable || !kindOpen(kind)} className="btn-primary flex-1 py-3 disabled:opacity-50">
                 {loading ? 'Creating QR...' : 'Continue →'}
               </button>
             </div>
@@ -639,6 +677,7 @@ export default function GetIdPage() {
               </div>
 
               {/* Secure Your Identity */}
+              {purpose === 'hire' ? null : (
               <div className="bg-white/[0.03] rounded-lg p-4 mb-6">
                 <h3 className="text-sm font-medium text-white mb-3">🔒 Secure Your Identity</h3>
                 <p className="text-xs text-gray-400 mb-4">
@@ -658,8 +697,8 @@ export default function GetIdPage() {
                   <div>
                     <div className="text-xs text-gray-400 mb-1">2. Update your identity (replace values with your own):</div>
                     <div className="relative">
-                      <pre className="bg-[#0a0b10] rounded p-2 text-xs text-green-400 overflow-x-auto whitespace-pre-wrap">{`updateidentity '{"name":"${name}","parent":"i7xKUpKQDSriYFfgHYfRpFc2uzRKWLDkjW","privateaddress":"YOUR_Z_ADDRESS","revocationauthority":"YOUR_PERSONAL_ID@","recoveryauthority":"YOUR_PERSONAL_ID@"}'`}</pre>
-                      <CopyButton text={`updateidentity '{"name":"${name}","parent":"i7xKUpKQDSriYFfgHYfRpFc2uzRKWLDkjW","privateaddress":"YOUR_Z_ADDRESS","revocationauthority":"YOUR_PERSONAL_ID@","recoveryauthority":"YOUR_PERSONAL_ID@"}'`} className="absolute top-1 right-1" />
+                      <pre className="bg-[#0a0b10] rounded p-2 text-xs text-green-400 overflow-x-auto whitespace-pre-wrap">{`updateidentity '{"name":"${name}","parent":"${parentName}","privateaddress":"YOUR_Z_ADDRESS","revocationauthority":"YOUR_PERSONAL_ID@","recoveryauthority":"YOUR_PERSONAL_ID@"}'`}</pre>
+                      <CopyButton text={`updateidentity '{"name":"${name}","parent":"${parentName}","privateaddress":"YOUR_Z_ADDRESS","revocationauthority":"YOUR_PERSONAL_ID@","recoveryauthority":"YOUR_PERSONAL_ID@"}'`} className="absolute top-1 right-1" />
                     </div>
                     <p className="text-xs text-gray-400 mt-1">
                       Replace <code className="text-gray-400">YOUR_Z_ADDRESS</code> with the z-address from step 1,
@@ -668,13 +707,14 @@ export default function GetIdPage() {
                   </div>
                 </div>
               </div>
+              )}
 
               <div className="bg-white/[0.03] rounded-lg p-4 mb-6">
                 <h3 className="text-sm font-medium text-gray-300 mb-2">What's next?</h3>
                 <ol className="text-sm text-gray-400 space-y-2 list-decimal list-inside">
                   <li>Open your Verus wallet — your new ID should appear automatically</li>
                   <li><button onClick={() => setShowAuthModal(true)} className="text-verus-blue hover:underline">Log in to the dashboard</button> with your new identity</li>
-                  <li>Register your first agent or browse the marketplace</li>
+                  <li>{purpose === 'hire' ? 'Browse the marketplace' : 'Register your first agent or browse the marketplace'}</li>
                 </ol>
               </div>
 
