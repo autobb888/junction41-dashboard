@@ -5,7 +5,6 @@ import TimePicker from './TimePicker';
 import CopyButton from './CopyButton';
 import SignCopyButtons from './SignCopyButtons';
 import { parseLocalDate } from '../utils/date';
-import QRCode from 'react-qr-code';
 import { safeWalletDeeplink } from '../utils/walletDeeplink';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -708,13 +707,11 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
                         </p>
                       )}
                       <p className="text-gray-400 text-xs mb-2">or scan with Verus Mobile:</p>
-                    </div>
-                    <div className="bg-white p-5 rounded-lg inline-block mb-2 max-w-full">
-                      {safeConsentDeeplink
-                        ? <QRCode value={safeConsentDeeplink} size={480} level="L" title="Hire QR" style={{ height: 'auto', maxWidth: '100%', width: 'min(480px, 100%)' }} />
-                        : safeConsentQr
-                          ? <img src={safeConsentQr} alt="Hire QR" className="w-[min(100%,480px)] h-auto" />
+                      <div className="bg-white p-3 rounded-lg inline-block mb-2">
+                        {safeConsentQr
+                          ? <img src={safeConsentQr} alt="Hire QR" className="w-52 h-52" />
                           : <div className="w-52 h-52 flex items-center justify-center text-red-600 text-sm">QR unavailable</div>}
+                      </div>
                     </div>
                     <div className="md:hidden mb-2">
                       {safeConsentDeeplink
