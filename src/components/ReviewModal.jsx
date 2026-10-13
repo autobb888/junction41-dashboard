@@ -1,15 +1,18 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import QRCode from 'react-qr-code';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from './Toast';
 import SignCopyButtons from './SignCopyButtons';
 import { REVIEWABLE_STATUSES } from '../utils/jobReview';
+import { safeWalletDeeplink } from '../utils/walletDeeplink';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
 const STAR_LABELS = ['Terrible', 'Poor', 'Okay', 'Good', 'Excellent'];
 
 /**
- * Build the review sign message client-side (matches server's generateReviewMessage exactly)
+ * Desktop fallback. The phone path signs the server's canonical line instead.
+ * This multiline form is the one the command-line paste path already verifies.
  */
 function buildReviewMessage(agentVerusId, jobHash, message, rating, timestamp) {
   return [
@@ -38,13 +41,25 @@ export default function ReviewModal({ job, onClose, onSubmitted, canSubmit = tru
   const sigClearedTimer = useRef(null);
   const [error, setError] = useState(null);
   const [timestamp] = useState(() => Math.floor(Date.now() / 1000));
+  const [phoneChallenge, setPhoneChallenge] = useState(null);
+  const [phoneBusy, setPhoneBusy] = useState(false);
+  const [phoneError, setPhoneError] = useState(null);
+  const [phoneNeedsSave, setPhoneNeedsSave] = useState(false);
+  const [retryToken, setRetryToken] = useState(0);
+  const phoneGen = useRef(0);
+  const confirmLock = useRef(false);
+  const onCloseRef = useRef(onClose);
+  const onSubmittedRef = useRef(onSubmitted);
+  const addToastRef = useRef(addToast);
+  onCloseRef.current = onClose;
+  onSubmittedRef.current = onSubmitted;
+  addToastRef.current = addToast;
 
   const isNegativeOutcome = ['disputed', 'cancelled'].includes(job.status);
   const modalTitle = isNegativeOutcome ? 'Rate This Experience' : 'Leave a Review';
   const shielded = job.payment?.kind === 'shielded';
   const waitingOnDelivery = !canSubmit && !REVIEWABLE_STATUSES.includes(job.status);
 
-  // Show "signature cleared" warning briefly when sig is cleared due to edits
   function clearSignatureWithWarning() {
     if (signature) {
       setSignature('');
@@ -52,6 +67,15 @@ export default function ReviewModal({ job, onClose, onSubmitted, canSubmit = tru
       if (sigClearedTimer.current) clearTimeout(sigClearedTimer.current);
       sigClearedTimer.current = setTimeout(() => setSigCleared(false), 4000);
     }
+  }
+
+  function invalidateSignedReview() {
+    phoneGen.current += 1;
+    confirmLock.current = false;
+    setPhoneChallenge(null);
+    setPhoneNeedsSave(false);
+    setPhoneError(null);
+    clearSignatureWithWarning();
   }
 
   useEffect(() => {
@@ -63,20 +87,14 @@ export default function ReviewModal({ job, onClose, onSubmitted, canSubmit = tru
   const agentVerusId = job.seller?.verusId || job.sellerVerusId;
   const idName = user?.identityName ? `${user.identityName}@` : (user?.verusId || 'yourID@');
 
-  // Build sign message live as user types
   const signMessage = rating >= 1
     ? buildReviewMessage(agentVerusId, job.jobHash, message, rating, timestamp)
     : null;
-  // Keep REAL newlines — bash preserves them inside double quotes, so the pasted
-  // command signs the exact bytes the backend verifies (generateReviewMessage,
-  // also .join('\n')). Escaping to literal "\n" made the wallet sign a different
-  // string → "Signature verification failed". Only quotes need escaping, same as
-  // every other signmessage builder in the app (#16).
   const signCommand = signMessage
     ? `signmessage "${idName}" "${signMessage.replace(/"/g, '\\"')}"`
     : null;
+  const safePhoneLink = phoneChallenge ? safeWalletDeeplink(phoneChallenge.deeplink) : null;
 
-  // Focus trap (F-22)
   const handleKeyDown = useCallback((e) => {
     if (e.key === 'Escape') { onClose(); return; }
     if (e.key !== 'Tab' || !modalRef.current) return;
@@ -98,6 +116,117 @@ export default function ReviewModal({ job, onClose, onSubmitted, canSubmit = tru
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown, hidden]);
+
+  useEffect(() => {
+    const challengeId = phoneChallenge?.challengeId;
+    if (!challengeId) return undefined;
+    const gen = phoneGen.current;
+    let stopped = false;
+
+    async function confirmPhone() {
+      if (gen !== phoneGen.current || confirmLock.current) return;
+      confirmLock.current = true;
+      setStep('submitting');
+      setError(null);
+      try {
+        const res = await fetch(`${API_BASE}/v1/reviews/consent/confirm/${challengeId}`, {
+          method: 'POST',
+          credentials: 'include',
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          if (gen !== phoneGen.current) return;
+          throw new Error(data.error?.message || 'Could not save the review');
+        }
+        setStep('done');
+        addToastRef.current?.('Review submitted!');
+        setTimeout(() => {
+          onSubmittedRef.current?.();
+          onCloseRef.current?.();
+        }, 2000);
+      } catch (err) {
+        if (gen !== phoneGen.current) return;
+        confirmLock.current = false;
+        setError(err.message || 'Could not save the review');
+        setStep('compose');
+        setPhoneNeedsSave(true);
+      }
+    }
+
+    async function tick() {
+      try {
+        const res = await fetch(`${API_BASE}/v1/reviews/consent/status/${challengeId}`, { credentials: 'include' });
+        const data = await res.json().catch(() => ({}));
+        if (stopped || gen !== phoneGen.current) return;
+        const status = data.data?.status;
+        if (status === 'awaiting_confirm') {
+          clearInterval(timer);
+          confirmPhone();
+        } else if (status === 'expired') {
+          clearInterval(timer);
+          setPhoneChallenge(null);
+          setPhoneError('This request expired. Generate a new one.');
+        } else if (status === 'completed') {
+          clearInterval(timer);
+          setStep('done');
+          setTimeout(() => {
+            onSubmittedRef.current?.();
+            onCloseRef.current?.();
+          }, 800);
+        }
+      } catch { /* keep polling */ }
+    }
+
+    tick();
+    const timer = setInterval(tick, 2500);
+    function onVis() {
+      if (document.visibilityState === 'visible') tick();
+    }
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVis);
+    };
+  }, [phoneChallenge, retryToken]);
+
+  async function requestPhone() {
+    if (!canSubmit || rating < 1 || phoneBusy) return;
+    phoneGen.current += 1;
+    confirmLock.current = false;
+    setPhoneNeedsSave(false);
+    setPhoneError(null);
+    setError(null);
+    setPhoneBusy(true);
+    try {
+      const res = await fetch(`${API_BASE}/v1/reviews/consent/challenge`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          jobHash: job.jobHash,
+          rating,
+          message: message || '',
+          ...(shielded ? { prosePublic } : {}),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error?.message || 'Could not create the signing request');
+      if (!data.data?.challengeId || !data.data?.deeplink) {
+        throw new Error('The signing request did not include a phone code');
+      }
+      setPhoneChallenge({
+        challengeId: data.data.challengeId,
+        deeplink: data.data.deeplink,
+        expiresAt: data.data.expiresAt,
+      });
+    } catch (err) {
+      setPhoneChallenge(null);
+      setPhoneError(err.message || 'Could not create the signing request');
+    } finally {
+      setPhoneBusy(false);
+    }
+  }
 
   async function handleSubmit() {
     if (!canSubmit) return;
@@ -144,8 +273,7 @@ export default function ReviewModal({ job, onClose, onSubmitted, canSubmit = tru
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div ref={modalRef} role="dialog" aria-modal="true" aria-label={modalTitle} className="bg-[#1a1a2e] border border-white/10 rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
-        {/* Header */}
+      <div ref={modalRef} role="dialog" aria-modal="true" aria-label={modalTitle} className="bg-[#1a1a2e] border border-white/10 rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
           <h2 className="text-lg font-semibold text-white">{modalTitle}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-white text-xl" aria-label="Close">✕</button>
@@ -167,7 +295,6 @@ export default function ReviewModal({ job, onClose, onSubmitted, canSubmit = tru
                 </p>
               )}
 
-              {/* Star Rating */}
               <div>
                 <label className="block text-sm text-gray-400 mb-2">Rating</label>
                 <div className="flex gap-2 items-center">
@@ -176,7 +303,7 @@ export default function ReviewModal({ job, onClose, onSubmitted, canSubmit = tru
                       key={star}
                       onMouseEnter={() => setHoverRating(star)}
                       onMouseLeave={() => setHoverRating(0)}
-                      onClick={() => { setRating(star); clearSignatureWithWarning(); }}
+                      onClick={() => { setRating(star); invalidateSignedReview(); }}
                       className="text-3xl transition-transform hover:scale-110"
                     >
                       {star <= (hoverRating || rating) ? '★' : '☆'}
@@ -190,13 +317,12 @@ export default function ReviewModal({ job, onClose, onSubmitted, canSubmit = tru
                 </div>
               </div>
 
-              {/* Review Text */}
               <div>
                 <label htmlFor="review-message" className="block text-sm text-gray-400 mb-2">Review (optional)</label>
                 <textarea
                   id="review-message"
                   value={message}
-                  onChange={e => { setMessage(e.target.value); clearSignatureWithWarning(); }}
+                  onChange={e => { setMessage(e.target.value); invalidateSignedReview(); }}
                   placeholder="How was your experience?"
                   rows={3}
                   maxLength={500}
@@ -210,7 +336,7 @@ export default function ReviewModal({ job, onClose, onSubmitted, canSubmit = tru
                   <input
                     type="checkbox"
                     checked={prosePublic}
-                    onChange={e => setProsePublic(e.target.checked)}
+                    onChange={e => { setProsePublic(e.target.checked); invalidateSignedReview(); }}
                     className="accent-teal-500"
                   />
                   <span>
@@ -221,54 +347,100 @@ export default function ReviewModal({ job, onClose, onSubmitted, canSubmit = tru
                 </label>
               )}
 
-              {/* Sign Command — appears as soon as rating is selected */}
+              {rating >= 1 && canSubmit && (
+                <div className="text-center space-y-3">
+                  <p className="text-gray-300 text-sm">Scan with Verus Mobile and approve the review.</p>
+                  <p className="text-amber-400/90 text-xs max-w-sm mx-auto leading-relaxed">
+                    On the phone, turn on Wallet Settings → General Settings → Enable experimental deeplinks, because this review asks the wallet to sign the text.
+                  </p>
+                  {safePhoneLink ? (
+                    <>
+                      <div className="bg-white p-5 rounded-lg inline-block mb-2 max-w-full">
+                        <QRCode value={safePhoneLink} size={480} level="L" title="Review QR" style={{ height: 'auto', maxWidth: '100%', width: 'min(480px, 100%)' }} />
+                      </div>
+                      <a href={safePhoneLink} className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-teal-600 hover:bg-teal-500 text-white font-semibold rounded-lg">
+                        Open in Verus Mobile
+                      </a>
+                      <div className="flex items-center justify-center gap-2 text-gray-400">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-teal-400"></div>
+                        <span className="text-sm">Waiting for the phone…</span>
+                      </div>
+                      {phoneNeedsSave && (
+                        <button
+                          type="button"
+                          onClick={() => { confirmLock.current = false; setRetryToken(n => n + 1); }}
+                          className="w-full bg-teal-600 hover:bg-teal-500 text-white font-medium py-3 rounded-lg"
+                        >
+                          Save the review
+                        </button>
+                      )}
+                      <button type="button" onClick={requestPhone} disabled={phoneBusy} className="block mx-auto text-xs text-gray-500 hover:text-gray-300">
+                        New code
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={requestPhone}
+                      disabled={phoneBusy}
+                      className="w-full bg-teal-600 hover:bg-teal-500 disabled:bg-gray-700 disabled:text-gray-500 text-white font-medium py-3 rounded-lg transition-colors"
+                    >
+                      {phoneBusy ? 'Preparing the phone code…' : 'Sign with Verus Mobile'}
+                    </button>
+                  )}
+                  {phoneError && (
+                    <p className="text-red-400 text-sm">{phoneError}</p>
+                  )}
+                </div>
+              )}
+
               {signCommand && (
-                <>
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-2">
-                      Sign this message with your VerusID
-                    </label>
-                    <div className="bg-black/40 border border-white/10 rounded-lg p-3">
-                      <code className="text-xs text-green-400 break-all select-all">
-                        {signCommand}
-                      </code>
+                <details className="text-sm">
+                  <summary className="cursor-pointer text-gray-400">Desktop or command line</summary>
+                  <div className="mt-3 space-y-4">
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-2">
+                        Sign this message with your VerusID
+                      </label>
+                      <div className="bg-black/40 border border-white/10 rounded-lg p-3">
+                        <code className="text-xs text-green-400 break-all select-all">
+                          {signCommand}
+                        </code>
+                      </div>
+                      <SignCopyButtons command={signCommand} className="mt-2" />
                     </div>
-                    <SignCopyButtons command={signCommand} className="mt-2" />
+                    <div>
+                      <label htmlFor="review-signature" className="block text-sm text-gray-400 mb-2">Paste signature</label>
+                      <input
+                        id="review-signature"
+                        type="text"
+                        value={signature}
+                        onChange={e => {
+                          let val = e.target.value;
+                          if (val.trim().startsWith('{')) {
+                            try { const p = JSON.parse(val.trim()); if (p.signature) val = p.signature; } catch { /* not JSON */ }
+                          }
+                          setSignature(val);
+                          setSigCleared(false);
+                        }}
+                        placeholder="Paste the signature output here..."
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-teal-500 font-mono text-sm"
+                      />
+                      {sigCleared && (
+                        <p className="text-amber-400 text-xs mt-1 animate-pulse">
+                          Signature cleared — sign again after editing
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      onClick={handleSubmit}
+                      disabled={!signature.trim() || !canSubmit}
+                      className="w-full bg-teal-600 hover:bg-teal-500 disabled:bg-gray-700 disabled:text-gray-500 text-white font-medium py-3 rounded-lg transition-colors"
+                    >
+                      {canSubmit ? 'Submit Review' : (waitingOnDelivery ? 'Waiting for delivery' : 'Review window closed')}
+                    </button>
                   </div>
-
-                  {/* Signature Input */}
-                  <div>
-                    <label htmlFor="review-signature" className="block text-sm text-gray-400 mb-2">Paste signature</label>
-                    <input
-                      id="review-signature"
-                      type="text"
-                      value={signature}
-                      onChange={e => {
-                        let val = e.target.value;
-                        if (val.trim().startsWith('{')) {
-                          try { const p = JSON.parse(val.trim()); if (p.signature) val = p.signature; } catch { /* not JSON */ }
-                        }
-                        setSignature(val);
-                        setSigCleared(false);
-                      }}
-                      placeholder="Paste the signature output here..."
-                      className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-teal-500 font-mono text-sm"
-                    />
-                    {sigCleared && (
-                      <p className="text-amber-400 text-xs mt-1 animate-pulse">
-                        Signature cleared — sign again after editing
-                      </p>
-                    )}
-                  </div>
-
-                  <button
-                    onClick={handleSubmit}
-                    disabled={!signature.trim() || !canSubmit}
-                    className="w-full bg-teal-600 hover:bg-teal-500 disabled:bg-gray-700 disabled:text-gray-500 text-white font-medium py-3 rounded-lg transition-colors"
-                  >
-                    {canSubmit ? 'Submit Review' : (waitingOnDelivery ? 'Waiting for delivery' : 'Review window closed')}
-                  </button>
-                </>
+                </details>
               )}
             </>
           )}
