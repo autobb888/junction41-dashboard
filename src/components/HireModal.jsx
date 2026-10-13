@@ -7,6 +7,7 @@ import SignCopyButtons from './SignCopyButtons';
 import { parseLocalDate } from '../utils/date';
 import QRCode from 'react-qr-code';
 import { safeWalletDeeplink } from '../utils/walletDeeplink';
+import { datasetTermsFromFields, listedHirePrice } from '../utils/hirePrice';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -42,6 +43,10 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
   const agentRequiresSovguard = Boolean(service?.sovguard);
   const [sovguardEnabled, setSovguardEnabled] = useState(true);
   const [dataProtectionEnabled, setDataProtectionEnabled] = useState(false);
+  const [rowColor, setRowColor] = useState('');
+  const [rowKind, setRowKind] = useState('');
+  const [rowTaste, setRowTaste] = useState('');
+  const [rowQuestion, setRowQuestion] = useState('');
   const modalRef = useRef(null);
 
   // Signing method: 'wallet' (scan QR in Verus Mobile) | 'cli' (paste a signmessage).
@@ -159,10 +164,14 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
   const acceptedCurrencies = service?.acceptedCurrencies || [{ currency: service?.currency || 'VRSCTEST', price: Number(service?.price) || 0 }];
   const [selectedCurrencyIdx, setSelectedCurrencyIdx] = useState(0);
   const selectedPricing = acceptedCurrencies[selectedCurrencyIdx] || acceptedCurrencies[0];
-  const amount = Number(selectedPricing?.price) || 0;
-  const currency = selectedPricing?.currency || 'VRSCTEST';
-  // Data sharing discount — discount off agent price (data has value to the agent, not the platform)
-  const dataDiscountRate = (allowTraining ? 0.10 : 0) + (allowThirdParty ? 0.10 : 0) + (!requireDeletion ? 0.05 : 0);
+  const isDataset = service?.serviceType === 'dataset';
+  const amount = listedHirePrice(service, selectedPricing);
+  const currency = selectedPricing?.currency || service?.currency || 'VRSCTEST';
+  // Data sharing discount — discount off agent price (data has value to the agent, not the platform).
+  // A dataset price is per row and stays on that grid.
+  const dataDiscountRate = isDataset
+    ? 0
+    : (allowTraining ? 0.10 : 0) + (allowThirdParty ? 0.10 : 0) + (!requireDeletion ? 0.05 : 0);
   const agentAmount = Math.max(amount * (1 - dataDiscountRate), 0);
   const platformFeeRate = 0.05; // Platform always takes 5% of agent amount
   const platformFee = agentAmount * platformFeeRate;
@@ -180,7 +189,7 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
     setConsentPending(null);
     setConsentError('');
     if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
-  }, [description, deadlineDate, deadlineTime, sovguardEnabled, dataRetention, allowTraining, allowThirdParty, requireDeletion, timestamp, selectedCurrencyIdx]);
+  }, [description, deadlineDate, deadlineTime, sovguardEnabled, dataRetention, allowTraining, allowThirdParty, requireDeletion, timestamp, selectedCurrencyIdx, rowColor, rowKind, rowTaste, rowQuestion]);
 
   // Stop polling on unmount
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
@@ -212,6 +221,11 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
     // hireable — connect via its API instead.
     if (!(agentAmount > 0)) {
       setError('This is a free service and cannot be hired. Connect via its API instead.');
+      return;
+    }
+    const datasetTerms = datasetHireTerms();
+    if (datasetTerms && !datasetTerms.ok) {
+      setError(datasetTerms.message);
       return;
     }
 
@@ -248,6 +262,7 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
           fee: parseFloat(feeAmount),
           timestamp,
           signature: signature.trim(),
+          ...(datasetTerms?.ok ? { datasetTerms: datasetTerms.terms } : {}),
         }),
       });
 
@@ -292,6 +307,11 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
     };
   }
 
+  function datasetHireTerms() {
+    if (!isDataset) return null;
+    return datasetTermsFromFields({ color: rowColor, kind: rowKind, taste: rowTaste, q: rowQuestion });
+  }
+
   function startConsentPoll(challengeId) {
     if (pollRef.current) clearInterval(pollRef.current);
     pollRef.current = setInterval(async () => {
@@ -326,13 +346,19 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
     if (!sellerVerusId) { setConsentError('Seller identity is missing. Reload and reopen this service.'); return; }
     if (!description.trim()) { setConsentError('Job description is required.'); return; }
     if (!(agentAmount > 0)) { setConsentError('This is a free service and cannot be hired. Connect via its API instead.'); return; }
+    const datasetTerms = datasetHireTerms();
+    if (datasetTerms && !datasetTerms.ok) { setConsentError(datasetTerms.message); return; }
     setConsentLoading(true);
     try {
       const res = await fetch(`${API_BASE}/v1/jobs/consent/challenge`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ ...buildJobBody(), protocol: walletProtocol }),
+        body: JSON.stringify({
+          ...buildJobBody(),
+          protocol: walletProtocol,
+          ...(datasetTerms?.ok ? { datasetTerms: datasetTerms.terms } : {}),
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error?.message || 'Could not create the signing request');
@@ -461,6 +487,33 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
                     {ac.price} {ac.currency}
                   </button>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {isDataset && (
+            <div className="rounded-lg p-3 space-y-3" style={{ background: 'rgba(56, 189, 248, 0.06)', border: '1px solid rgba(56, 189, 248, 0.2)' }}>
+              <p className="text-xs font-medium text-sky-300">Which rows</p>
+              <p className="text-xs text-gray-400">
+                Name at least one. The price on this form is the listed price for one row. If the question matches more rows, the seller names the full price.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block text-xs text-gray-400">
+                  Color
+                  <input value={rowColor} onChange={(e) => setRowColor(e.target.value)} className="mt-1 w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white" placeholder="red" />
+                </label>
+                <label className="block text-xs text-gray-400">
+                  Kind
+                  <input value={rowKind} onChange={(e) => setRowKind(e.target.value)} className="mt-1 w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white" placeholder="apple" />
+                </label>
+                <label className="block text-xs text-gray-400">
+                  Taste
+                  <input value={rowTaste} onChange={(e) => setRowTaste(e.target.value)} className="mt-1 w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white" />
+                </label>
+                <label className="block text-xs text-gray-400">
+                  Question
+                  <input value={rowQuestion} onChange={(e) => setRowQuestion(e.target.value)} className="mt-1 w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white" />
+                </label>
               </div>
             </div>
           )}
