@@ -529,7 +529,7 @@ function ExtensionPanel({ job, loading, setLoading, setError, onUpdate, onCancel
 }
 
 
-export default function JobActions({ job, onUpdate, autoOpenPayment, onAutoOpenConsumed, onJobStarted }) {
+export default function JobActions({ job, onUpdate, autoOpenPayment, onAutoOpenConsumed, onJobStarted, onReviewRequested }) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -646,6 +646,7 @@ export default function JobActions({ job, onUpdate, autoOpenPayment, onAutoOpenC
       setSignPanel(null);
       setSignatureInput('');
       if (onUpdate) onUpdate();
+      if (action === 'complete') onReviewRequested?.();
     } catch (err) {
       setError(err.message);
     } finally {

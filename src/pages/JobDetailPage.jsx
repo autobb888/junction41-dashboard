@@ -10,6 +10,7 @@ import AlertBanner from '../components/AlertBanner';
 import JobActions from '../components/JobActions';
 import DisputeTimeline from '../components/DisputeTimeline';
 import ReviewModal from '../components/ReviewModal';
+import { isJobReviewable, isNegativeJobOutcome } from '../utils/jobReview';
 import WorkspacePanel from '../components/WorkspacePanel';
 import GpuRentalAccess from '../components/GpuRentalAccess';
 import { Terminal } from 'lucide-react';
@@ -24,13 +25,22 @@ export default function JobDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showReview, setShowReview] = useState(false);
+  const [reviewMounted, setReviewMounted] = useState(false);
   const [existingReview, setExistingReview] = useState(null);
   const [reviewChecked, setReviewChecked] = useState(false);
   const [autoOpenPayment, setAutoOpenPayment] = useState(false);
   const chatRef = useRef(null);
   const prevStatusRef = useRef(null);
+  // Closing the review on a job that can already be reviewed stays closed for
+  // this visit. A status poll must not reopen it and wipe what they typed.
+  const reviewDismissedRef = useRef(false);
 
   useEffect(() => {
+    setShowReview(false);
+    setReviewMounted(false);
+    setExistingReview(null);
+    setReviewChecked(false);
+    reviewDismissedRef.current = false;
     fetchJob();
   }, [id]);
 
@@ -57,6 +67,29 @@ export default function JobDetailPage() {
     }
     prevStatusRef.current = job.status;
   }, [job?.status, loading]);
+
+  // One review window, on this page, once the job can take it. Jobs stays a
+  // fallback if this visit missed the window.
+  useEffect(() => {
+    if (!job || job.id !== id || !user || !reviewChecked) return;
+    if (job.buyerVerusId !== user.verusId) return;
+    if (existingReview || reviewDismissedRef.current) return;
+    if (!isJobReviewable(job)) return;
+    setReviewMounted(true);
+    setShowReview(true);
+  }, [id, job?.status, job?.id, job?.reviewWindowExpiresAt, job?.buyerVerusId, reviewChecked, existingReview, user?.verusId]);
+
+  function requestReview() {
+    if (!job || job.id !== id || job.buyerVerusId !== user?.verusId || existingReview) return;
+    reviewDismissedRef.current = false;
+    setReviewMounted(true);
+    setShowReview(true);
+  }
+
+  function closeReview() {
+    setShowReview(false);
+    if (isJobReviewable(job)) reviewDismissedRef.current = true;
+  }
 
   // Handle ?action=pay URL param
   useEffect(() => {
@@ -305,7 +338,7 @@ export default function JobDetailPage() {
       {/* Job Actions */}
       {(isBuyer || isSeller) && (
         <div className="card">
-          <JobActions job={job} onUpdate={fetchJob} autoOpenPayment={autoOpenPayment} onAutoOpenConsumed={() => setAutoOpenPayment(false)} onJobStarted={handleJobStarted} />
+          <JobActions job={job} onUpdate={fetchJob} autoOpenPayment={autoOpenPayment} onAutoOpenConsumed={() => setAutoOpenPayment(false)} onJobStarted={handleJobStarted} onReviewRequested={requestReview} />
         </div>
       )}
 
@@ -328,19 +361,16 @@ export default function JobDetailPage() {
       {/* Real-time Chat */}
       {(isBuyer || isSeller) && job.status !== 'cancelled' && (
         <div ref={chatRef}>
-          <Chat jobId={id} job={job} onJobStatusChanged={() => fetchJob()} onJobAccepted={() => setAutoOpenPayment(true)} />
+          <Chat jobId={id} job={job} onJobStatusChanged={() => fetchJob()} onJobAccepted={() => setAutoOpenPayment(true)} onReviewRequested={requestReview} />
         </div>
       )}
 
       {/* Review Section — shown for completed, delivered, disputed, cancelled jobs */}
       {(() => {
-        const reviewableStatuses = ['completed', 'delivered', 'disputed', 'cancelled'];
-        // For delivered jobs, only show if review window hasn't expired
-        const deliveredExpired = job.status === 'delivered' && job.reviewWindowExpiresAt && new Date(job.reviewWindowExpiresAt) < new Date();
-        const canReview = reviewableStatuses.includes(job.status) && !deliveredExpired;
+        const canReview = isJobReviewable(job);
         if (!canReview) return null;
 
-        const isNegativeOutcome = ['disputed', 'cancelled'].includes(job.status);
+        const isNegativeOutcome = isNegativeJobOutcome(job.status);
         const buttonLabel = isNegativeOutcome ? 'Rate This Experience' : 'Leave a Review';
 
         return (
@@ -370,7 +400,7 @@ export default function JobDetailPage() {
             ) : isBuyer ? (
               <>
                 <button
-                  onClick={() => setShowReview(true)}
+                  onClick={requestReview}
                   className="bg-teal-600 hover:bg-teal-500 text-white font-medium px-6 py-3 rounded-lg transition-colors"
                 >
                   {isNegativeOutcome ? '📝' : '⭐'} {buttonLabel}
@@ -389,10 +419,12 @@ export default function JobDetailPage() {
       })()}
 
       {/* Review Modal */}
-      {showReview && (
+      {reviewMounted && (
         <ReviewModal
           job={job}
-          onClose={() => setShowReview(false)}
+          hidden={!showReview}
+          canSubmit={isJobReviewable(job)}
+          onClose={closeReview}
           onSubmitted={() => fetchJob()}
         />
       )}

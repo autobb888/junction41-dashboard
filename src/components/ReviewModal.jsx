@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from './Toast';
 import SignCopyButtons from './SignCopyButtons';
+import { REVIEWABLE_STATUSES } from '../utils/jobReview';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -24,12 +25,13 @@ function buildReviewMessage(agentVerusId, jobHash, message, rating, timestamp) {
   ].join('\n');
 }
 
-export default function ReviewModal({ job, onClose, onSubmitted }) {
+export default function ReviewModal({ job, onClose, onSubmitted, canSubmit = true, hidden = false }) {
   const { user } = useAuth();
   const addToast = useToast();
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [message, setMessage] = useState('');
+  const [prosePublic, setProsePublic] = useState(true);
   const [step, setStep] = useState('compose'); // compose | submitting | done
   const [signature, setSignature] = useState('');
   const [sigCleared, setSigCleared] = useState(false);
@@ -39,6 +41,8 @@ export default function ReviewModal({ job, onClose, onSubmitted }) {
 
   const isNegativeOutcome = ['disputed', 'cancelled'].includes(job.status);
   const modalTitle = isNegativeOutcome ? 'Rate This Experience' : 'Leave a Review';
+  const shielded = job.payment?.kind === 'shielded';
+  const waitingOnDelivery = !canSubmit && !REVIEWABLE_STATUSES.includes(job.status);
 
   // Show "signature cleared" warning briefly when sig is cleared due to edits
   function clearSignatureWithWarning() {
@@ -90,11 +94,13 @@ export default function ReviewModal({ job, onClose, onSubmitted }) {
   }, [onClose]);
 
   useEffect(() => {
+    if (hidden) return;
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyDown]);
+  }, [handleKeyDown, hidden]);
 
   async function handleSubmit() {
+    if (!canSubmit) return;
     if (!signature.trim()) {
       setError('Please paste your signature');
       return;
@@ -116,6 +122,7 @@ export default function ReviewModal({ job, onClose, onSubmitted }) {
           rating,
           timestamp,
           signature: signature.trim(),
+          ...(shielded ? { prosePublic } : {}),
         }),
       });
       const data = await res.json();
@@ -133,6 +140,8 @@ export default function ReviewModal({ job, onClose, onSubmitted }) {
     }
   }
 
+  if (hidden) return null;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div ref={modalRef} role="dialog" aria-modal="true" aria-label={modalTitle} className="bg-[#1a1a2e] border border-white/10 rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
@@ -145,6 +154,19 @@ export default function ReviewModal({ job, onClose, onSubmitted }) {
         <div className="p-6 space-y-5">
           {step === 'compose' && (
             <>
+              {!canSubmit && (
+                <p className="text-amber-200 text-sm bg-amber-500/10 border border-amber-500/30 rounded-lg px-4 py-3">
+                  {waitingOnDelivery
+                    ? 'Fill this in now. It sends after the work is delivered — stay on this page.'
+                    : 'This review window has closed.'}
+                </p>
+              )}
+              {canSubmit && job.status === 'delivered' && (
+                <p className="text-sm text-gray-400">
+                  Confirm completion on this page to release payment. Closing this keeps what you have typed.
+                </p>
+              )}
+
               {/* Star Rating */}
               <div>
                 <label className="block text-sm text-gray-400 mb-2">Rating</label>
@@ -182,6 +204,22 @@ export default function ReviewModal({ job, onClose, onSubmitted }) {
                 />
                 <div className="text-xs text-gray-400 text-right mt-1">{message.length}/500</div>
               </div>
+
+              {shielded && (
+                <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-400">
+                  <input
+                    type="checkbox"
+                    checked={prosePublic}
+                    onChange={e => setProsePublic(e.target.checked)}
+                    className="accent-teal-500"
+                  />
+                  <span>
+                    {prosePublic
+                      ? 'Public review — the words can appear with the score'
+                      : 'Stars only — the words stay with the agent'}
+                  </span>
+                </label>
+              )}
 
               {/* Sign Command — appears as soon as rating is selected */}
               {signCommand && (
@@ -225,10 +263,10 @@ export default function ReviewModal({ job, onClose, onSubmitted }) {
 
                   <button
                     onClick={handleSubmit}
-                    disabled={!signature.trim()}
+                    disabled={!signature.trim() || !canSubmit}
                     className="w-full bg-teal-600 hover:bg-teal-500 disabled:bg-gray-700 disabled:text-gray-500 text-white font-medium py-3 rounded-lg transition-colors"
                   >
-                    Submit Review
+                    {canSubmit ? 'Submit Review' : (waitingOnDelivery ? 'Waiting for delivery' : 'Review window closed')}
                   </button>
                 </>
               )}

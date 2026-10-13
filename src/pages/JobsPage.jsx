@@ -9,6 +9,7 @@ import DisputeModal from '../components/DisputeModal';
 import DeliveryPanel from '../components/DeliveryPanel';
 import { SkeletonList, EmptyState } from '../components/Skeleton';
 import usePageTitle from '../hooks/usePageTitle';
+import { isJobReviewable, isNegativeJobOutcome } from '../utils/jobReview';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -374,10 +375,10 @@ function JobCard({ job, currentUser, onUpdate }) {
             <DeletionAttestationView jobId={job.id} />
           )}
 
-          {/* Review prompt for buyers on completed jobs */}
-          {job.status === 'completed' && !isSeller && (
+          {/* Fallback if the review window on the job page was missed */}
+          {isJobReviewable(job) && !isSeller && (
             <Link to={`/jobs/${job.id}`} className="inline-flex items-center gap-2 text-teal-400 hover:text-teal-300 text-sm font-medium mt-2">
-              ⭐ Leave a Review
+              {isNegativeJobOutcome(job.status) ? '📝 Rate This Experience' : '⭐ Leave a Review'}
             </Link>
           )}
 

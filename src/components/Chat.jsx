@@ -40,10 +40,6 @@ const WS_URL = import.meta.env.VITE_WS_URL || window.location.origin;
 /**
  * Build a signmessage command — single-line format, works in CLI and GUI console.
  */
-function buildSignCmd(idName, message) {
-  return `signmessage "${idName}" "${message.replace(/"/g, '\\"')}"`;
-}
-
 function FileMessage({ content, jobId, messageId }) {
   const [fileInfo, setFileInfo] = useState(null);
   useEffect(() => {
@@ -113,7 +109,7 @@ function FileAttachment({ fileInfo, jobId }) {
   );
 }
 
-export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) {
+export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted, onReviewRequested }) {
   const { user } = useAuth();
   const addToast = useToast();
   const [messages, setMessages] = useState([]);
@@ -140,23 +136,13 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
   // End-session state
   const [jobStatus, setJobStatus] = useState(job?.status);
   const [endSessionPanel, setEndSessionPanel] = useState(null);
-  // null | 'deliver' | 'complete' | 'review' | 'done'
+  // null | 'deliver' | 'extend' | 'done'
   const [sessionEndingInfo, setSessionEndingInfo] = useState(null);
   // { requestedBy, reason } — from WS event
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState(null);
 
   // Delivery panel state (managed by shared DeliveryPanel component)
-
-  // Complete + review panel state
-  const [completeSig, setCompleteSig] = useState('');
-  const [completeTs, setCompleteTs] = useState(() => Math.floor(Date.now() / 1000));
-  const [completeStep, setCompleteStep] = useState('review'); // review | sign
-  const [reviewRating, setReviewRating] = useState(0);
-  const [reviewHover, setReviewHover] = useState(0);
-  const [reviewMessage, setReviewMessage] = useState('');
-  const [reviewPublic, setReviewPublic] = useState(true);
-
 
   // Extension panel state
   const [extAmount, setExtAmount] = useState('');
@@ -348,10 +334,9 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
       if (data.status === 'accepted' && isBuyer) {
         onJobAccepted?.();
       }
-      // Auto-open relevant panel for buyer
-      if (data.status === 'delivered' && isBuyer) {
-        setEndSessionPanel(null); // Let them see the delivered banner
-      }
+      // Delivery no longer closes a panel. The review lives in the page
+      // window, and clearing this bar used to throw away the review they
+      // were writing.
       if (data.status === 'completed') {
         setEndSessionPanel('done');
       }
@@ -493,9 +478,7 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
       if (isSeller) {
         setEndSessionPanel('deliver');
       } else {
-        // Buyer goes straight to complete+review — refresh timestamp so it's not stale
-        setCompleteTs(Math.floor(Date.now() / 1000));
-        setEndSessionPanel('complete');
+        onReviewRequested?.();
       }
     } catch (err) {
       setActionError(err.message);
@@ -505,38 +488,6 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
   }
 
   // handleDeliver removed — shared DeliveryPanel handles its own submission
-
-  async function handleComplete() {
-    setActionLoading(true);
-    setActionError(null);
-    try {
-      const body = {
-        timestamp: completeTs,
-        signature: completeSig.trim(),
-      };
-      if (reviewRating >= 1) {
-        body.rating = reviewRating;
-        body.reviewMessage = reviewMessage || '';
-        body.publicReview = reviewPublic;
-      }
-      const res = await fetch(`${API_BASE}/v1/jobs/${jobId}/complete`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error?.message || 'Completion failed');
-      setCompleteSig('');
-      setCompleteTs(null);
-      setEndSessionPanel('done');
-      onJobStatusChanged?.();
-    } catch (err) {
-      setActionError(err.message);
-    } finally {
-      setActionLoading(false);
-    }
-  }
 
   async function handleRequestExtension() {
     setActionLoading(true);
@@ -581,7 +532,6 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
   }
 
   const height = expanded ? '600px' : '400px';
-  const idName = user?.identityName ? `${user.identityName}@` : 'yourID@';
   const isSessionDone = endSessionPanel === 'done' || (jobStatus === 'completed' && !endSessionPanel);
   const isSessionPaused = jobStatus === 'paused';
   const inputDisabled = isSessionDone || isSessionPaused;
@@ -618,165 +568,6 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
               ? 'use the Session Paused panel above to resume or reactivate'
               : 'buyer needs to reactivate the session'}
           </span>
-        </div>
-      );
-    }
-
-    // Completion panel (buyer, job delivered)
-    if (endSessionPanel === 'complete' && isBuyer) {
-      const ts = completeTs;
-
-      // Step 1: Review (stars + message)
-      if (completeStep === 'review') {
-        return (
-          <div style={{
-            padding: '12px 16px', background: 'var(--bg-tertiary)',
-            borderTop: '1px solid var(--border-primary)',
-          }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>
-              Complete & Review
-            </div>
-            <div style={{ display: 'flex', gap: 4, marginBottom: 4 }}>
-              {[1, 2, 3, 4, 5].map(star => (
-                <button
-                  key={star}
-                  onMouseEnter={() => setReviewHover(star)}
-                  onMouseLeave={() => setReviewHover(0)}
-                  onClick={() => setReviewRating(star)}
-                  style={{
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    fontSize: 24, color: star <= (reviewHover || reviewRating) ? '#eab308' : '#4b5563',
-                  }}
-                >
-                  {star <= (reviewHover || reviewRating) ? '\u2605' : '\u2606'}
-                </button>
-              ))}
-              {(reviewHover || reviewRating) > 0 && (
-                <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 8, alignSelf: 'center' }}>
-                  {['Terrible', 'Poor', 'Okay', 'Good', 'Excellent'][(reviewHover || reviewRating) - 1]}
-                </span>
-              )}
-            </div>
-            {reviewRating < 1 && (
-              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>
-                Rating required to complete
-              </p>
-            )}
-            <textarea
-              value={reviewMessage}
-              onChange={e => setReviewMessage(e.target.value)}
-              placeholder="How was your experience? (optional)"
-              rows={2}
-              maxLength={500}
-              style={{
-                width: '100%', background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)',
-                borderRadius: 6, padding: '6px 10px', color: 'var(--text-primary)', fontSize: 13,
-                resize: 'none', outline: 'none',
-              }}
-            />
-            <label style={{
-              display: 'flex', alignItems: 'center', gap: 8, marginTop: 8,
-              cursor: 'pointer', fontSize: 12, color: 'var(--text-muted)',
-            }}>
-              <input
-                type="checkbox"
-                checked={reviewPublic}
-                onChange={e => setReviewPublic(e.target.checked)}
-                style={{ accentColor: 'var(--accent)' }}
-              />
-              <span>
-                {reviewPublic
-                  ? 'Public review \u2014 visible on agent profile with your name'
-                  : 'Private feedback \u2014 only the agent sees this, not published on-chain'}
-              </span>
-            </label>
-            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-              <button
-                onClick={() => { setCompleteTs(Math.floor(Date.now() / 1000)); setCompleteStep('sign'); setCompleteSig(''); }}
-                disabled={reviewRating < 1}
-                className="btn-primary"
-                style={{ padding: '6px 14px', fontSize: 13 }}
-              >
-                Continue to Sign
-              </button>
-              <button
-                onClick={() => { setEndSessionPanel(null); setCompleteTs(null); setReviewRating(0); setReviewMessage(''); }}
-                style={{
-                  background: 'none', border: '1px solid var(--border-primary)',
-                  borderRadius: 6, padding: '6px 14px', fontSize: 13,
-                  color: 'var(--text-muted)', cursor: 'pointer',
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        );
-      }
-
-      // Step 2: Sign (includes review data in message)
-      const msg = reviewRating >= 1
-        ? `J41-COMPLETE|Job:${job.jobHash}|Rating:${reviewRating}|Msg:${reviewMessage || ''}|Ts:${ts}|I confirm delivery and submit this review.`
-        : `J41-COMPLETE|Job:${job.jobHash}|Ts:${ts}|I confirm the work has been delivered satisfactorily.`;
-      const cmd = buildSignCmd(idName, msg);
-
-      return (
-        <div style={{
-          padding: '12px 16px', background: 'var(--bg-tertiary)',
-          borderTop: '1px solid var(--border-primary)',
-        }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>
-            Sign to Complete{reviewRating >= 1 ? ` (${reviewRating}\u2605)` : ''}
-          </div>
-          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>
-            Sign this to confirm completion{reviewRating >= 1 ? ' and submit your review' : ''}:
-          </p>
-          <div style={{
-            background: 'var(--bg-secondary)', borderRadius: 6, padding: 8,
-            fontFamily: 'monospace', fontSize: 11, color: '#34D399',
-            wordBreak: 'break-all', whiteSpace: 'pre-wrap', marginBottom: 8,
-          }}>
-            {cmd}
-          </div>
-          <SignCopyButtons command={cmd} />
-          <input
-            type="text"
-            value={completeSig}
-            onChange={e => {
-              let val = e.target.value;
-              if (val.trim().startsWith('{')) {
-                try { const p = JSON.parse(val.trim()); if (p.signature) val = p.signature; } catch { /* not JSON */ }
-              }
-              setCompleteSig(val);
-            }}
-            placeholder="Paste signature..."
-            style={{
-              width: '100%', marginTop: 8, background: 'var(--bg-secondary)',
-              border: '1px solid var(--border-primary)', borderRadius: 6,
-              padding: '6px 10px', color: 'var(--text-primary)', fontFamily: 'monospace',
-              fontSize: 13, outline: 'none',
-            }}
-          />
-          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            <button
-              onClick={handleComplete}
-              disabled={!completeSig.trim() || actionLoading}
-              className="btn-primary"
-              style={{ padding: '6px 14px', fontSize: 13 }}
-            >
-              {actionLoading ? 'Submitting...' : 'Confirm Complete'}
-            </button>
-            <button
-              onClick={() => { setCompleteStep('review'); setCompleteSig(''); }}
-              style={{
-                background: 'none', border: '1px solid var(--border-primary)',
-                borderRadius: 6, padding: '6px 14px', fontSize: 13,
-                color: 'var(--text-muted)', cursor: 'pointer',
-              }}
-            >
-              Back
-            </button>
-          </div>
         </div>
       );
     }
@@ -901,7 +692,7 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
         }}>
           <span style={{ color: '#22c55e', fontSize: 14 }}>&#10003;</span>
           <span style={{ color: '#22c55e', fontWeight: 600, fontSize: 13 }}>
-            {isBuyer ? 'Job completed — review submitted' : 'Session Complete'}
+            {isBuyer ? 'Job completed' : 'Session Complete'}
           </span>
         </div>
       );
@@ -910,12 +701,8 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
     // Delivered state — buyer sees "Confirm & Review"
     if (jobStatus === 'delivered') {
       if (isBuyer) {
-        // Completion is signed in the JobActions "Confirm Complete" panel (the
-        // canonical lifecycle surface, rendered above the chat), and the review is
-        // left from the Review section on the job page. This bar only reports +
-        // points there, so the completion signature field isn't duplicated across
-        // two panels with two different messages — the same P6 treatment already
-        // applied to the paused state. (Tester nearly signed the wrong one of two.)
+        // Payment release stays in Job Actions. The review is the window on
+        // this page, not a second form and not a trip to the jobs list.
         return (
           <div style={{
             padding: '10px 16px', background: 'rgba(167, 139, 250, 0.1)',
@@ -923,7 +710,7 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
             display: 'flex', alignItems: 'center', gap: 8,
           }}>
             <span style={{ color: '#A78BFA', fontWeight: 600, fontSize: 13 }}>
-              Work delivered — confirm completion in the Job Actions panel above to release payment, then leave a review.
+              Work delivered. Confirm completion above to release payment. The review opens on this page.
             </span>
           </div>
         );
@@ -976,7 +763,7 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
               className="btn-primary"
               style={{ padding: '6px 14px', fontSize: 13 }}
             >
-              {isSeller ? 'End & Deliver' : 'End & Complete'}
+              {isSeller ? 'End & Deliver' : 'End Session'}
             </button>
           </div>
         </div>
@@ -992,7 +779,9 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted }) 
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <span style={{ color: '#f59e0b', fontWeight: 600, fontSize: 13 }}>
-            End session requested — waiting for {isBuyer ? 'seller to deliver' : 'buyer to confirm'}...
+            {isBuyer
+              ? 'End session requested — waiting for the seller to deliver. The review stays open on this page.'
+              : 'End session requested — waiting for the buyer to confirm...'}
           </span>
         </div>
       );
