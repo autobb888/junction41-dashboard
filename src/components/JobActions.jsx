@@ -149,23 +149,45 @@ function PaymentQR({ jobId, type, amount, currency, onTxDetected }) {
     );
   }
 
-  // Encode the wallet DEEPLINK (toWalletDeeplinkUri — scheme'd VerusPay invoice that
-  // Verus Mobile parses with amount+recipient), NOT the bare toQrString() base64, which
-  // the app reads as "only an address". Same format the working login/hire QRs use.
+  // The pay scan is the standalone invoice deeplink. The bare qrString is only an
+  // address to Verus Mobile. genericRequestDeeplink is the same invoice inside a
+  // signed VerusPay V4 request, shown beside the pay scan when the API could sign it.
   const payDeeplink = safeWalletDeeplink(qrData.deeplink);
+  const v4Deeplink = safeWalletDeeplink(qrData.genericRequestDeeplink);
+  const slippage = Number(qrData.maxEstimatedSlippagePercent);
+  const slippageLabel = Number.isFinite(slippage) ? slippage : 0.5;
+  const amountLabel = `${qrData.amount?.toFixed?.(4) || amount} ${currency}`;
   return (
     <div className="flex flex-col items-center gap-3">
-      <div className="bg-white p-3 rounded-lg">
-        {payDeeplink ? (
-          <QRCode value={payDeeplink} size={200} level="M" />
-        ) : (
-          <div className="w-[200px] h-[200px] flex items-center justify-center text-red-600 text-xs text-center px-2">
-            Payment link unavailable — paste the txid manually below
+      <div className={`flex flex-col items-center gap-4 ${v4Deeplink ? 'sm:flex-row sm:items-start sm:justify-center' : ''}`}>
+        <div className="flex flex-col items-center gap-2">
+          <div className="bg-white p-3 rounded-lg">
+            {payDeeplink ? (
+              <QRCode value={payDeeplink} size={200} level="M" />
+            ) : (
+              <div className="w-[200px] h-[200px] flex items-center justify-center text-red-600 text-xs text-center px-2">
+                Payment link unavailable — paste the txid manually below
+              </div>
+            )}
+          </div>
+          <p className="text-xs text-center max-w-[220px]" style={{ color: 'var(--text-tertiary)' }}>Pay scan</p>
+        </div>
+        {v4Deeplink && (
+          <div className="flex flex-col items-center gap-2">
+            <div className="bg-white p-3 rounded-lg">
+              <QRCode value={v4Deeplink} size={200} level="L" />
+            </div>
+            <p className="text-xs text-center max-w-[220px]" style={{ color: 'var(--text-tertiary)' }}>
+              VerusPay V4 request. Same amount and address.
+            </p>
           </div>
         )}
       </div>
       <p className="text-xs text-center" style={{ color: 'var(--text-tertiary)' }}>
-        Scan with Verus Mobile to pay <span className="text-white font-medium">{qrData.amount?.toFixed?.(4) || amount} {currency}</span>
+        Scan the pay code with Verus Mobile 1.1 to pay <span className="text-white font-medium">{amountLabel}</span>.
+        The phone can take that from {currency}, or convert another currency on this same chain.
+        The conversion cap is {slippageLabel}%. Labour and the 5% fee are two scans.
+        Pay works with the experimental deeplink switch left off.
       </p>
       <div className="w-full bg-gray-950 rounded p-2 text-center">
         <p className="text-xs font-mono break-all" style={{ color: 'var(--text-secondary)' }}>{qrData.address}</p>
@@ -178,7 +200,12 @@ function PaymentQR({ jobId, type, amount, currency, onTxDetected }) {
           deeplink support (tracked with the multi-output VerusPay upstream note). */}
       {payDeeplink && (
         <a href={payDeeplink} className="md:hidden text-xs text-verus-blue hover:underline">
-          Open in Verus Mobile →
+          Open the pay scan in Verus Mobile →
+        </a>
+      )}
+      {v4Deeplink && (
+        <a href={v4Deeplink} className="md:hidden text-xs text-verus-blue hover:underline">
+          Open the VerusPay V4 request →
         </a>
       )}
       {polling && !detectedTxid && (

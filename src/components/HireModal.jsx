@@ -46,8 +46,9 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
   // Signing method: 'wallet' (scan QR in Verus Mobile) | 'cli' (paste a signmessage).
   const [signMethod, setSignMethod] = useState('wallet');
   // Wallet request protocol: 'legacy' (LoginConsentRequest — stock Verus Mobile)
-  // | 'genreq' (new-envelope GenericRequest — generic-request wallet builds).
-  const [walletProtocol, setWalletProtocol] = useState('legacy');
+  // | 'genreq' (Verus Mobile 1.1). Hire includes a data packet, so the phone
+  // must have Wallet Settings → General Settings → Enable experimental deeplinks.
+  const [walletProtocol, setWalletProtocol] = useState('genreq');
   const [consent, setConsent] = useState(null);        // { challengeId, qrDataUrl, deeplink, expiresAt }
   const [consentPending, setConsentPending] = useState(null); // { verusId, identityName } once the wallet signed
   const [consentError, setConsentError] = useState('');
@@ -668,8 +669,8 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
                       onChange={(e) => { setWalletProtocol(e.target.value); setConsent(null); setConsentError(''); }}
                       aria-label="Wallet app"
                       className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-gray-200 text-xs">
-                      <option value="legacy">Verus Mobile (standard)</option>
-                      <option value="genreq">Generic-request wallet (beta)</option>
+                      <option value="genreq">Verus Mobile 1.1</option>
+                      <option value="legacy">Older Verus Mobile (until 15 Jan 2027)</option>
                     </select>
                   </div>
                 )}
@@ -686,8 +687,13 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
                 ) : consent && !consentExpired ? (
                   <>
                     <p className="text-gray-300 text-sm mb-3">
-                      Scan with <strong>{walletProtocol === 'genreq' ? 'your generic-request wallet' : 'Verus Mobile'}</strong> and approve the request to sign this hire.
+                      Scan with <strong>{walletProtocol === 'genreq' ? 'Verus Mobile 1.1' : 'an older Verus Mobile'}</strong> and approve the request to sign this hire.
                     </p>
+                    {walletProtocol === 'genreq' && (
+                      <p className="text-amber-400/90 text-xs mb-3 max-w-sm mx-auto leading-relaxed">
+                        On the phone, turn on Wallet Settings → General Settings → Enable experimental deeplinks. Hire asks the wallet to sign the job text, and that request stays behind that switch. Sign-in does not.
+                      </p>
+                    )}
                     <div className="hidden md:block">
                       {safeConsentDeeplink && (
                         <a href={safeConsentDeeplink} className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition-colors mb-3">

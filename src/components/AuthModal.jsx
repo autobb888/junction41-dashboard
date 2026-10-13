@@ -33,8 +33,9 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
   const [showIdDropdown, setShowIdDropdown] = useState(false);
   const [pendingConfirm, setPendingConfirm] = useState(null); // { verusId, identityName } when wallet has signed, awaiting user confirm
   const [confirming, setConfirming] = useState(false);
-  // 'legacy' (stock Verus Mobile) | 'genreq' (generic-request wallet builds, beta).
-  const [walletProtocol, setWalletProtocol] = useState('legacy');
+  // 'genreq' is Verus Mobile 1.1 sign-in. It does not need the experimental
+  // deeplink switch. 'legacy' is the older LoginConsentRequest, until 2027-01-15.
+  const [walletProtocol, setWalletProtocol] = useState('genreq');
   const pollIntervalRef = useRef(null);
   const fetchingRef = useRef(false);
   const fetchGenRef = useRef(0);
@@ -166,7 +167,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
     const timeoutId = setTimeout(() => controller.abort('timeout'), CHALLENGE_TIMEOUT_MS);
     try {
       const proto = protocolArg ?? walletProtocol;
-      const q = proto === 'genreq' ? '?protocol=genreq' : '';
+      const q = proto === 'legacy' ? '?protocol=legacy' : '?protocol=genreq';
       const res = await fetch(`${API_BASE}/auth/consent/challenge${q}`, {
         credentials: 'include',
         signal: controller.signal,
@@ -428,8 +429,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
                       }}
                       className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-gray-200 text-xs"
                     >
-                      <option value="legacy">Verus Mobile (standard)</option>
-                      <option value="genreq">Generic-request wallet (beta)</option>
+                      <option value="genreq">Verus Mobile 1.1</option>
+                      <option value="legacy">Older Verus Mobile (until 15 Jan 2027)</option>
                     </select>
                   </div>
                   {/* Desktop: open the local Verus Desktop app + scan-with-mobile QR */}
@@ -454,7 +455,11 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
                         </button>.
                       </p>
                     )}
-                    <p className="text-gray-400 text-xs mb-4">or scan with Verus Mobile:</p>
+                    <p className="text-gray-400 text-xs mb-4">
+                      {walletProtocol === 'genreq'
+                        ? 'or scan with Verus Mobile 1.1. Sign-in does not need the experimental deeplink switch.'
+                        : 'or scan with an older Verus Mobile.'}
+                    </p>
                     <div className="bg-white p-4 rounded-lg inline-block mb-4">
                       {safeQrDataUrl ? (
                         <img src={safeQrDataUrl} alt="Login QR" className="w-56 h-56" />

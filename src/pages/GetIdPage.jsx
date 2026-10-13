@@ -33,8 +33,8 @@ export default function GetIdPage() {
 
   // Primary (Verus Mobile) flow: signed provisioning QR + on-chain poll.
   const [prov, setProv] = useState(null); // { challengeId, name, identity, deeplink, qrDataUrl, expiresAt }
-  // 'legacy' = stock Verus Mobile; 'genreq' = generic-request wallet builds (beta).
-  const [walletProtocol, setWalletProtocol] = useState('legacy');
+  // 'genreq' is Verus Mobile 1.1. 'legacy' is the older claim QR, until 2027-01-15.
+  const [walletProtocol, setWalletProtocol] = useState('genreq');
   const [result, setResult] = useState(null); // { status, identity, iAddress, funded? }
 
   // Manual (CLI / Desktop) fallback — the legacy /v1/onboard challenge-sign flow.
@@ -92,9 +92,9 @@ export default function GetIdPage() {
   const nameUsable = name.trim().length >= 3 && (availability.state === 'available' || availability.state === 'error');
 
   // ---- Primary flow: request a signed provisioning QR ------------------
-  // walletProtocol: 'legacy' (stock Verus Mobile) | 'genreq' (new-envelope
-  // GenericRequest — generic-request wallet builds). Both mint the same way;
-  // only the QR payload differs.
+  // walletProtocol: 'genreq' is Verus Mobile 1.1 name claim. It is a
+  // provisioning request, not a data packet, so the experimental deeplink
+  // switch is not required. 'legacy' remains until 2027-01-15.
   async function requestChallenge(chosenName) {
     setError('');
     setLoading(true);
@@ -426,8 +426,8 @@ export default function GetIdPage() {
               <label htmlFor="wallet-protocol" className="text-gray-400">Wallet app:</label>
               <select id="wallet-protocol" value={walletProtocol} onChange={(e) => setWalletProtocol(e.target.value)}
                 className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-gray-200 text-sm">
-                <option value="legacy">Verus Mobile (standard)</option>
-                <option value="genreq">Generic-request wallet (beta)</option>
+                <option value="genreq">Verus Mobile 1.1</option>
+                <option value="legacy">Older Verus Mobile (until 15 Jan 2027)</option>
               </select>
             </div>
 
@@ -448,8 +448,9 @@ export default function GetIdPage() {
         <div className="card !p-8">
           <h2 className="text-xl font-semibold text-white mb-2">📲 Step 3: Scan to Claim</h2>
           <p className="text-gray-300 mb-6">
-            Open <strong>Verus Mobile</strong>, scan this QR, and approve <strong className="text-gray-200">"request ID"</strong>.
-            The platform mints <span className="font-mono text-verus-blue">{prov?.identity}</span> as <span className="font-mono">{kind}</span> — free.
+            Open <strong>{walletProtocol === 'genreq' ? 'Verus Mobile 1.1' : 'an older Verus Mobile'}</strong>, scan this QR, and approve <strong className="text-gray-200">"request ID"</strong>.
+            {walletProtocol === 'genreq' ? ' Name claim does not need the experimental deeplink switch.' : ''}
+            {' '}The platform mints <span className="font-mono text-verus-blue">{prov?.identity}</span> as <span className="font-mono">{kind}</span> — free.
           </p>
 
           <div className="flex flex-col items-center mb-6">

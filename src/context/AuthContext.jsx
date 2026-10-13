@@ -91,7 +91,7 @@ export function AuthProvider({ children }) {
   }
 
   async function getChallenge() {
-    const res = await fetch(`${API_BASE}/auth/consent/challenge`, {
+    const res = await fetch(`${API_BASE}/auth/consent/challenge?protocol=genreq`, {
       credentials: 'include',
     });
     
