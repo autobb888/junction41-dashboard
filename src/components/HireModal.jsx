@@ -7,7 +7,7 @@ import SignCopyButtons from './SignCopyButtons';
 import { parseLocalDate } from '../utils/date';
 import QRCode from 'react-qr-code';
 import { safeWalletDeeplink } from '../utils/walletDeeplink';
-import { datasetTermsFromFields, listedHirePrice } from '../utils/hirePrice';
+import { DATASET_PUBLIC_DESCRIPTION, datasetQuestionTerms, listedHirePrice } from '../utils/hirePrice';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -43,9 +43,6 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
   const agentRequiresSovguard = Boolean(service?.sovguard);
   const [sovguardEnabled, setSovguardEnabled] = useState(true);
   const [dataProtectionEnabled, setDataProtectionEnabled] = useState(false);
-  const [rowColor, setRowColor] = useState('');
-  const [rowKind, setRowKind] = useState('');
-  const [rowTaste, setRowTaste] = useState('');
   const [rowQuestion, setRowQuestion] = useState('');
   const modalRef = useRef(null);
 
@@ -189,7 +186,7 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
     setConsentPending(null);
     setConsentError('');
     if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
-  }, [description, deadlineDate, deadlineTime, sovguardEnabled, dataRetention, allowTraining, allowThirdParty, requireDeletion, timestamp, selectedCurrencyIdx, rowColor, rowKind, rowTaste, rowQuestion]);
+  }, [description, deadlineDate, deadlineTime, sovguardEnabled, dataRetention, allowTraining, allowThirdParty, requireDeletion, timestamp, selectedCurrencyIdx, rowQuestion]);
 
   // Stop polling on unmount
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
@@ -212,7 +209,7 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
       return;
     }
 
-    if (!description.trim()) {
+    if (!isDataset && !description.trim()) {
       setError('Job description is required.');
       return;
     }
@@ -243,23 +240,7 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          sellerVerusId,
-          serviceId: service?.id,
-          description: description.trim(),
-          message: message.trim() || undefined,
-          amount: agentAmount,
-          currency,
-          deadline: deadline || undefined,
-          paymentTerms,
-          sovguardEnabled,
-          dataProtectionEnabled,
-          dataTerms: {
-            retention: dataRetention,
-            allowTraining,
-            allowThirdParty,
-            requireDeletionAttestation: requireDeletion,
-          },
-          fee: parseFloat(feeAmount),
+          ...buildJobBody(),
           timestamp,
           signature: signature.trim(),
           ...(datasetTerms?.ok ? { datasetTerms: datasetTerms.terms } : {}),
@@ -289,11 +270,11 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
     return {
       sellerVerusId,
       serviceId: service?.id,
-      description: description.trim(),
-      message: message.trim() || undefined,
+      description: isDataset ? DATASET_PUBLIC_DESCRIPTION : description.trim(),
+      message: isDataset ? undefined : (message.trim() || undefined),
       amount: agentAmount,
       currency,
-      deadline: deadline || undefined,
+      deadline: isDataset ? undefined : (deadline || undefined),
       paymentTerms,
       sovguardEnabled,
       dataProtectionEnabled,
@@ -309,7 +290,7 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
 
   function datasetHireTerms() {
     if (!isDataset) return null;
-    return datasetTermsFromFields({ color: rowColor, kind: rowKind, taste: rowTaste, q: rowQuestion });
+    return datasetQuestionTerms(rowQuestion);
   }
 
   function startConsentPoll(challengeId) {
@@ -344,7 +325,7 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
   async function requestConsentChallenge() {
     setConsentError('');
     if (!sellerVerusId) { setConsentError('Seller identity is missing. Reload and reopen this service.'); return; }
-    if (!description.trim()) { setConsentError('Job description is required.'); return; }
+    if (!isDataset && !description.trim()) { setConsentError('Job description is required.'); return; }
     if (!(agentAmount > 0)) { setConsentError('This is a free service and cannot be hired. Connect via its API instead.'); return; }
     const datasetTerms = datasetHireTerms();
     if (datasetTerms && !datasetTerms.ok) { setConsentError(datasetTerms.message); return; }
@@ -356,7 +337,7 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
         credentials: 'include',
         body: JSON.stringify({
           ...buildJobBody(),
-          protocol: walletProtocol,
+          protocol: isDataset ? 'genreq' : walletProtocol,
           ...(datasetTerms?.ok ? { datasetTerms: datasetTerms.terms } : {}),
         }),
       });
@@ -450,7 +431,7 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
           </div>
 
           {/* Session lifecycle terms */}
-          {(service?.idleTimeout > 0 || service?.pauseTTL > 0 || service?.reactivationFee > 0) && (
+          {!isDataset && (service?.idleTimeout > 0 || service?.pauseTTL > 0 || service?.reactivationFee > 0) && (
             <div className="rounded-lg p-3 space-y-1" style={{ background: 'rgba(251, 191, 36, 0.06)', border: '1px solid rgba(251, 191, 36, 0.15)' }}>
               <p className="text-xs font-medium text-amber-400 mb-1.5">Session Terms</p>
               <p className="text-xs text-gray-400">
@@ -492,32 +473,28 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
           )}
 
           {isDataset && (
-            <div className="rounded-lg p-3 space-y-3" style={{ background: 'rgba(56, 189, 248, 0.06)', border: '1px solid rgba(56, 189, 248, 0.2)' }}>
-              <p className="text-xs font-medium text-sky-300">Which rows</p>
-              <p className="text-xs text-gray-400">
-                Name at least one. The price on this form is the listed price for one row. If the question matches more rows, the seller names the full price.
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <label className="block text-xs text-gray-400">
-                  Color
-                  <input value={rowColor} onChange={(e) => setRowColor(e.target.value)} className="mt-1 w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white" placeholder="red" />
-                </label>
-                <label className="block text-xs text-gray-400">
-                  Kind
-                  <input value={rowKind} onChange={(e) => setRowKind(e.target.value)} className="mt-1 w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white" placeholder="apple" />
-                </label>
-                <label className="block text-xs text-gray-400">
-                  Taste
-                  <input value={rowTaste} onChange={(e) => setRowTaste(e.target.value)} className="mt-1 w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white" />
-                </label>
-                <label className="block text-xs text-gray-400">
-                  Question
-                  <input value={rowQuestion} onChange={(e) => setRowQuestion(e.target.value)} className="mt-1 w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white" />
-                </label>
+            <div className="space-y-2">
+              <label htmlFor="hire-row-question" className="block text-sm font-medium text-gray-300">
+                Which rows
+              </label>
+              <textarea
+                id="hire-row-question"
+                value={rowQuestion}
+                onChange={(e) => setRowQuestion(e.target.value)}
+                rows={3}
+                maxLength={200}
+                className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-verus-blue focus:outline-none"
+                placeholder="red delicious"
+              />
+              <div className="flex justify-between gap-3 text-xs text-gray-400">
+                <p>The phone shows this question before you approve. The seller returns rows that contain this text.</p>
+                <span className="shrink-0">{rowQuestion.trim().length}/200</span>
               </div>
             </div>
           )}
 
+          {!isDataset && (
+          <>
           {/* Job details */}
           <div className="space-y-4">
             <div>
@@ -653,6 +630,8 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
               </>
             )}
           </div>
+          </>
+          )}
 
           {/* Payment Breakdown */}
           <div className="rounded-xl border p-4" style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--bg-raised)' }}>
@@ -700,6 +679,7 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
           <div className="bg-gray-900 rounded-lg p-4 space-y-4">
             <h3 className="text-white font-medium">Sign Your Request</h3>
 
+            {!isDataset && (
             <div className="flex rounded-lg overflow-hidden border border-gray-700">
               <button type="button" onClick={() => setSignMethod('wallet')}
                 className={`flex-1 py-2 text-sm font-medium transition-colors ${signMethod === 'wallet' ? 'bg-verus-blue text-white' : 'text-gray-400 hover:text-gray-200'}`}>
@@ -710,12 +690,13 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
                 Advanced (CLI)
               </button>
             </div>
+            )}
 
             {/* WALLET (QR) */}
-            {signMethod === 'wallet' && (
+            {(isDataset || signMethod === 'wallet') && (
               <div className="text-center">
                 {/* Request protocol — changing it invalidates any pending QR */}
-                {!consentPending && (
+                {!consentPending && !isDataset && (
                   <div className="flex items-center justify-center gap-2 mb-3 text-xs">
                     <span className="text-gray-500">Wallet app:</span>
                     <select
@@ -791,7 +772,7 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
                       Continue to get a QR to scan with <strong>Verus Mobile</strong> — or, on desktop, an <strong>Open in Verus Desktop</strong> button.
                     </p>
                     <button type="button" onClick={requestConsentChallenge}
-                      disabled={consentLoading || !sellerVerusId || !description.trim()}
+                      disabled={consentLoading || !sellerVerusId || (isDataset ? !rowQuestion.trim() : !description.trim())}
                       className="w-full py-3 bg-verus-blue hover:bg-verus-blue/80 text-white rounded-lg font-medium transition-colors disabled:opacity-50">
                       {consentLoading ? 'Generating…' : (consentExpired ? 'Request expired — generate a new request' : 'Continue with Verus Wallet')}
                     </button>
@@ -806,8 +787,8 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
               </div>
             )}
 
-            {/* CLI (copy-paste signmessage) */}
-            {signMethod === 'cli' && (
+            {/* CLI (copy-paste signmessage). A SovData hire signs the question on the phone. */}
+            {!isDataset && signMethod === 'cli' && (
               <>
                 <p className="text-gray-400 text-sm">
                   Copy the message and sign it with your VerusID to create a binding job request.
@@ -867,7 +848,7 @@ export default function HireModal({ service, agent, onClose, onSuccess }) {
             >
               Cancel
             </button>
-            {signMethod === 'cli' && (
+            {!isDataset && signMethod === 'cli' && (
               <button
                 type="submit"
                 disabled={loading || !signature.trim() || !sellerVerusId || !description.trim()}

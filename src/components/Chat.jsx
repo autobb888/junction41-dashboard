@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { isJobReviewable } from '../utils/jobReview';
 import { io } from 'socket.io-client';
 import Markdown from 'react-markdown';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
@@ -477,7 +478,7 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted, on
       // After signaling, open appropriate panel
       if (isSeller) {
         setEndSessionPanel('deliver');
-      } else {
+      } else if (isJobReviewable(job)) {
         onReviewRequested?.();
       }
     } catch (err) {

@@ -47,6 +47,7 @@ export default function ReviewModal({ job, onClose, onSubmitted, canSubmit = tru
   const [phoneNeedsSave, setPhoneNeedsSave] = useState(false);
   const [retryToken, setRetryToken] = useState(0);
   const phoneGen = useRef(0);
+  const requestPhoneRef = useRef(async () => {});
   const confirmLock = useRef(false);
   const onCloseRef = useRef(onClose);
   const onSubmittedRef = useRef(onSubmitted);
@@ -191,8 +192,8 @@ export default function ReviewModal({ job, onClose, onSubmitted, canSubmit = tru
   }, [phoneChallenge, retryToken]);
 
   async function requestPhone() {
-    if (!canSubmit || rating < 1 || phoneBusy) return;
-    phoneGen.current += 1;
+    if (!canSubmit || rating < 1) return;
+    const gen = ++phoneGen.current;
     confirmLock.current = false;
     setPhoneNeedsSave(false);
     setPhoneError(null);
@@ -211,9 +212,13 @@ export default function ReviewModal({ job, onClose, onSubmitted, canSubmit = tru
         }),
       });
       const data = await res.json().catch(() => ({}));
+      if (gen !== phoneGen.current) return;
       if (!res.ok) throw new Error(data.error?.message || 'Could not create the signing request');
       if (!data.data?.challengeId || !data.data?.deeplink) {
         throw new Error('The signing request did not include a phone code');
+      }
+      if (!safeWalletDeeplink(data.data.deeplink)) {
+        throw new Error('The phone link could not be drawn.');
       }
       setPhoneChallenge({
         challengeId: data.data.challengeId,
@@ -221,12 +226,28 @@ export default function ReviewModal({ job, onClose, onSubmitted, canSubmit = tru
         expiresAt: data.data.expiresAt,
       });
     } catch (err) {
+      if (gen !== phoneGen.current) return;
       setPhoneChallenge(null);
       setPhoneError(err.message || 'Could not create the signing request');
     } finally {
-      setPhoneBusy(false);
+      if (gen === phoneGen.current) setPhoneBusy(false);
     }
   }
+
+  requestPhoneRef.current = requestPhone;
+
+  // The window that opens on a finished job is the phone code. Five stars is
+  // selected so the code is on screen; changing the stars asks for a new one.
+  useEffect(() => {
+    if (hidden || !canSubmit || rating >= 1) return;
+    setRating(5);
+  }, [hidden, canSubmit, rating]);
+
+  useEffect(() => {
+    if (hidden || !canSubmit || rating < 1) return undefined;
+    const handle = setTimeout(() => { requestPhoneRef.current(); }, 300);
+    return () => clearTimeout(handle);
+  }, [hidden, canSubmit, rating, message, prosePublic, shielded]);
 
   async function handleSubmit() {
     if (!canSubmit) return;
@@ -303,7 +324,11 @@ export default function ReviewModal({ job, onClose, onSubmitted, canSubmit = tru
                       key={star}
                       onMouseEnter={() => setHoverRating(star)}
                       onMouseLeave={() => setHoverRating(0)}
-                      onClick={() => { setRating(star); invalidateSignedReview(); }}
+                      onClick={() => {
+                        if (star === rating) return;
+                        invalidateSignedReview();
+                        setRating(star);
+                      }}
                       className="text-3xl transition-transform hover:scale-110"
                     >
                       {star <= (hoverRating || rating) ? '★' : '☆'}
@@ -317,39 +342,9 @@ export default function ReviewModal({ job, onClose, onSubmitted, canSubmit = tru
                 </div>
               </div>
 
-              <div>
-                <label htmlFor="review-message" className="block text-sm text-gray-400 mb-2">Review (optional)</label>
-                <textarea
-                  id="review-message"
-                  value={message}
-                  onChange={e => { setMessage(e.target.value); invalidateSignedReview(); }}
-                  placeholder="How was your experience?"
-                  rows={3}
-                  maxLength={500}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-teal-500 resize-none"
-                />
-                <div className="text-xs text-gray-400 text-right mt-1">{message.length}/500</div>
-              </div>
-
-              {shielded && (
-                <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-400">
-                  <input
-                    type="checkbox"
-                    checked={prosePublic}
-                    onChange={e => { setProsePublic(e.target.checked); invalidateSignedReview(); }}
-                    className="accent-teal-500"
-                  />
-                  <span>
-                    {prosePublic
-                      ? 'Public review — the words can appear with the score'
-                      : 'Stars only — the words stay with the agent'}
-                  </span>
-                </label>
-              )}
-
-              {rating >= 1 && canSubmit && (
+              {canSubmit && (
                 <div className="text-center space-y-3">
-                  <p className="text-gray-300 text-sm">Scan with Verus Mobile and approve the review.</p>
+                  <p className="text-gray-300 text-sm">Scan with Verus Mobile and approve the review. Five stars is selected until you change it.</p>
                   <p className="text-amber-400/90 text-xs max-w-sm mx-auto leading-relaxed">
                     On the phone, turn on Wallet Settings → General Settings → Enable experimental deeplinks, because this review asks the wallet to sign the text.
                   </p>
@@ -379,19 +374,52 @@ export default function ReviewModal({ job, onClose, onSubmitted, canSubmit = tru
                       </button>
                     </>
                   ) : (
-                    <button
-                      type="button"
-                      onClick={requestPhone}
-                      disabled={phoneBusy}
-                      className="w-full bg-teal-600 hover:bg-teal-500 disabled:bg-gray-700 disabled:text-gray-500 text-white font-medium py-3 rounded-lg transition-colors"
-                    >
-                      {phoneBusy ? 'Preparing the phone code…' : 'Sign with Verus Mobile'}
-                    </button>
+                    <p className="text-gray-300 text-sm">{phoneError ? 'The phone code is not ready.' : 'Preparing the phone code…'}</p>
                   )}
                   {phoneError && (
-                    <p className="text-red-400 text-sm">{phoneError}</p>
+                    <>
+                      <p className="text-red-400 text-sm">{phoneError}</p>
+                      <button
+                        type="button"
+                        onClick={requestPhone}
+                        disabled={phoneBusy}
+                        className="w-full bg-teal-600 hover:bg-teal-500 disabled:bg-gray-700 disabled:text-gray-500 text-white font-medium py-3 rounded-lg transition-colors"
+                      >
+                        Try the phone code again
+                      </button>
+                    </>
                   )}
                 </div>
+              )}
+
+              <div>
+                <label htmlFor="review-message" className="block text-sm text-gray-400 mb-2">Review (optional)</label>
+                <textarea
+                  id="review-message"
+                  value={message}
+                  onChange={e => { setMessage(e.target.value); invalidateSignedReview(); }}
+                  placeholder="How was your experience?"
+                  rows={3}
+                  maxLength={500}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-teal-500 resize-none"
+                />
+                <div className="text-xs text-gray-400 text-right mt-1">{message.length}/500</div>
+              </div>
+
+              {shielded && (
+                <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-400">
+                  <input
+                    type="checkbox"
+                    checked={prosePublic}
+                    onChange={e => { setProsePublic(e.target.checked); invalidateSignedReview(); }}
+                    className="accent-teal-500"
+                  />
+                  <span>
+                    {prosePublic
+                      ? 'Public review — the words can appear with the score'
+                      : 'Stars only — the words stay with the agent'}
+                  </span>
+                </label>
               )}
 
               {signCommand && (
