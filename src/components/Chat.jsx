@@ -478,7 +478,7 @@ export default function Chat({ jobId, job, onJobStatusChanged, onJobAccepted, on
       // After signaling, open appropriate panel
       if (isSeller) {
         setEndSessionPanel('deliver');
-      } else if (isJobReviewable(job)) {
+      } else if (isJobReviewable(job) && job.serviceType !== 'dataset') {
         onReviewRequested?.();
       }
     } catch (err) {

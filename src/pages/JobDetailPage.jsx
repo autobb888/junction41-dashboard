@@ -11,6 +11,7 @@ import JobActions from '../components/JobActions';
 import DisputeTimeline from '../components/DisputeTimeline';
 import ReviewModal from '../components/ReviewModal';
 import { isJobReviewable, isNegativeJobOutcome } from '../utils/jobReview';
+import { datasetAnswerText, datasetQuestionText } from '../utils/datasetAnswer';
 import WorkspacePanel from '../components/WorkspacePanel';
 import GpuRentalAccess from '../components/GpuRentalAccess';
 import { Terminal } from 'lucide-react';
@@ -29,6 +30,7 @@ export default function JobDetailPage() {
   const [existingReview, setExistingReview] = useState(null);
   const [reviewChecked, setReviewChecked] = useState(false);
   const [autoOpenPayment, setAutoOpenPayment] = useState(false);
+  const [datasetResult, setDatasetResult] = useState(null);
   const chatRef = useRef(null);
   const prevStatusRef = useRef(null);
   // Closing the review on a job that can already be reviewed stays closed for
@@ -40,6 +42,7 @@ export default function JobDetailPage() {
     setReviewMounted(false);
     setExistingReview(null);
     setReviewChecked(false);
+    setDatasetResult(null);
     reviewDismissedRef.current = false;
     fetchJob();
   }, [id]);
@@ -75,9 +78,11 @@ export default function JobDetailPage() {
     if (job.buyerVerusId !== user.verusId) return;
     if (existingReview || reviewDismissedRef.current) return;
     if (!isJobReviewable(job)) return;
+    // A SovData hire shows the seller's answer first. The review stays a button.
+    if (job.serviceType === 'dataset') return;
     setReviewMounted(true);
     setShowReview(true);
-  }, [id, job?.status, job?.id, job?.reviewWindowExpiresAt, job?.buyerVerusId, reviewChecked, existingReview, user?.verusId]);
+  }, [id, job?.status, job?.id, job?.serviceType, job?.reviewWindowExpiresAt, job?.buyerVerusId, reviewChecked, existingReview, user?.verusId]);
 
   function requestReview() {
     if (!job || job.id !== id || job.buyerVerusId !== user?.verusId || existingReview) return;
@@ -100,6 +105,26 @@ export default function JobDetailPage() {
       setSearchParams(searchParams, { replace: true });
     }
   }, [job, loading, searchParams]);
+
+  useEffect(() => {
+    if (!job || job.id !== id || job.serviceType !== 'dataset') return undefined;
+    let stopped = false;
+    (async () => {
+      try {
+        const res = await apiFetch(`/v1/jobs/${id}/dataset-result`);
+        const data = await res.json().catch(() => ({}));
+        if (stopped) return;
+        if (!res.ok || !data.data) {
+          setDatasetResult({ kind: 'unread', question: datasetQuestionText(job.datasetTerms) });
+          return;
+        }
+        setDatasetResult(data.data);
+      } catch {
+        if (!stopped) setDatasetResult({ kind: 'unread', question: datasetQuestionText(job.datasetTerms) });
+      }
+    })();
+    return () => { stopped = true; };
+  }, [id, job?.id, job?.serviceType]);
 
   function handleJobStarted() {
     fetchJob();
@@ -187,6 +212,24 @@ export default function JobDetailPage() {
       <div className="card" style={{ padding: '16px 24px' }}>
         <JobStepper status={job.status} hasPayment={!!job.payment?.txid} />
       </div>
+
+      {job.serviceType === 'dataset' && (
+        <div className="card space-y-3">
+          <h3 className="text-lg font-semibold text-white">Seller response</h3>
+          <p className="text-gray-300">
+            <span className="text-gray-500">You asked: </span>
+            {datasetQuestionText(job.datasetTerms) || 'the rows on this listing'}
+          </p>
+          <p className="text-white">
+            {datasetResult
+              ? datasetAnswerText(datasetResult, job.currency)
+              : 'Reading the seller’s answer…'}
+          </p>
+          {!job.delivery && (
+            <p className="text-gray-400 text-sm">Waiting for the seller to mark this hire delivered.</p>
+          )}
+        </div>
+      )}
 
       {/* Waiting for agent — shown when buyer is waiting for acceptance */}
       {isBuyer && job.status === 'requested' && (() => {
@@ -343,7 +386,7 @@ export default function JobDetailPage() {
       )}
 
       {/* Workspace Panel — buyer only, active/delivered jobs */}
-      {isBuyer && ['in_progress', 'delivered', 'paused'].includes(job.status) && (
+      {isBuyer && job.serviceType !== 'dataset' && ['in_progress', 'delivered', 'paused'].includes(job.status) && (
         job.seller?.workspaceCapable ? (
           <WorkspacePanel job={job} />
         ) : (

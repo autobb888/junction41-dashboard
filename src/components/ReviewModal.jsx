@@ -34,6 +34,9 @@ export default function ReviewModal({ job, onClose, onSubmitted, canSubmit = tru
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [message, setMessage] = useState('');
+  // The phone code signs this note. Typing updates `message` only. Leaving the
+  // box copies it here, so the picture is not rebuilt on every letter.
+  const [phoneNote, setPhoneNote] = useState('');
   const [prosePublic, setProsePublic] = useState(true);
   const [step, setStep] = useState('compose'); // compose | submitting | done
   const [signature, setSignature] = useState('');
@@ -47,6 +50,7 @@ export default function ReviewModal({ job, onClose, onSubmitted, canSubmit = tru
   const [phoneNeedsSave, setPhoneNeedsSave] = useState(false);
   const [retryToken, setRetryToken] = useState(0);
   const phoneGen = useRef(0);
+  const requestGen = useRef(0);
   const requestPhoneRef = useRef(async () => {});
   const confirmLock = useRef(false);
   const onCloseRef = useRef(onClose);
@@ -72,11 +76,21 @@ export default function ReviewModal({ job, onClose, onSubmitted, canSubmit = tru
 
   function invalidateSignedReview() {
     phoneGen.current += 1;
+    requestGen.current += 1;
     confirmLock.current = false;
     setPhoneChallenge(null);
     setPhoneNeedsSave(false);
     setPhoneError(null);
     clearSignatureWithWarning();
+  }
+
+  function commitPhoneNote() {
+    if (message !== phoneNote) setPhoneNote(message);
+  }
+
+  function refreshPhoneCode() {
+    if (message !== phoneNote) setPhoneNote(message);
+    else requestPhone();
   }
 
   useEffect(() => {
@@ -193,7 +207,7 @@ export default function ReviewModal({ job, onClose, onSubmitted, canSubmit = tru
 
   async function requestPhone() {
     if (!canSubmit || rating < 1) return;
-    const gen = ++phoneGen.current;
+    const gen = ++requestGen.current;
     confirmLock.current = false;
     setPhoneNeedsSave(false);
     setPhoneError(null);
@@ -207,12 +221,12 @@ export default function ReviewModal({ job, onClose, onSubmitted, canSubmit = tru
         body: JSON.stringify({
           jobHash: job.jobHash,
           rating,
-          message: message || '',
+          message: phoneNote || '',
           ...(shielded ? { prosePublic } : {}),
         }),
       });
       const data = await res.json().catch(() => ({}));
-      if (gen !== phoneGen.current) return;
+      if (gen !== requestGen.current) return;
       if (!res.ok) throw new Error(data.error?.message || 'Could not create the signing request');
       if (!data.data?.challengeId || !data.data?.deeplink) {
         throw new Error('The signing request did not include a phone code');
@@ -220,17 +234,19 @@ export default function ReviewModal({ job, onClose, onSubmitted, canSubmit = tru
       if (!safeWalletDeeplink(data.data.deeplink)) {
         throw new Error('The phone link could not be drawn.');
       }
+      // Swap the picture only after the new code exists. The old one stays up
+      // while this request is in flight, so typing cannot blank the page.
+      phoneGen.current += 1;
       setPhoneChallenge({
         challengeId: data.data.challengeId,
         deeplink: data.data.deeplink,
         expiresAt: data.data.expiresAt,
       });
     } catch (err) {
-      if (gen !== phoneGen.current) return;
-      setPhoneChallenge(null);
+      if (gen !== requestGen.current) return;
       setPhoneError(err.message || 'Could not create the signing request');
     } finally {
-      if (gen === phoneGen.current) setPhoneBusy(false);
+      if (gen === requestGen.current) setPhoneBusy(false);
     }
   }
 
@@ -247,7 +263,7 @@ export default function ReviewModal({ job, onClose, onSubmitted, canSubmit = tru
     if (hidden || !canSubmit || rating < 1) return undefined;
     const handle = setTimeout(() => { requestPhoneRef.current(); }, 300);
     return () => clearTimeout(handle);
-  }, [hidden, canSubmit, rating, message, prosePublic, shielded]);
+  }, [hidden, canSubmit, rating, phoneNote, prosePublic, shielded]);
 
   async function handleSubmit() {
     if (!canSubmit) return;
@@ -344,7 +360,7 @@ export default function ReviewModal({ job, onClose, onSubmitted, canSubmit = tru
 
               {canSubmit && (
                 <div className="text-center space-y-3">
-                  <p className="text-gray-300 text-sm">Scan with Verus Mobile and approve the review. Five stars is selected until you change it.</p>
+                  <p className="text-gray-300 text-sm">Scan with Verus Mobile and approve the review. Five stars is selected until you change it. The code stays while you write, and it updates once when you leave the note.</p>
                   <p className="text-amber-400/90 text-xs max-w-sm mx-auto leading-relaxed">
                     On the phone, turn on Wallet Settings → General Settings → Enable experimental deeplinks, because this review asks the wallet to sign the text.
                   </p>
@@ -369,7 +385,7 @@ export default function ReviewModal({ job, onClose, onSubmitted, canSubmit = tru
                           Save the review
                         </button>
                       )}
-                      <button type="button" onClick={requestPhone} disabled={phoneBusy} className="block mx-auto text-xs text-gray-500 hover:text-gray-300">
+                      <button type="button" onClick={refreshPhoneCode} disabled={phoneBusy} className="block mx-auto text-xs text-gray-500 hover:text-gray-300">
                         New code
                       </button>
                     </>
@@ -381,7 +397,7 @@ export default function ReviewModal({ job, onClose, onSubmitted, canSubmit = tru
                       <p className="text-red-400 text-sm">{phoneError}</p>
                       <button
                         type="button"
-                        onClick={requestPhone}
+                        onClick={refreshPhoneCode}
                         disabled={phoneBusy}
                         className="w-full bg-teal-600 hover:bg-teal-500 disabled:bg-gray-700 disabled:text-gray-500 text-white font-medium py-3 rounded-lg transition-colors"
                       >
@@ -397,13 +413,17 @@ export default function ReviewModal({ job, onClose, onSubmitted, canSubmit = tru
                 <textarea
                   id="review-message"
                   value={message}
-                  onChange={e => { setMessage(e.target.value); invalidateSignedReview(); }}
+                  onChange={e => { setMessage(e.target.value); clearSignatureWithWarning(); }}
+                  onBlur={commitPhoneNote}
                   placeholder="How was your experience?"
                   rows={3}
                   maxLength={500}
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-teal-500 resize-none"
                 />
                 <div className="text-xs text-gray-400 text-right mt-1">{message.length}/500</div>
+                {message !== phoneNote && (
+                  <p className="text-xs text-gray-400 mt-1">The phone code keeps the previous note until you click outside this box.</p>
+                )}
               </div>
 
               {shielded && (
